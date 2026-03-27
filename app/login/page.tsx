@@ -1,7 +1,48 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import { Lock, Mail, ArrowRight } from "lucide-react";
+import { Lock, Mail, ArrowRight, Loader2 } from "lucide-react";
+import { useToast } from "../components/ui/Toast";
 
 export default function Login() {
+  const router = useRouter();
+  const toast = useToast();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // Basic validation
+    if (!email || !password) {
+      setError("Please fill in all fields.");
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Mock API call
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      toast("Welcome back!", "success");
+      router.push("/");
+    } catch (err) {
+      setError("Invalid email or password.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className={styles.loginContainer}>
       <div className={styles.imageSection}>
@@ -23,12 +64,22 @@ export default function Login() {
             <p>Please enter your details to sign in.</p>
           </div>
 
-          <form className={styles.form}>
+          <form className={styles.form} onSubmit={handleSubmit}>
+            {error && <div className={styles.errorMessage}>{error}</div>}
+            
             <div className={styles.inputGroup}>
               <label htmlFor="email">Email</label>
               <div className={styles.inputWrapper}>
                 <Mail className={styles.inputIcon} size={20} />
-                <input id="email" type="email" placeholder="manager@premierfarm.com" required />
+                <input 
+                  id="email" 
+                  type="email" 
+                  placeholder="manager@premierfarm.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isSubmitting}
+                  required 
+                />
               </div>
             </div>
 
@@ -36,7 +87,15 @@ export default function Login() {
               <label htmlFor="password">Password</label>
               <div className={styles.inputWrapper}>
                 <Lock className={styles.inputIcon} size={20} />
-                <input id="password" type="password" placeholder="••••••••" required />
+                <input 
+                  id="password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isSubmitting}
+                  required 
+                />
               </div>
             </div>
 
@@ -45,11 +104,25 @@ export default function Login() {
                 <input type="checkbox" />
                 <span>Remember me</span>
               </label>
-              <a href="#" className={styles.forgot}>Forgot password?</a>
+              <button 
+                type="button" 
+                className={styles.forgotBtn}
+                onClick={() => router.push("/login/forgot")}
+              >
+                Forgot password?
+              </button>
             </div>
 
-            <button type="button" className={styles.submitBtn}>
-              Sign In <ArrowRight size={18} />
+            <button 
+              type="submit" 
+              className={styles.submitBtn}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>Logging in... <Loader2 className={styles.spinner} size={18} /></>
+              ) : (
+                <>Sign In <ArrowRight size={18} /></>
+              )}
             </button>
           </form>
 

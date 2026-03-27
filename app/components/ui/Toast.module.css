@@ -50,9 +50,24 @@
 }
 
 .info {
-  background: var(--color-surface);
-  color: var(--color-text-main);
-  border: 1px solid var(--color-border);
+  background: #3b82f6;
+  color: white;
+}
+
+.warning {
+  background: #f59e0b;
+  color: white;
+}
+
+.warningIcon {
+  color: white;
+}
+
+:global([data-theme='dark']) {
+  .success { background: rgba(16, 185, 129, 0.2); }
+  .error { background: rgba(239, 68, 68, 0.2); }
+  .info { background: rgba(59, 130, 246, 0.2); }
+  .warning { background: rgba(245, 158, 11, 0.2); }
 }
 
 .closeBtn {

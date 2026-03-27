@@ -1,10 +1,15 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { ThemeToggle } from "../../components/theme-toggle/ThemeToggle";
 import { ChevronRight, Download, Bell, Lock, HelpCircle, LogOut, Globe, Palette } from "lucide-react";
+import { useToast } from "../../components/ui/Toast";
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const toast = useToast();
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -73,7 +78,10 @@ export default function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Data & Privacy</h2>
         <div className={styles.card}>
-          <button className={styles.settingRow}>
+          <button
+            className={styles.settingRow}
+            onClick={() => toast("Exporting farm data to CSV...", "info")}
+          >
             <div className={styles.rowLeft}>
               <Download size={20} className={styles.rowIcon} />
               <span>Export Farm Data (CSV)</span>
@@ -83,7 +91,10 @@ export default function SettingsPage() {
 
           <div className={styles.divider}></div>
 
-          <button className={styles.settingRow}>
+          <button
+            className={styles.settingRow}
+            onClick={() => toast("Password reset enabled in next update", "info")}
+          >
             <div className={styles.rowLeft}>
               <Lock size={20} className={styles.rowIcon} />
               <span>Change Password</span>
@@ -97,7 +108,10 @@ export default function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Support</h2>
         <div className={styles.card}>
-          <button className={styles.settingRow}>
+          <button
+            className={styles.settingRow}
+            onClick={() => toast("Opening help center...", "info")}
+          >
             <div className={styles.rowLeft}>
               <HelpCircle size={20} className={styles.rowIcon} />
               <span>Help & FAQ</span>
@@ -109,7 +123,13 @@ export default function SettingsPage() {
 
       {/* Logout */}
       <section className={styles.section}>
-        <button className={`${styles.card} ${styles.logoutCard}`}>
+        <button
+          className={`${styles.card} ${styles.logoutCard}`}
+          onClick={() => {
+            toast("Logging out...", "success");
+            setTimeout(() => router.push("/login"), 1000);
+          }}
+        >
           <div className={styles.rowLeft}>
             <LogOut size={20} />
             <span>Log Out</span>

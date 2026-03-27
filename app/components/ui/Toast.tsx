@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useCallback } from "react";
 import styles from "./Toast.module.css";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 
-type ToastVariant = "success" | "error" | "info";
+type ToastVariant = "success" | "error" | "info" | "warning";
 type ToastItem = { id: number; message: string; variant: ToastVariant };
 
 const ToastContext = createContext<(message: string, variant?: ToastVariant) => void>(() => {});
@@ -31,6 +31,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     success: <CheckCircle2 size={20} />,
     error: <AlertCircle size={20} />,
     info: <Info size={20} />,
+    warning: <AlertCircle size={20} className={styles.warningIcon} />,
   };
 
   return (

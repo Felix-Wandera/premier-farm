@@ -264,10 +264,9 @@
 }
 
 .stickyFooter {
-  position: fixed;
+  position: sticky;
   bottom: 0;
-  left: 0;
-  right: 0;
+  margin-top: auto;
   background: var(--color-surface);
   padding: 1.5rem;
   padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0));
@@ -280,7 +279,6 @@
 
 @media (min-width: 768px) {
   .stickyFooter {
-    position: absolute;
     border-radius: 0 0 24px 24px;   /* Bound to container borders */
   }
 }

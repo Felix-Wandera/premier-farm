@@ -1,0 +1,37 @@
+.breadcrumb {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  margin-bottom: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .breadcrumb {
+    display: flex;
+  }
+}
+
+.homeLink, .link {
+  color: var(--color-text-sub);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.homeLink:hover, .link:hover {
+  color: var(--color-primary);
+}
+
+.separator {
+  color: var(--color-border);
+}
+
+.current {
+  color: var(--color-text-main);
+  font-size: 0.85rem;
+  font-weight: 600;
+}

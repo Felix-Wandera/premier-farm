@@ -4,7 +4,7 @@ import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export function ThemeToggle({ className, hideLabel = false }: { className?: string; hideLabel?: boolean }) {
+export function ThemeToggle({ className, showLabel = true }: { className?: string; showLabel?: boolean }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -26,7 +26,7 @@ export function ThemeToggle({ className, hideLabel = false }: { className?: stri
       aria-label="Toggle Dark Mode"
     >
       {isDark ? <Moon size={20} /> : <Sun size={20} />}
-      {!hideLabel && <span>{isDark ? "Light Mode" : "Dark Mode"}</span>}
+      {showLabel && <span>{isDark ? "Light Mode" : "Dark Mode"}</span>}
     </button>
   );
 }

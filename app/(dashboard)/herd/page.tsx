@@ -1,10 +1,11 @@
 "use client";
 import React, { useState } from "react";
 import styles from "./page.module.css";
-import { Search, Plus, LayoutGrid, List as ListIcon } from "lucide-react";
 import Link from "next/link";
 import AnimalIcon from "../../components/ui/AnimalIcon";
 import QuickAddMenu from "../../components/quick-add/QuickAddMenu";
+import EmptyState from "../../components/ui/EmptyState";
+import { Search, Plus, LayoutGrid, List as ListIcon, Info } from "lucide-react";
 
 type Animal = {
   id: string;
@@ -88,6 +89,8 @@ export default function HerdDirectory() {
               key={filter} 
               className={`${styles.filterPill} ${activeFilter === filter ? styles.activeFilter : ''}`}
               onClick={() => setActiveFilter(filter)}
+              aria-selected={activeFilter === filter}
+              aria-pressed={activeFilter === filter}
             >
               {filter}
             </button>
@@ -96,32 +99,42 @@ export default function HerdDirectory() {
       </div>
 
       {/* Animal Grid / List */}
-      <div className={viewMode === 'grid' ? styles.grid : styles.list}>
-        {filteredAnimals.map((animal) => (
-          <Link key={animal.id} href={`/herd/${animal.id}`} className={`${styles.animalCard} ${viewMode === 'list' ? styles.listCard : ''}`} style={{textDecoration: 'none'}}>
-             <div className={styles.cardHeader}>
-               <div className={styles.avatar}>
-                 <AnimalIcon species={animal.species} size={28} />
+      {filteredAnimals.length > 0 ? (
+        <div className={viewMode === 'grid' ? styles.grid : styles.list}>
+          {filteredAnimals.map((animal) => (
+            <Link key={animal.id} href={`/herd/${animal.id}`} className={`${styles.animalCard} ${viewMode === 'list' ? styles.listCard : ''}`} style={{textDecoration: 'none'}}>
+               <div className={styles.cardHeader}>
+                 <div className={styles.avatar}>
+                   <AnimalIcon species={animal.species} size={28} />
+                 </div>
+                 <div className={`${styles.statusBadge} ${animal.status === 'Sick' ? styles.badgeSick : styles.badgeActive}`}>
+                   <span className={`${styles.statusDot} ${animal.status === 'Sick' ? styles.dotSick : styles.dotActive}`}></span>
+                   {animal.status}
+                 </div>
                </div>
-               <div className={styles.statusBadge}>
-                 <span className={`${styles.statusDot} ${animal.status === 'Sick' ? styles.dotSick : styles.dotActive}`}></span>
-                 {animal.status}
-               </div>
-             </div>
 
-             <div className={styles.cardBody}>
-               <h3 className={styles.tagNumber} style={{display: "flex", alignItems: "center", gap: "6px"}}>
-                 {animal.tagNumber} {animal.name && <span className={styles.animalName}>({animal.name})</span>}
-               </h3>
-               
-               <div className={styles.tags}>
-                 <span className={styles.infoTag}>{animal.species}</span>
-                 <span className={styles.infoTag}>{animal.age}</span>
+               <div className={styles.cardBody}>
+                 <h3 className={styles.tagNumber} style={{display: "flex", alignItems: "center", gap: "6px"}}>
+                   {animal.tagNumber} {animal.name && <span className={styles.animalName}>({animal.name})</span>}
+                 </h3>
+                 
+                 <div className={styles.tags}>
+                   <span className={styles.infoTag}>{animal.species}</span>
+                   <span className={styles.infoTag}>{animal.age}</span>
+                 </div>
                </div>
-             </div>
-          </Link>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <EmptyState 
+          icon={<Info size={36} />}
+          title="No animals found"
+          description={searchQuery ? `We couldn't find any animals matching "${searchQuery}"` : "Try adjusting your filters or add a new animal."}
+          actionLabel="Add New Animal"
+          onAction={() => setIsQuickAddOpen(true)}
+        />
+      )}
 
       {/* Floating Action Button purely for this page */}
       <button className={styles.fabMain} aria-label="Add New Animal" onClick={() => setIsQuickAddOpen(true)}>

@@ -1,9 +1,10 @@
 "use client";
 import React, { useState } from "react";
 import styles from "./page.module.css";
-import { CheckCircle2, History, Clock } from "lucide-react";
+import { CheckCircle2, History, Clock, Search, Info } from "lucide-react";
 import AnimalIcon from "../../components/ui/AnimalIcon";
 import { useToast } from "../../components/ui/Toast";
+import EmptyState from "../../components/ui/EmptyState";
 
 type MilkingRecord = {
   id: string;
@@ -24,7 +25,13 @@ export default function MilkLogging() {
   const [session, setSession] = useState<"Morning" | "Evening">("Morning");
   const [activeTab, setActiveTab] = useState<"log" | "history">("log");
   const [records, setRecords] = useState<MilkingRecord[]>(MOCK_COWS);
+  const [searchQuery, setSearchQuery] = useState("");
   const toast = useToast();
+
+  const filteredRecords = records.filter(rec => 
+    rec.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (rec.name && rec.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
   
   const handleAmountChange = (id: string, val: string) => {
     setRecords(prev => prev.map(rec => 
@@ -62,87 +69,118 @@ export default function MilkLogging() {
       </header>
 
       {/* View Tabs */}
-      <div className={styles.sessionToggle}>
+      <div className={styles.sessionToggle} role="tablist">
          <button
            className={`${styles.sessionBtn} ${activeTab === 'log' ? styles.activeSession : ''}`}
            onClick={() => setActiveTab('log')}
+           role="tab"
+           aria-selected={activeTab === 'log'}
          >
            🪣 Log Today
          </button>
          <button
            className={`${styles.sessionBtn} ${activeTab === 'history' ? styles.activeSession : ''}`}
            onClick={() => setActiveTab('history')}
+           role="tab"
+           aria-selected={activeTab === 'history'}
          >
            <History size={16} /> History
          </button>
       </div>
 
       {activeTab === 'log' && (
-      <>
-      {/* Session Toggle */}
-      <div className={styles.sessionToggle}>
-         <button 
-           className={`${styles.sessionBtn} ${session === 'Morning' ? styles.activeSession : ''}`}
-           onClick={() => setSession('Morning')}
-         >
-           🌅 Morning
-         </button>
-         <button 
-           className={`${styles.sessionBtn} ${session === 'Evening' ? styles.activeSession : ''}`}
-           onClick={() => setSession('Evening')}
-         >
-           🌃 Evening
-         </button>
-      </div>
-
-      {/* Summary Card */}
-      <div className={styles.summaryCard}>
-         <div className={styles.summaryContent}>
-           <span className={styles.summaryLabel}>Total Session Yield</span>
-           <strong className={styles.summaryTotal}>{totalYield} <small>Liters</small></strong>
-         </div>
-      </div>
-
-      {/* Batch Entry List */}
-      <div className={styles.batchList}>
-        <div className={styles.listHeader}>
-          <span>Tag ID</span>
-          <span>Amount (L)</span>
-        </div>
-
-        {records.map(record => (
-          <div key={record.id} className={styles.recordRow}>
-             <div className={styles.cowTag}>
-               <span className={styles.badge} style={{display: "flex", alignItems: "center", gap: "6px"}}>
-                 <AnimalIcon species={record.species} size={16} />
-                 {record.tagNumber} {record.name && <span style={{fontWeight: 500, opacity: 0.8}}>({record.name})</span>}
-               </span>
-             </div>
-             
-             <div className={styles.inputControls}>
-                <button className={styles.qtyBtn} onClick={() => decrement(record.id)}>-</button>
-                <input 
-                  type="number" 
-                  inputMode="numeric"
-                  className={styles.qtyInput} 
-                  value={record.amount} 
-                  onChange={(e) => handleAmountChange(record.id, e.target.value)}
-                  placeholder="0"
-                />
-                <button className={styles.qtyBtn} onClick={() => increment(record.id)}>+</button>
-             </div>
+        <>
+          {/* Search */}
+          <div className={styles.searchBox}>
+            <Search className={styles.searchIcon} size={20} />
+            <input 
+              type="text" 
+              placeholder="Search by Tag ID or Name..." 
+              className={styles.searchInput}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-        ))}
-      </div>
 
-      {/* Save Button */}
-      <div className={styles.stickyFooter}>
-         <button className={styles.submitBtn} onClick={() => toast(`${session} session saved — ${totalYield}L`, "success")}>
-            <CheckCircle2 size={20} />
-            Save {session} Session
-         </button>
-      </div>
-      </>
+          {/* Session Toggle */}
+          <div className={styles.sessionToggle} role="tablist">
+            <button 
+              className={`${styles.sessionBtn} ${session === 'Morning' ? styles.activeSession : ''}`}
+              onClick={() => setSession('Morning')}
+              role="tab"
+              aria-selected={session === 'Morning'}
+            >
+              🌅 Morning
+            </button>
+            <button 
+              className={`${styles.sessionBtn} ${session === 'Evening' ? styles.activeSession : ''}`}
+              onClick={() => setSession('Evening')}
+              role="tab"
+              aria-selected={session === 'Evening'}
+            >
+              🌃 Evening
+            </button>
+          </div>
+
+          {/* Summary Card */}
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryContent}>
+              <span className={styles.summaryLabel}>Total Session Yield</span>
+              <strong className={styles.summaryTotal}>{totalYield} <small>Liters</small></strong>
+            </div>
+          </div>
+
+          {/* Batch Entry List */}
+          {filteredRecords.length > 0 ? (
+            <div className={styles.batchList}>
+              <div className={styles.listHeader}>
+                <span>Tag ID</span>
+                <span>Amount (L)</span>
+              </div>
+
+              {filteredRecords.map(record => (
+                <div key={record.id} className={styles.recordRow}>
+                  <div className={styles.cowTag}>
+                    <span className={styles.badge} style={{display: "flex", alignItems: "center", gap: "6px"}}>
+                      <AnimalIcon species={record.species} size={16} />
+                      {record.tagNumber} {record.name && <span style={{fontWeight: 500, opacity: 0.8}}>({record.name})</span>}
+                    </span>
+                  </div>
+                  
+                  <div className={styles.inputControls}>
+                    <button className={styles.qtyBtn} onClick={() => decrement(record.id)} aria-label="Decrease amount">-</button>
+                    <input 
+                      type="number" 
+                      inputMode="numeric"
+                      className={styles.qtyInput} 
+                      value={record.amount} 
+                      onChange={(e) => handleAmountChange(record.id, e.target.value)}
+                      placeholder="0"
+                      aria-label={`Amount for ${record.tagNumber}`}
+                    />
+                    <button className={styles.qtyBtn} onClick={() => increment(record.id)} aria-label="Increase amount">+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState 
+              icon={<Info size={36} />}
+              title="No cows found"
+              description={searchQuery ? `No records matching "${searchQuery}"` : "You haven't added any dairy animals to your herd yet."}
+              actionLabel="Add Animal"
+              onAction={() => toast("Redirecting to Herd...", "info")}
+            />
+          )}
+
+          {/* Save Button */}
+          <div className={styles.stickyFooter}>
+            <button className={styles.submitBtn} onClick={() => toast(`${session} session saved — ${totalYield}L`, "success")}>
+              <CheckCircle2 size={20} />
+              Save {session} Session
+            </button>
+          </div>
+        </>
       )}
 
       {activeTab === 'history' && (
