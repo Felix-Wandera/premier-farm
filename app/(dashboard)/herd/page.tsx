@@ -4,6 +4,7 @@ import styles from "./page.module.css";
 import { Search, Plus, LayoutGrid, List as ListIcon } from "lucide-react";
 import Link from "next/link";
 import AnimalIcon from "../../components/ui/AnimalIcon";
+import QuickAddMenu from "../../components/quick-add/QuickAddMenu";
 
 type Animal = {
   id: string;
@@ -29,6 +30,7 @@ export default function HerdDirectory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
   const filteredAnimals = MOCK_ANIMALS.filter((animal) => {
     const matchesSearch = animal.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -122,9 +124,11 @@ export default function HerdDirectory() {
       </div>
 
       {/* Floating Action Button purely for this page */}
-      <button className={styles.fabMain} aria-label="Add New Animal">
+      <button className={styles.fabMain} aria-label="Add New Animal" onClick={() => setIsQuickAddOpen(true)}>
          <Plus size={28} color="white" strokeWidth={2.5} />
       </button>
+
+      <QuickAddMenu isOpen={isQuickAddOpen} onClose={() => setIsQuickAddOpen(false)} />
     </div>
   );
 }

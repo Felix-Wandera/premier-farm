@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import { Home, Beef, Droplet, Menu, Plus } from "lucide-react";
 import styles from "./BottomNav.module.css";
 import MobileMenu from "../mobile-menu/MobileMenu";
+import QuickAddMenu from "../quick-add/QuickAddMenu";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
   // Hide BottomNav on deep routes (like /herd/some-id) to free up screen real-estate
   if (pathname.split('/').length > 2) return null;
@@ -46,7 +48,7 @@ export default function BottomNav() {
         </div>
 
         <div className={styles.fabWrapper}>
-          <button className={styles.fab} aria-label="Quick Add">
+          <button className={styles.fab} aria-label="Quick Add" onClick={() => setIsQuickAddOpen(true)}>
             <Plus size={28} color="white" strokeWidth={2.5} />
           </button>
         </div>
@@ -67,6 +69,7 @@ export default function BottomNav() {
       </nav>
 
       <MobileMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      <QuickAddMenu isOpen={isQuickAddOpen} onClose={() => setIsQuickAddOpen(false)} />
     </>
   );
 }

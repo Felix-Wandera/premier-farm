@@ -3,8 +3,12 @@ import React from "react";
 import styles from "./page.module.css";
 import { Plus, Calendar, Activity, AlertCircle, CheckCircle2 } from "lucide-react";
 import AnimalIcon from "../../components/ui/AnimalIcon";
+import QuickAddMenu from "../../components/quick-add/QuickAddMenu";
+import { useState } from "react";
 
 export default function BreedingHub() {
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -93,9 +97,11 @@ export default function BreedingHub() {
       </div>
 
       {/* Floating Action Button specifically for Event Insertion */}
-      <button className={styles.fabMain} aria-label="Add Event">
+      <button className={styles.fabMain} aria-label="Add Event" onClick={() => setIsQuickAddOpen(true)}>
          <Plus size={28} color="white" strokeWidth={2.5} />
       </button>
+
+      <QuickAddMenu isOpen={isQuickAddOpen} onClose={() => setIsQuickAddOpen(false)} />
     </div>
   );
 }

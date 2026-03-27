@@ -1,0 +1,164 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: calc(100vh - 8rem);
+  padding-bottom: 4rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.pageTitle {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+  letter-spacing: -0.03em;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-sub);
+  letter-spacing: 0.05em;
+  padding-left: 0.25rem;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.farmBanner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.farmAvatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.farmName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.farmSub {
+  font-size: 0.85rem;
+  color: var(--color-text-sub);
+  margin-top: 0.15rem;
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.25rem;
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--color-text-main);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.settingRow:active {
+  background: var(--color-bg);
+}
+
+.rowLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-weight: 600;
+}
+
+.rowIcon {
+  color: var(--color-text-sub);
+  opacity: 0.8;
+}
+
+.rowRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.valueLabel {
+  font-size: 0.9rem;
+  color: var(--color-text-sub);
+  font-weight: 500;
+}
+
+.chevron {
+  color: var(--color-text-sub);
+  opacity: 0.4;
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0 1.25rem;
+}
+
+.logoutCard {
+  display: flex;
+  align-items: center;
+  padding: 1.15rem 1.25rem;
+  cursor: pointer;
+  color: #ef4444;
+  font-weight: 600;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.logoutCard:active {
+  background: #fef2f2;
+}
+
+@media (prefers-color-scheme: dark) {
+  .logoutCard:active {
+    background: rgba(239, 68, 68, 0.1);
+  }
+}
+
+.version {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-text-sub);
+  opacity: 0.6;
+  font-weight: 500;
+  padding-bottom: 2rem;
+}
