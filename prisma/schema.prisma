@@ -1,0 +1,266 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =======================
+// User Management
+// =======================
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  password  String // Hashed password
+  role      Role      @default(WORKER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+
+  // Relations
+  expenses Expense[]
+  milkLogs MilkLog[]
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  WORKER
+}
+
+// =======================
+// Animal Management
+// =======================
+model Animal {
+  id          String       @id @default(cuid())
+  tagNumber   String       @unique
+  name        String?
+  species     Species
+  breed       String?
+  dateOfBirth DateTime?
+  gender      Gender
+  status      AnimalStatus @default(ACTIVE)
+
+  // Sale or Death details
+  dateOfDeath  DateTime?
+  causeOfDeath String?
+  saleId       String?   @unique
+  sale         Sale?     @relation(fields: [saleId], references: [id])
+
+  // Genealogy / Breeding
+  motherId   String?
+  fatherName String? // Could be an external sire's name
+  mother     Animal?  @relation("MotherOffspring", fields: [motherId], references: [id])
+  offspring  Animal[] @relation("MotherOffspring")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+
+  // Relations
+  milkLogs       MilkLog[]
+  healthRecords  HealthRecord[]
+  breedingEvents BreedingEvent[] @relation("MotherBreeding")
+}
+
+enum Species {
+  DAIRY_COW
+  INDIGENOUS_COW
+  SHEEP
+  GOAT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum AnimalStatus {
+  ACTIVE
+  SOLD
+  DECEASED
+  SICK
+}
+
+// =======================
+// Milk Production
+// =======================
+model MilkLog {
+  id           String      @id @default(cuid())
+  amountLiters Float
+  milkingTime  MilkingTime
+  date         DateTime    @default(now()) // Can be backdated if needed
+
+  animalId String
+  animal   Animal @relation(fields: [animalId], references: [id])
+
+  recordedById String
+  recordedBy   User   @relation(fields: [recordedById], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+}
+
+enum MilkingTime {
+  MORNING
+  EVENING
+  OTHER
+}
+
+// =======================
+// Sales Revenue
+// =======================
+model Sale {
+  id        String   @id @default(cuid())
+  saleType  SaleType
+  amount    Float // Total revenue money
+  quantity  Float? // e.g., Liters of milk or Number of animals
+  date      DateTime @default(now())
+  buyerName String?
+  notes     String?
+
+  // If saleType is ANIMAL, link to the specific animal sold
+  animal Animal?
+
+  createdAt DateTime  @default(now())
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+}
+
+enum SaleType {
+  MILK
+  ANIMAL
+  OTHER
+}
+
+// =======================
+// Breeding & Calving
+// =======================
+model BreedingEvent {
+  id           String            @id @default(cuid())
+  date         DateTime // Date of mating/insemination
+  eventType    BreedingEventType
+  sireDetails  String? // Details/Name of the sire used
+  expectedDate DateTime? // Expected birth date
+  actualDate   DateTime? // Actual birth date
+  notes        String?
+
+  animalId String
+  animal   Animal @relation("MotherBreeding", fields: [animalId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+}
+
+enum BreedingEventType {
+  INSEMINATION
+  NATURAL_MATING
+  PREGNANCY_CHECK
+  BIRTH
+}
+
+// =======================
+// Health & Medical
+// =======================
+model HealthRecord {
+  id          String           @id @default(cuid())
+  date        DateTime         @default(now())
+  recordType  HealthRecordType
+  description String
+  cost        Float? // Optional: Track individual treatment costs
+
+  animalId String
+  animal   Animal @relation(fields: [animalId], references: [id])
+
+  createdAt DateTime  @default(now())
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+}
+
+enum HealthRecordType {
+  VACCINATION
+  TREATMENT
+  CHECKUP
+}
+
+// =======================
+// Inventory & Expenses
+// =======================
+model InventoryItem {
+  id           String            @id @default(cuid())
+  name         String
+  category     InventoryCategory
+  quantity     Float
+  unit         String // e.g., kg, bales, bottles
+  minThreshold Float? // Alert if quantity drops below this
+
+  transactions InventoryTransaction[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+}
+
+enum InventoryCategory {
+  FEED
+  MEDICINE
+  EQUIPMENT
+  OTHER
+}
+
+model InventoryTransaction {
+  id       String          @id @default(cuid())
+  type     TransactionType
+  quantity Float // Amount added or removed
+  date     DateTime        @default(now())
+  notes    String?
+
+  itemId String
+  item   InventoryItem @relation(fields: [itemId], references: [id])
+
+  createdAt DateTime  @default(now())
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+}
+
+enum TransactionType {
+  STOCK_IN
+  STOCK_OUT
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  category    ExpenseCategory
+  amount      Float
+  date        DateTime        @default(now())
+  description String?
+
+  recordedById String?
+  recordedBy   User?   @relation(fields: [recordedById], references: [id])
+
+  createdAt DateTime  @default(now())
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+}
+
+enum ExpenseCategory {
+  INVENTORY_PURCHASE
+  LABOR
+  VET_SERVICES
+  MAINTENANCE
+  OTHER
+}
