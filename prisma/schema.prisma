@@ -75,6 +75,8 @@ model Animal {
 enum Species {
   DAIRY_COW
   INDIGENOUS_COW
+  BULL
+  HEIFER
   SHEEP
   GOAT
 }

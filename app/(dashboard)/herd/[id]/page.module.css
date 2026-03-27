@@ -1,0 +1,338 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  max-width: 800px; /* Center layout on desktop for readability */
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  position: sticky;
+  top: 0;
+  background: var(--color-bg); /* Opaque for scrolling over */
+  z-index: 10;
+  margin: -1rem -1rem 1rem -1rem; /* Offset the mainContent padding */
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .header {
+    margin: -2.5rem -3rem 1rem -3rem;
+    padding: 2.5rem 3rem 1rem 3rem;
+  }
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-main);
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.backBtn:active {
+  transform: scale(0.9);
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  color: var(--color-text-sub);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.iconBtn:hover {
+  color: var(--color-text-main);
+  background: var(--color-surface);
+}
+
+.cover {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.profileBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #d1fae5; /* Emerald 100 */
+  color: #064e3b; /* Emerald 900 */
+  padding: 0.35rem 0.75rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .profileBadge {
+    background: #064e3b;
+    color: #d1fae5;
+  }
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981; /* Emerald 500 */
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.tagTitle {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--color-text-main);
+  margin-bottom: 0.25rem;
+  line-height: 1;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--color-text-sub);
+  margin-bottom: 2rem;
+  font-weight: 500;
+}
+
+.quickStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 100%;
+  gap: 1rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1.5rem;
+}
+
+.statBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.statBox span {
+  font-size: 0.7rem;
+  color: var(--color-text-sub);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.statBox strong {
+  font-size: 1rem;
+  color: var(--color-text-main);
+  font-weight: 700;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-sub);
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 99px;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.tab.activeTab {
+  background: var(--color-text-main);
+  color: var(--color-bg);
+}
+
+.tabContent {
+  padding: 2rem 0;
+}
+
+.panel h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--color-text-main);
+}
+
+.genealogyTree {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.parent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.parentLabel {
+  font-size: 0.8rem;
+  color: var(--color-text-sub);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.parentCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 1.25rem;
+  border-radius: 12px;
+  font-weight: 600;
+  color: var(--color-text-main);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 4rem 1rem;
+  background: var(--color-surface);
+  border-radius: 24px;
+  border: 1px dashed var(--color-border);
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.emptyIcon {
+  color: var(--color-text-sub);
+  opacity: 0.4;
+}
+
+.emptyState p {
+  color: var(--color-text-sub);
+  font-weight: 500;
+}
+
+.primaryBtn {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.2);
+}
+
+.primaryBtn:active {
+  transform: scale(0.95);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  padding-left: 0.5rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 31px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.timelineItem {
+  display: flex;
+  gap: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.timelineDot {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 2px solid var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.timelineContent {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 1.25rem;
+  border-radius: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.timelineContent h4 {
+  font-size: 1.1rem;
+  color: var(--color-text-main);
+  font-weight: 700;
+}
+
+.timelineContent p {
+  font-size: 0.95rem;
+  color: var(--color-text-sub);
+  line-height: 1.4;
+}
+
+.date {
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-top: 0.25rem;
+}

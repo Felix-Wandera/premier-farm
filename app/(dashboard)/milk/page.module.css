@@ -1,0 +1,251 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 600px; /* Kept narrow for numerical entry focus */
+  margin: 0 auto;
+  min-height: calc(100vh - var(--app-bar-height));
+  position: relative;
+  padding-bottom: 6rem; /* Space for the robust sticky footer */
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.pageTitle {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+  letter-spacing: -0.03em;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--color-text-sub);
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.sessionToggle {
+  display: flex;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.sessionBtn {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text-sub);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sessionBtn.activeSession {
+  background: var(--color-bg); /* Contrast against surface */
+  color: var(--color-text-main);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Float above */
+}
+
+.summaryCard {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  border-radius: 20px;
+  padding: 1.5rem;
+  color: white;
+  display: flex;
+  box-shadow: 0 10px 25px rgba(4, 120, 87, 0.2);
+}
+
+@media (prefers-color-scheme: dark) {
+  .summaryCard {
+    background: linear-gradient(135deg, #022c22 0%, var(--color-primary-dark) 100%);
+  }
+}
+
+.summaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summaryLabel {
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summaryTotal {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.summaryTotal small {
+  font-size: 1rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.batchList {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 0.5rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--color-text-sub);
+  letter-spacing: 0.05em;
+}
+
+.recordRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.recordRow:last-child {
+  border-bottom: none;
+}
+
+.cowTag {
+  display: flex;
+  align-items: center;
+}
+
+.badge {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text-main);
+  letter-spacing: -0.01em;
+}
+
+.inputControls {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.qtyBtn {
+  background: transparent;
+  border: none;
+  width: 40px;
+  height: 48px;
+  font-size: 1.25rem;
+  color: var(--color-text-sub);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.qtyBtn:active {
+  background: #e2e8f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .qtyBtn:active {
+    background: #334155;
+  }
+}
+
+.qtyInput {
+  width: 60px;
+  height: 48px;
+  border: none;
+  background: white; /* Specifically styled input center */
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  outline: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .qtyInput {
+    background: #1e293b;
+  }
+}
+
+.qtyInput:focus {
+  background: #f1f5f9;
+}
+
+@media (prefers-color-scheme: dark) {
+  .qtyInput:focus {
+    background: #0f172a;
+  }
+}
+
+/* Let clicks pass through empty space of sticky footer */
+.stickyFooter {
+  position: fixed;
+  bottom: calc(var(--app-bar-height) + 1rem); 
+  left: 1rem;
+  right: 1rem;
+  z-index: 40;
+  pointer-events: none; 
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (min-width: 768px) {
+  .stickyFooter {
+    position: absolute;
+    bottom: 2rem;
+    left: auto;
+    right: 2rem;
+  }
+}
+
+.submitBtn {
+  pointer-events: auto;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 1rem 1.5rem;
+  border-radius: 16px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 10px 25px rgba(4, 120, 87, 0.4);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.submitBtn:active {
+  transform: scale(0.95);
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.3);
+}

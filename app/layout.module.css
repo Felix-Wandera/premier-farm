@@ -11,9 +11,7 @@
   flex: 1;
   overflow-y: auto;
   position: relative;
-  /* Add padding bottom for mobile so content isn't under the app bar */
-  padding-bottom: var(--app-bar-height);
-  padding: 1rem; /* default mobile padding */
+  padding: 1.5rem 1.25rem calc(var(--app-bar-height) + 2rem) 1.25rem;
 }
 
 /* Desktop layout overrides */

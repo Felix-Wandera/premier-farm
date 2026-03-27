@@ -10,6 +10,9 @@ export default function BottomNav() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Hide BottomNav on deep routes (like /herd/some-id) to free up screen real-estate
+  if (pathname.split('/').length > 2) return null;
+
   const navItems = [
     { icon: Home, label: "Home", href: "/" },
     { icon: Beef, label: "Herd", href: "/herd" },
