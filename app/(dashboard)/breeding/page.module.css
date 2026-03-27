@@ -72,7 +72,7 @@
   color: var(--color-primary-dark);
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .num { color: var(--color-primary); }
 }
 
@@ -159,7 +159,7 @@
   letter-spacing: 0.05em;
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .dateBadge { color: #fff; background: var(--color-primary); }
 }
 
@@ -223,7 +223,7 @@
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .fabMain {
     border-color: var(--color-bg);
   }

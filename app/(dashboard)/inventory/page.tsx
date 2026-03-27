@@ -1,7 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import styles from "./page.module.css";
-import { Package, ShieldAlert, History, User } from "lucide-react";
+import { Package, ShieldAlert, History, User, Plus } from "lucide-react";
+import { useToast } from "../../components/ui/Toast";
 
 type InventoryItem = {
   id: string;
@@ -22,6 +23,7 @@ const MOCK_INVENTORY: InventoryItem[] = [
 export default function InventoryManager() {
   const [activeTab, setActiveTab] = useState<"stock" | "ledger">("stock");
   const [items, setItems] = useState<InventoryItem[]>(MOCK_INVENTORY);
+  const toast = useToast();
 
   const increment = (id: string) => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, quantity: item.quantity + 1 } : item));
@@ -37,6 +39,12 @@ export default function InventoryManager() {
           <h1 className={styles.pageTitle}>Inventory</h1>
           <p className={styles.subtitle}>Manage stock and consumables</p>
         </div>
+        <button 
+          className={styles.addBtn}
+          onClick={() => toast("New item form coming soon!", "info")}
+        >
+          <Plus size={20} /> Add Item
+        </button>
       </header>
 
       {/* Tabs */}

@@ -1,9 +1,11 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import styles from "./page.module.css";
-import { TrendingUp, TrendingDown, Banknote, Filter } from "lucide-react";
+import { TrendingUp, TrendingDown, Banknote, Filter, Plus } from "lucide-react";
+import { useToast } from "../../components/ui/Toast";
 
 export default function SalesFinances() {
+  const toast = useToast();
   const transactions = [
     { id: 1, type: "income", category: "Milk Sales", title: "Brookside Dairy - 1200L", amount: "+KES 85,000", date: "Today" },
     { id: 2, type: "expense", category: "Feed", title: "Farmers Agro - 20 Bags Dairy Meal", amount: "-KES 32,000", date: "Yesterday" },
@@ -83,6 +85,15 @@ export default function SalesFinances() {
            ))}
          </div>
       </div>
+
+      {/* Add Transaction FAB */}
+      <button 
+        className={styles.fabMain} 
+        aria-label="Add Transaction"
+        onClick={() => toast("Transaction form coming soon!", "info")}
+      >
+        <Plus size={28} color="white" strokeWidth={2.5} />
+      </button>
     </div>
   );
 }

@@ -133,7 +133,7 @@
   border-radius: 99px;
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .netPositive { background: var(--color-primary); color: white; }
 }
 
@@ -274,3 +274,25 @@
 
 .amountPos { color: #10b981; }
 .amountNeg { color: #f43f5e; }
+
+.fabMain {
+  position: fixed;
+  bottom: calc(var(--app-bar-height) + 2rem);
+  right: 1.5rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--color-primary);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(4, 120, 87, 0.4);
+  z-index: 50;
+  transition: transform 0.2s;
+}
+
+.fabMain:active {
+  transform: scale(0.92);
+}

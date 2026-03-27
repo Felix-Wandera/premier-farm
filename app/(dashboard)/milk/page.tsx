@@ -1,9 +1,9 @@
 "use client";
 import React, { useState } from "react";
 import styles from "./page.module.css";
-import { CheckCircle2 } from "lucide-react";
-
+import { CheckCircle2, History, Clock } from "lucide-react";
 import AnimalIcon from "../../components/ui/AnimalIcon";
+import { useToast } from "../../components/ui/Toast";
 
 type MilkingRecord = {
   id: string;
@@ -22,7 +22,9 @@ const MOCK_COWS: MilkingRecord[] = [
 
 export default function MilkLogging() {
   const [session, setSession] = useState<"Morning" | "Evening">("Morning");
+  const [activeTab, setActiveTab] = useState<"log" | "history">("log");
   const [records, setRecords] = useState<MilkingRecord[]>(MOCK_COWS);
+  const toast = useToast();
   
   const handleAmountChange = (id: string, val: string) => {
     setRecords(prev => prev.map(rec => 
@@ -54,11 +56,29 @@ export default function MilkLogging() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.pageTitle}>Log Milk</h1>
+          <h1 className={styles.pageTitle}>Milk Production</h1>
           <p className={styles.subtitle}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
         </div>
       </header>
 
+      {/* View Tabs */}
+      <div className={styles.sessionToggle}>
+         <button
+           className={`${styles.sessionBtn} ${activeTab === 'log' ? styles.activeSession : ''}`}
+           onClick={() => setActiveTab('log')}
+         >
+           🪣 Log Today
+         </button>
+         <button
+           className={`${styles.sessionBtn} ${activeTab === 'history' ? styles.activeSession : ''}`}
+           onClick={() => setActiveTab('history')}
+         >
+           <History size={16} /> History
+         </button>
+      </div>
+
+      {activeTab === 'log' && (
+      <>
       {/* Session Toggle */}
       <div className={styles.sessionToggle}>
          <button 
@@ -103,6 +123,7 @@ export default function MilkLogging() {
                 <button className={styles.qtyBtn} onClick={() => decrement(record.id)}>-</button>
                 <input 
                   type="number" 
+                  inputMode="numeric"
                   className={styles.qtyInput} 
                   value={record.amount} 
                   onChange={(e) => handleAmountChange(record.id, e.target.value)}
@@ -114,13 +135,44 @@ export default function MilkLogging() {
         ))}
       </div>
 
-      {/* Save Button floating right above nav */}
+      {/* Save Button */}
       <div className={styles.stickyFooter}>
-         <button className={styles.submitBtn}>
+         <button className={styles.submitBtn} onClick={() => toast(`${session} session saved — ${totalYield}L`, "success")}>
             <CheckCircle2 size={20} />
             Save {session} Session
          </button>
       </div>
+      </>
+      )}
+
+      {activeTab === 'history' && (
+        <div className={styles.batchList}>
+          <div className={styles.listHeader}>
+            <span>Date</span>
+            <span>Session</span>
+            <span>Total</span>
+          </div>
+          {[
+            { date: "Today", session: "Morning", total: "285 L" },
+            { date: "Yesterday", session: "Evening", total: "312 L" },
+            { date: "Yesterday", session: "Morning", total: "298 L" },
+            { date: "25 Mar", session: "Evening", total: "305 L" },
+            { date: "25 Mar", session: "Morning", total: "290 L" },
+          ].map((entry, i) => (
+            <div key={i} className={styles.recordRow}>
+              <div className={styles.cowTag}>
+                <span className={styles.badge}><Clock size={14} /> {entry.date}</span>
+              </div>
+              <div className={styles.cowTag}>
+                <span className={styles.badge}>{entry.session === 'Morning' ? '🌅' : '🌃'} {entry.session}</span>
+              </div>
+              <div className={styles.cowTag}>
+                <strong>{entry.total}</strong>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -148,7 +148,7 @@
   background: #fef2f2;
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .logoutCard:active {
     background: rgba(239, 68, 68, 0.1);
   }

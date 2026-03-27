@@ -22,7 +22,7 @@
   animation: fadeIn 0.2s ease-out forwards;
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .backdrop {
     background: rgba(0, 0, 0, 0.6);
   }

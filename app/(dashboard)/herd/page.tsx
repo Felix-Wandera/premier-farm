@@ -98,7 +98,7 @@ export default function HerdDirectory() {
       {/* Animal Grid / List */}
       <div className={viewMode === 'grid' ? styles.grid : styles.list}>
         {filteredAnimals.map((animal) => (
-          <div key={animal.id} className={`${styles.animalCard} ${viewMode === 'list' ? styles.listCard : ''}`}>
+          <Link key={animal.id} href={`/herd/${animal.id}`} className={`${styles.animalCard} ${viewMode === 'list' ? styles.listCard : ''}`} style={{textDecoration: 'none'}}>
              <div className={styles.cardHeader}>
                <div className={styles.avatar}>
                  <AnimalIcon species={animal.species} size={28} />
@@ -119,7 +119,7 @@ export default function HerdDirectory() {
                  <span className={styles.infoTag}>{animal.age}</span>
                </div>
              </div>
-          </div>
+          </Link>
         ))}
       </div>
 

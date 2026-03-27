@@ -94,7 +94,7 @@
   color: var(--color-primary-dark);
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .mobileLogo h2 {
     color: white;
   }

@@ -41,7 +41,7 @@
   letter-spacing: -0.02em;
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .logoText {
     color: var(--color-text-main);
   }
@@ -102,7 +102,7 @@
 .logoutBtn:hover {
   background-color: #fef2f2;
 }
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .logoutBtn:hover {
     background-color: rgba(239, 68, 68, 0.1);
   }

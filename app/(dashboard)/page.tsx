@@ -1,14 +1,27 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
 import styles from "./page.module.css";
-import { Plus, Bell, ChevronRight, Activity, TrendingUp, AlertTriangle } from "lucide-react";
+import { Bell, ChevronRight, Activity, TrendingUp, AlertTriangle, Droplet, DollarSign, HeartPulse } from "lucide-react";
 import { ThemeToggle } from "../components/theme-toggle/ThemeToggle";
+import AnimalIcon from "../components/ui/AnimalIcon";
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function Dashboard() {
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
   return (
     <div className={styles.dashboard}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.greeting}>Good morning, Manager</h1>
-          <p className={styles.date}>Thursday, March 27</p>
+          <h1 className={styles.greeting}>{getGreeting()}, Manager</h1>
+          <p className={styles.date}>{today}</p>
         </div>
         <div className={styles.headerActions}>
            <div className={styles.mobileOnlyToggle}>
@@ -20,18 +33,18 @@ export default function Dashboard() {
       
       {/* Mobile Priority: Quick Actions */}
       <section className={styles.quickActions}>
-        <div className={styles.actionCard}>
-           <div className={styles.actionIcon}><Plus size={24} /></div>
+        <Link href="/milk" className={styles.actionCard}>
+           <div className={styles.actionIcon}><Droplet size={24} /></div>
            <span>Record Milk</span>
-        </div>
-        <div className={styles.actionCard}>
-           <div className={styles.actionIcon}><TrendingUp size={24} /></div>
+        </Link>
+        <Link href="/sales" className={styles.actionCard}>
+           <div className={styles.actionIcon}><DollarSign size={24} /></div>
            <span>Add Sale</span>
-        </div>
-        <div className={styles.actionCard}>
-           <div className={styles.actionIcon}><Activity size={24} /></div>
+        </Link>
+        <Link href="/breeding" className={styles.actionCard}>
+           <div className={styles.actionIcon}><HeartPulse size={24} /></div>
            <span>Log Health</span>
-        </div>
+        </Link>
       </section>
 
       {/* At a Glance Stats */}
@@ -63,7 +76,7 @@ export default function Dashboard() {
              <h3>Monthly Revenue</h3>
              <ChevronRight size={18} className={styles.statIcon} />
           </div>
-          <p className={styles.statValue}>$4,250</p>
+          <p className={styles.statValue}>KES 425,000</p>
           <div className={styles.statFooter}>
              <span className={styles.positive}>↑ 12%</span> vs last month
           </div>
@@ -78,14 +91,14 @@ export default function Dashboard() {
               <AlertTriangle size={20} className={styles.alertIcon} />
               <div className={styles.alertContent}>
                  <h4>Low Feed Inventory</h4>
-                 <p>Dairy meal is below minimum threshold (200kg).</p>
+                 <p>High-Yield Dairy Meal is below minimum threshold (20 bags).</p>
               </div>
            </div>
            <div className={`${styles.alertItem} ${styles.alertInfo}`}>
               <Activity size={20} className={styles.alertIcon} />
               <div className={styles.alertContent}>
                  <h4>Upcoming Calving</h4>
-                 <p>Cow Tag #024 is expected to calve tomorrow.</p>
+                 <p style={{display:'flex',alignItems:'center',gap:'6px'}}><AnimalIcon species="Dairy Cow" size={16} /> DC-024 (Bella) is expected to calve tomorrow.</p>
               </div>
            </div>
         </div>

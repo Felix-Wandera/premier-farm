@@ -15,6 +15,26 @@
   align-items: flex-end;
 }
 
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(4, 120, 87, 0.3);
+  transition: all 0.2s;
+}
+
+.addBtn:active {
+  transform: scale(0.95);
+}
+
 .pageTitle {
   font-size: 1.75rem;
   font-weight: 800;
@@ -97,7 +117,7 @@
   background: rgba(16, 185, 129, 0.08); /* Very light emerald */
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .bgSafe { background: rgba(16, 185, 129, 0.15); }
 }
 
@@ -105,7 +125,7 @@
   background: rgba(244, 63, 94, 0.1); /* Light rose */
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .bgCritical { background: rgba(244, 63, 94, 0.2); }
 }
 
@@ -168,7 +188,7 @@
   color: #f43f5e;
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .textCritical { color: #fb7185; }
 }
 
@@ -185,7 +205,7 @@
   margin-bottom: 1rem;
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .warningText { color: #fb7185; }
 }
 

@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, ChevronRight, X } from "lucide-react";
 import styles from "./page.module.css";
 import AnimalIcon from "../../../components/ui/AnimalIcon";
+import { useToast } from "../../../components/ui/Toast";
 
 export default function NewAnimalWizard() {
   const router = useRouter();
+  const toast = useToast();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     species: "Dairy Cow",
@@ -23,9 +25,9 @@ export default function NewAnimalWizard() {
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
 
   const handleSave = () => {
-    // Mock save logic for UI demonstration
     console.log("Saving animal...", formData);
-    router.push("/herd"); // Redirect back to herd directory upon completion
+    toast(`${formData.tagNumber || 'Animal'} registered successfully!`, "success");
+    setTimeout(() => router.push("/herd"), 800);
   };
 
   return (

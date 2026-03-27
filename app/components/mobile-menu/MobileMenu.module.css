@@ -63,7 +63,7 @@
   background: #e2e8f0;
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .closeBtn:active {
     background: #334155;
   }
@@ -168,7 +168,7 @@
   background: #fef2f2;
 }
 
-@media (prefers-color-scheme: dark) {
+:global([data-theme='dark']) {
   .danger:active {
     background: rgba(239, 68, 68, 0.1);
   }
