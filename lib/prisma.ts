@@ -1,18 +1,23 @@
 import { PrismaClient } from "@prisma/client";
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-// Ensure we don't create multiple Prisma instances in dev mode
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+const prismaClientSingleton = () => {
+    const connectionString = process.env.DATABASE_URL
+    const pool = new Pool({ connectionString })
+    const adapter = new PrismaPg(pool)
+    return new PrismaClient({ adapter })
 };
 
-// We pass the config explicitly because Turbopack does not magically bundle prisma.config.ts
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    // Explicitly pass config for Turbopack compatibility 
-    // using @ts-ignore to bypass Prisma 7 type mismatch
-    // @ts-ignore
-    datasourceUrl: process.env.DATABASE_URL,
-  });
+type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+const globalForPrisma = globalThis as unknown as {
+    prisma: PrismaClientSingleton | undefined;
+};
+
+export const prisma =
+    globalForPrisma.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== "production") {
+    globalForPrisma.prisma = prisma;
+}

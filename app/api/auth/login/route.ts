@@ -13,6 +13,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check for Tech Admin global login
+    const techAdminEmail = process.env.TECH_ADMIN_EMAIL;
+    const techAdminPassword = process.env.TECH_ADMIN_PASSWORD;
+
+    if (
+      techAdminEmail &&
+      techAdminPassword &&
+      email === techAdminEmail &&
+      password === techAdminPassword
+    ) {
+      const token = await signToken({
+        id: "tech-admin-global",
+        email: techAdminEmail,
+        role: "ADMIN",
+      });
+
+      const response = NextResponse.json(
+        { success: true, message: "Logged in as Tech Admin successfully" },
+        { status: 200 }
+      );
+
+      response.cookies.set({
+        name: "auth_token",
+        value: token,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24, // 24 hours
+        path: "/",
+      });
+
+      return response;
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
     });

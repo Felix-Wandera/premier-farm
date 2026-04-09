@@ -11,6 +11,7 @@ import {
 import styles from "./Sidebar.module.css";
 import { ThemeToggle } from "../theme-toggle/ThemeToggle";
 import { useToast } from "../ui/Toast";
+import { useAuth } from "../auth/AuthProvider";
 
 const navItems = [
   { icon: Home, label: "Dashboard", href: "/" },
@@ -26,6 +27,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const toast = useToast();
+  const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Persistence
@@ -42,9 +44,15 @@ export default function Sidebar() {
     localStorage.setItem("sidebar-collapsed", JSON.stringify(newState));
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     toast("Logging out...", "success");
-    setTimeout(() => router.push("/login"), 1000);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch (err) {
+      router.push("/login");
+    }
   };
 
   return (
@@ -84,6 +92,12 @@ export default function Sidebar() {
       </nav>
 
       <div className={styles.footer}>
+        {user && !isCollapsed && (
+          <div className={styles.userInfo}>
+            <p style={{ fontSize: "0.85rem", fontWeight: "600", marginBottom: "2px" }}>{user.name || "User"}</p>
+            <p style={{ fontSize: "0.75rem", opacity: 0.7, marginBottom: "12px" }}>{user.email}</p>
+          </div>
+        )}
         <ThemeToggle
           className={styles.navLink}
           showLabel={!isCollapsed}
