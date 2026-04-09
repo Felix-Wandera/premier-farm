@@ -31,13 +31,24 @@ export default function Login() {
 
     setIsSubmitting(true);
 
-    // Mock API call
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Invalid email or password.");
+      }
+
       toast("Welcome back!", "success");
       router.push("/");
-    } catch (err) {
-      setError("Invalid email or password.");
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || "Invalid email or password.");
     } finally {
       setIsSubmitting(false);
     }
