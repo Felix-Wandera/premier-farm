@@ -4,6 +4,7 @@ import { X, Save, User as UserIcon, Mail, Phone } from "lucide-react";
 import { updateUserProfile } from "@/actions/settings.actions";
 import { useToast } from "../ui/Toast";
 import { useAuth } from "../auth/AuthProvider";
+import styles from "./SettingsModal.module.css";
 
 export default function EditProfileModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { user, refreshSession } = useAuth();
@@ -41,14 +42,15 @@ export default function EditProfileModal({ isOpen, onClose }: { isOpen: boolean;
   const iconStyle: React.CSSProperties = { position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", padding: "1rem" }}>
-      <div style={{ backgroundColor: "#fff", borderRadius: "16px", width: "100%", maxWidth: "450px", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", overflow: "hidden" }}>
-        <div style={{ padding: "1.5rem", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700, color: "#1e293b" }}>Edit Profile</h2>
+    <div className={styles.modalOverlay}>
+      <div className={styles.modalContainer}>
+        <div className={styles.dragHandle} />
+        <div className={styles.modalHeader}>
+          <h2>Edit Profile</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}><X size={24} color="#64748b" /></button>
         </div>
 
-        <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div className={styles.modalBody}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             <div>
               <label style={labelStyle}>First Name</label>
@@ -83,13 +85,11 @@ export default function EditProfileModal({ isOpen, onClose }: { isOpen: boolean;
           </div>
         </div>
 
-        <div style={{ padding: "1.5rem", backgroundColor: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
+        <div className={styles.modalFooter}>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
             style={{ width: "100%", padding: "0.875rem", backgroundColor: "#22c55e", color: "#fff", borderRadius: "10px", border: "none", fontWeight: 700, display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", cursor: isSubmitting ? "not-allowed" : "pointer", transition: "all 0.2s" }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#16a34a"}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#22c55e"}
           >
             <Save size={20} />
             {isSubmitting ? "Saving Changes..." : "Save Profile"}

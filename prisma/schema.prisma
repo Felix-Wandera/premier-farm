@@ -31,6 +31,10 @@ model User {
   resetToken    String?
   resetTokenExp DateTime?
 
+  // Invitation Flow
+  inviteToken    String? @unique
+  inviteTokenExp DateTime?
+
   // Relations
   expenses Expense[]
   milkLogs MilkLog[]

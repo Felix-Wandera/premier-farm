@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { verifyToken } from "./lib/auth";
 
 // Add any routes that should not be protected here
-const publicRoutes = ["/login", "/login/forgot"];
+const publicRoutes = ["/login", "/login/forgot", "/accept-invite"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -59,6 +59,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|sw.js|manifest.json).*)',
   ],
 };

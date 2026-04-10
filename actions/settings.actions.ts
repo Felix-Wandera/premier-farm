@@ -59,7 +59,7 @@ export async function changePassword(data: any) {
 // ============================================
 // Forgot Password — Request Reset Token
 // ============================================
-import nodemailer from "nodemailer";
+import { sendEmail } from "@/lib/mail";
 import crypto from "crypto";
 
 export async function requestPasswordReset(email: string) {
@@ -70,9 +70,12 @@ export async function requestPasswordReset(email: string) {
 
     const user = await prisma.user.findUnique({ where: { email } });
 
-    // Security: always return success to avoid email enumeration
-    if (!user || user.isDeleted) {
+    if (!user) {
       return { success: true, message: "If that email is registered, a reset link has been sent." };
+    }
+
+    if (user.isDeleted) {
+        return { success: false, message: "Your account is currently deactivated. You cannot reset your password." };
     }
 
     // Generate token
@@ -87,39 +90,16 @@ export async function requestPasswordReset(email: string) {
 
     const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login/reset?token=${rawToken}`;
 
-    // Send email if SMTP is configured
-    if (process.env.SMTP_HOST) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: Number(process.env.SMTP_PORT) === 465,
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      });
-
-      await transporter.sendMail({
-        from: `"Premier Farm" <${process.env.SMTP_USER || "admin@premierfarm.co.ke"}>`,
+    // Send email via central utility with templates
+    await sendEmail({
         to: email,
         subject: "Password Reset — Premier Farm",
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #1e293b; padding: 24px; text-align: center;">
-              <h1 style="color: #fff; margin: 0;">Premier Farm</h1>
-            </div>
-            <div style="padding: 24px;">
-              <h2>Password Reset</h2>
-              <p>You requested a password reset. Click the button below to set a new password. This link expires in 1 hour.</p>
-              <p style="margin-top: 24px;">
-                <a href="${resetLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
-              </p>
-              <p style="color: #64748b; font-size: 12px; margin-top: 32px;">If you didn't request this, you can safely ignore this email.</p>
-            </div>
-          </div>
-        `,
-      });
-    } else {
-      console.log(`[PASSWORD RESET] Token for ${email}: ${rawToken}`);
-      console.log(`[PASSWORD RESET] Link: ${resetLink}`);
-    }
+        template: 'reset',
+        data: { 
+            link: resetLink 
+        }
+    });
+
 
     return { success: true, message: "If that email is registered, a reset link has been sent." };
   } catch (e) {

@@ -51,10 +51,17 @@ export async function POST(req: NextRequest) {
       where: { email },
     });
 
-    if (!user || user.isDeleted) {
+    if (!user) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
+      );
+    }
+
+    if (user.isDeleted) {
+      return NextResponse.json(
+        { error: "This account has been deactivated. Please contact your administrator." },
+        { status: 403 }
       );
     }
 

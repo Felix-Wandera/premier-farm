@@ -124,17 +124,30 @@
 .memberCard {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   padding: 1.25rem;
-  border-radius: 16px;
-  box-shadow: var(--shadow-sm);
-  flex-wrap: wrap;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  position: relative;
+  /* overflow: visible; - removed hidden to prevent dropdown truncation */
 }
 
-@media (min-width: 768px) {
-  .memberCard { flex-wrap: nowrap; }
+.memberCard:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 767px) {
+  .memberCard {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 1rem;
+    gap: 1rem;
+  }
 }
 
 .avatarCircle {
@@ -173,20 +186,18 @@
 }
 
 .memberInfo h3 {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-bottom: 0.15rem;
 }
 
 .memberInfo p {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--color-text-sub);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .memberMeta {
@@ -199,10 +210,14 @@
 
 @media (max-width: 767px) {
   .memberMeta {
-    flex-direction: row;
-    width: 100%;
-    align-items: center;
-    padding-left: 64px; /* Align with text, past avatar */
+    display: none;
+  }
+  
+  .memberInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-right: 2.5rem; /* Reserve space for the absolute-positioned or right-aligned moreBtn */
   }
 }
 
@@ -226,6 +241,7 @@
   font-size: 0.75rem;
   color: var(--color-text-sub);
   font-weight: 500;
+  margin-top: 0.25rem;
 }
 
 .moreBtn {
@@ -239,6 +255,14 @@
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .moreBtn {
+    margin-left: auto;
+    align-self: center;
+  }
 }
 
 .moreBtn:active {
@@ -262,7 +286,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  min-width: 140px;
+  min-width: 200px;
   margin-top: 0.5rem;
   animation: slideTop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -287,12 +311,187 @@
 
 .dropdown button:hover {
   background: var(--color-bg);
+  color: var(--color-primary);
 }
 
 .dropdown .deleteBtn {
   color: #f43f5e;
 }
 
-.dropdown .deleteBtn:hover {
-  background: rgba(244, 63, 94, 0.1);
+/* Action Sheet (Mobile Bottom Sheet) */
+.actionSheetOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  animation: fadeIn 0.2s ease-out;
 }
+
+.actionSheet {
+  width: 100%;
+  background: var(--color-surface);
+  border-radius: 32px 32px 0 0;
+  padding: 1.5rem;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border-top: 1px solid var(--color-border);
+}
+
+.actionSheetTitle {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.actionSheetButton {
+  width: 100%;
+  padding: 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: transform 0.1s;
+}
+
+.actionSheetButton:active {
+  transform: scale(0.98);
+  background: var(--color-primary-light);
+}
+
+.cancelAction {
+  margin-top: 0.5rem;
+  background: transparent;
+  border: none;
+  justify-content: center;
+  color: var(--color-text-sub);
+  font-weight: 600;
+}
+
+
+/* Modal and Bottom Sheet Styles */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center; /* Desktop: center */
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalContainer {
+  background-color: var(--color-surface);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--color-border);
+}
+
+.modalHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.modalBody {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modalFooter {
+  padding: 1.5rem;
+  border-top: 1px solid var(--color-border);
+  background-color: rgba(64, 64, 64, 0.02);
+}
+
+.dragHandle {
+  display: none; /* Desktop: hidden */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .modalOverlay {
+    align-items: flex-end; /* Mobile: Bottom aligned */
+    padding: 0;
+  }
+
+  .modalContainer {
+    max-width: none;
+    border-radius: 24px 24px 0 0;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .dragHandle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    margin: 10px auto 0 auto;
+    flex-shrink: 0;
+  }
+}
+
+:global([data-theme='dark']) .dragHandle {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.saveBtn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: var(--color-primary-dark);
+  color: #fff;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.saveBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+
