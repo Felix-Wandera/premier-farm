@@ -38,9 +38,15 @@
 }
 
 .sidebar[data-collapsed='true'] .logoContainer {
-  padding: 0 0 2rem 0;
+  padding: 1rem 0;
   justify-content: center;
+  min-height: unset;
 }
+
+.sidebar[data-collapsed='true'] .logoMarkWrapper {
+  display: none;
+}
+
 
 .logoMarkWrapper {
   display: flex;
@@ -53,24 +59,23 @@
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   color: var(--color-text-sub);
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
   position: absolute;
-  right: -12px;
-  top: 96px;
+  right: -20px;
+  top: 92px;
   box-shadow: var(--shadow-sm);
   z-index: 10;
 }
 
 .sidebar[data-collapsed='true'] .collapseToggle {
   position: static;
-  margin-top: 1rem;
 }
 
 .collapseToggle:hover {

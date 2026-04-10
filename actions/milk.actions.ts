@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "./utils";
 import { revalidatePath } from "next/cache";
+import { sendPushNotification } from "./push.actions";
 
 export async function getMilkingCows() {
   await requireAuth();
@@ -69,12 +70,26 @@ export async function logBatchMilkSession(data: any) {
       data: insertData,
     });
 
+    const totalLitres = validRecords.reduce((acc, curr) => acc + curr.amount, 0);
+
+    // Trigger Smart Alert for low production
+    if (totalLitres < 5) {
+      const admins = await prisma.user.findMany({ where: { role: "ADMIN", isDeleted: false }, select: { id: true } });
+      for (const admin of admins) {
+        await sendPushNotification(admin.id, {
+          title: "Production Drop Alert 🥛",
+          body: `Low yield detected in ${session} session: only ${totalLitres}L across ${validRecords.length} cows.`,
+          url: "/milk"
+        });
+      }
+    }
+
     revalidatePath("/milk");
     revalidatePath("/herd");
 
     return { 
       success: true, 
-      message: `${session} session saved! Recorded ${validRecords.length} cows for a total of ${validRecords.reduce((acc, curr) => acc + curr.amount, 0)} L.`,
+      message: `${session} session saved! Recorded ${validRecords.length} cows for a total of ${totalLitres} L.`,
     };
 
   } catch (error) {

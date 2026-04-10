@@ -34,7 +34,19 @@ model User {
   // Relations
   expenses Expense[]
   milkLogs MilkLog[]
+  pushSubscriptions PushSubscription[]
 }
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
 
 enum Role {
   ADMIN

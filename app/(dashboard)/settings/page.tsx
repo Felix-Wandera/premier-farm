@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { ThemeToggle } from "../../components/theme-toggle/ThemeToggle";
@@ -8,6 +8,8 @@ import { useToast } from "../../components/ui/Toast";
 import { useAuth } from "../../components/auth/AuthProvider";
 import ChangePasswordModal from "../../components/settings/ChangePasswordModal";
 import EditProfileModal from "../../components/settings/EditProfileModal";
+import { subscribeUser, unsubscribeUser } from "../../components/notifications/NotificationManager";
+import { sendTestNotification } from "@/actions/push.actions";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -15,6 +17,46 @@ export default function SettingsPage() {
   const toast = useToast();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
+
+  // Sync push status on mount
+  useEffect(() => {
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.pushManager.getSubscription().then(sub => {
+          setIsPushEnabled(!!sub);
+        });
+      });
+    }
+  }, []);
+
+  const handlePushToggle = async () => {
+    try {
+      if (isPushEnabled) {
+        await unsubscribeUser();
+        setIsPushEnabled(false);
+        toast("Push notifications disabled.", "info");
+      } else {
+        const ok = await subscribeUser();
+        if (ok) {
+          setIsPushEnabled(true);
+          toast("Push notifications enabled!", "success");
+        }
+      }
+    } catch (err: any) {
+      toast(err.message || "Failed to toggle notifications.", "error");
+    }
+  };
+
+  const handleTestPush = async () => {
+    if (!isPushEnabled) return toast("Enable notifications first!", "warning");
+    setIsSendingTest(true);
+    const res = await sendTestNotification();
+    if (res.success) toast("Test notification sent!", "success");
+    else toast("Failed to send test. Check logs.", "error");
+    setIsSendingTest(false);
+  };
 
   return (
     <div className={styles.container}>
@@ -47,7 +89,7 @@ export default function SettingsPage() {
             </div>
             <span className={styles.valueLabel}>{user?.phoneNumber || 'Not linked'}</span>
           </div>
-          <button 
+          <button
             onClick={() => setIsProfileModalOpen(true)}
             style={{ width: '100%', padding: '0.85rem', color: 'var(--color-primary)', fontWeight: 600, border: 'none', background: 'var(--color-bg)', borderTop: '1px solid var(--color-border)', cursor: 'pointer' }}
           >
@@ -97,7 +139,6 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Notifications */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Notifications</h2>
         <div className={styles.card}>
@@ -107,10 +148,40 @@ export default function SettingsPage() {
               <span>Push Notifications</span>
             </div>
             <div className={styles.rowRight}>
-              <span className={styles.valueLabel}>On</span>
-              <ChevronRight size={18} className={styles.chevron} />
+              <button
+                onClick={handlePushToggle}
+                style={{
+                  padding: '0.4rem 1rem',
+                  borderRadius: '20px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                  backgroundColor: isPushEnabled ? 'var(--color-primary-light)' : 'var(--color-bg)',
+                  color: isPushEnabled ? 'var(--color-primary-dark)' : 'var(--color-text-sub)',
+                  border: '1px solid var(--color-border)',
+                  cursor: 'pointer'
+                }}
+              >
+                {isPushEnabled ? "Enabled" : "Enable"}
+              </button>
             </div>
           </div>
+          {isPushEnabled && (
+            <>
+              <div className={styles.divider}></div>
+              <button
+                className={styles.settingRow}
+                onClick={handleTestPush}
+                disabled={isSendingTest}
+              >
+                <div className={styles.rowLeft}>
+                  <Bell size={20} className={styles.rowIcon} />
+                  <span>Send Test Notification</span>
+                </div>
+                <ChevronRight size={18} className={styles.chevron} />
+              </button>
+            </>
+          )}
         </div>
       </section>
 

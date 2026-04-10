@@ -62,15 +62,19 @@ export default function Sidebar() {
     >
       <div className={styles.logoContainer}>
         <div className={styles.logoMarkWrapper}>
-          <div className={styles.logoMark}></div>
-          {!isCollapsed && <h1 className={styles.logoText}>Premier Farm</h1>}
+          {!isCollapsed && (
+            <>
+              <div className={styles.logoMark}></div>
+              <h1 className={styles.logoText}>Premier Farm</h1>
+            </>
+          )}
         </div>
         <button
           className={styles.collapseToggle}
           onClick={toggleCollapse}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
       </div>
 

@@ -1,9 +1,11 @@
 "use client";
+import React, { useState } from "react";
 import Link from "next/link";
 import styles from "../../(dashboard)/page.module.css";
 import { Bell, ChevronRight, Activity, TrendingUp, AlertTriangle, Droplet, DollarSign, HeartPulse } from "lucide-react";
 import { ThemeToggle } from "../theme-toggle/ThemeToggle";
 import AnimalIcon from "../ui/AnimalIcon";
+import NotificationPopover from "./NotificationPopover";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -29,6 +31,7 @@ type DashboardStats = {
 };
 
 export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
@@ -42,7 +45,22 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
           <div className={styles.mobileOnlyToggle}>
             <ThemeToggle className={styles.iconBtn} showLabel={false} />
           </div>
-          <button className={styles.iconBtn} aria-label="Notifications"><Bell size={20} /></button>
+          <div style={{ position: 'relative' }}>
+            <button 
+              className={styles.iconBtn} 
+              aria-label="Notifications"
+              onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+            >
+              <Bell size={20} />
+              {stats.alerts.length > 0 && <span className={styles.pulseBadge} />}
+            </button>
+            {isPopoverOpen && (
+              <NotificationPopover 
+                alerts={stats.alerts} 
+                onClose={() => setIsPopoverOpen(false)} 
+              />
+            )}
+          </div>
         </div>
       </header>
 
