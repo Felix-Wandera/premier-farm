@@ -3,20 +3,58 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { ThemeToggle } from "../../components/theme-toggle/ThemeToggle";
-import { ChevronRight, Download, Bell, Lock, HelpCircle, LogOut, Globe, Palette } from "lucide-react";
+import { ChevronRight, Download, Bell, Lock, HelpCircle, LogOut, Globe, Palette, User, Phone, Mail } from "lucide-react";
 import { useToast } from "../../components/ui/Toast";
+import { useAuth } from "../../components/auth/AuthProvider";
 import ChangePasswordModal from "../../components/settings/ChangePasswordModal";
+import EditProfileModal from "../../components/settings/EditProfileModal";
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <h1 className={styles.pageTitle}>Settings</h1>
       </header>
+
+      {/* User Info */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Personal Profile</h2>
+        <div className={styles.card}>
+          <div className={styles.settingRow} style={{ borderBottom: '1px solid var(--color-border)', cursor: 'default' }}>
+            <div className={styles.rowLeft}>
+              <User size={20} className={styles.rowIcon} />
+              <span>Full Name</span>
+            </div>
+            <span className={styles.valueLabel}>{user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Not set' : '...'}</span>
+          </div>
+          <div className={styles.settingRow} style={{ borderBottom: '1px solid var(--color-border)', cursor: 'default' }}>
+            <div className={styles.rowLeft}>
+              <Mail size={20} className={styles.rowIcon} />
+              <span>Email</span>
+            </div>
+            <span className={styles.valueLabel}>{user?.email || '...'}</span>
+          </div>
+          <div className={styles.settingRow} style={{ cursor: 'default' }}>
+            <div className={styles.rowLeft}>
+              <Phone size={20} className={styles.rowIcon} />
+              <span>Phone</span>
+            </div>
+            <span className={styles.valueLabel}>{user?.phoneNumber || 'Not linked'}</span>
+          </div>
+          <button 
+            onClick={() => setIsProfileModalOpen(true)}
+            style={{ width: '100%', padding: '0.85rem', color: 'var(--color-primary)', fontWeight: 600, border: 'none', background: 'var(--color-bg)', borderTop: '1px solid var(--color-border)', cursor: 'pointer' }}
+          >
+            Edit Profile Details
+          </button>
+        </div>
+      </section>
 
       {/* Farm Info */}
       <section className={styles.section}>
@@ -143,6 +181,7 @@ export default function SettingsPage() {
       <p className={styles.version}>Premier Farm v1.0.0</p>
 
       <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
+      <EditProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </div>
   );
 }

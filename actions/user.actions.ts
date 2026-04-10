@@ -16,7 +16,8 @@ export async function getUsers() {
     select: {
       id: true,
       email: true,
-      name: true,
+      firstName: true,
+      lastName: true,
       role: true,
       createdAt: true
     }
@@ -24,7 +25,7 @@ export async function getUsers() {
 
   return users.map(u => ({
     id: u.id,
-    name: u.name || u.email.split("@")[0].replace(".", " "),
+    name: u.firstName ? `${u.firstName} ${u.lastName || ""}`.trim() : u.email.split("@")[0].replace(".", " "),
     email: u.email,
     role: u.role,
     lastActive: u.createdAt.toLocaleDateString(),
@@ -55,7 +56,8 @@ export async function inviteUser(data: any) {
     await prisma.user.create({
       data: {
         email,
-        name: email.split("@")[0],
+        firstName: email.split("@")[0],
+        lastName: "",
         role: role as any,
         password: hashedPassword,
       }

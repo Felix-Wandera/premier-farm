@@ -26,7 +26,7 @@ export async function changePassword(data: any) {
 
     const val = changePasswordSchema.safeParse(data);
     if (!val.success) {
-      const firstError = val.error.errors[0]?.message || "Invalid input.";
+      const firstError = val.error.issues[0]?.message || "Invalid input.";
       return { success: false, message: firstError };
     }
 
@@ -170,3 +170,60 @@ export async function resetPasswordWithToken(token: string, newPassword: string)
     return { success: false, message: "An unexpected error occurred." };
   }
 }
+
+// ============================================
+// Profile Management
+// ============================================
+const updateProfileSchema = z.object({
+  firstName: z.string().min(1, "First name is required."),
+  lastName: z.string().min(1, "Last name is required."),
+  email: z.string().email("Invalid email address."),
+  phoneNumber: z.string().optional().nullable(),
+});
+
+export async function updateUserProfile(data: any) {
+  try {
+    const sessionUser = await requireAuth();
+    const userId = sessionUser.id as string;
+
+    if (userId === "tech-admin-global") {
+      return { success: false, message: "Tech Admin profile is immutable." };
+    }
+
+    const val = updateProfileSchema.safeParse(data);
+    if (!val.success) {
+      return { success: false, message: val.error.issues[0]?.message || "Invalid input." };
+    }
+
+    const { firstName, lastName, email, phoneNumber } = val.data;
+
+    // Check if email is already taken by another user
+    const existing = await prisma.user.findFirst({
+      where: {
+        email,
+        id: { not: userId },
+        isDeleted: false,
+      }
+    });
+
+    if (existing) {
+      return { success: false, message: "This email is already in use by another account." };
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName,
+        lastName,
+        email,
+        phoneNumber: phoneNumber || null,
+      }
+    });
+
+    return { success: true, message: "Profile updated successfully!" };
+  } catch (e) {
+    console.error("Profile update error:", e);
+    return { success: false, message: "Failed to update profile." };
+  }
+}
+

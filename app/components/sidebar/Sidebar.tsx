@@ -92,12 +92,6 @@ export default function Sidebar() {
       </nav>
 
       <div className={styles.footer}>
-        {user && !isCollapsed && (
-          <div className={styles.userInfo}>
-            <p style={{ fontSize: "0.85rem", fontWeight: "600", marginBottom: "2px" }}>{user.name || "User"}</p>
-            <p style={{ fontSize: "0.75rem", opacity: 0.7, marginBottom: "12px" }}>{user.email}</p>
-          </div>
-        )}
         <ThemeToggle
           className={styles.navLink}
           showLabel={!isCollapsed}
