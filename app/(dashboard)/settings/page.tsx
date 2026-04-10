@@ -125,9 +125,10 @@ export default function SettingsPage() {
       <section className={styles.section}>
         <button
           className={`${styles.card} ${styles.logoutCard}`}
-          onClick={() => {
+          onClick={async () => {
             toast("Logging out...", "success");
-            setTimeout(() => router.push("/login"), 1000);
+            await fetch("/api/auth/logout", { method: "POST" });
+            setTimeout(() => router.push("/login"), 500);
           }}
         >
           <div className={styles.rowLeft}>

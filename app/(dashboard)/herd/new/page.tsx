@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { createAnimal } from "@/actions/animal.actions";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ChevronRight, X } from "lucide-react";
 import styles from "./page.module.css";
@@ -24,10 +25,28 @@ export default function NewAnimalWizard() {
   const nextStep = () => setStep(prev => Math.min(prev + 1, 3));
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
 
-  const handleSave = () => {
-    console.log("Saving animal...", formData);
-    toast(`${formData.tagNumber || 'Animal'} registered successfully!`, "success");
-    setTimeout(() => router.push("/herd"), 800);
+
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSave = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const response = await createAnimal(formData);
+
+      if (response.success) {
+        toast(response.message, "success");
+        setTimeout(() => router.push("/herd"), 800);
+      } else {
+        toast(response.message, "error");
+      }
+    } catch (e: any) {
+      toast("An unexpected connection error occurred.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
