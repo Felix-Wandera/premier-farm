@@ -25,6 +25,10 @@ model User {
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
 
+  // Password Reset
+  resetToken    String?
+  resetTokenExp DateTime?
+
   // Relations
   expenses Expense[]
   milkLogs MilkLog[]

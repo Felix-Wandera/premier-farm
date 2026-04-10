@@ -125,3 +125,48 @@ export async function inviteUser(data: any) {
     return { success: false, message: "Internal server error." };
   }
 }
+
+export async function updateUserRole(userId: string, newRole: string) {
+  try {
+    const session = await requireAuth();
+
+    if (!["ADMIN", "MANAGER", "WORKER"].includes(newRole)) {
+      return { success: false, message: "Invalid role." };
+    }
+
+    // Prevent self-demotion
+    if ((session.id as string) === userId && newRole !== "ADMIN") {
+      return { success: false, message: "You cannot change your own role. Ask another admin." };
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: newRole as any },
+    });
+
+    revalidatePath("/users");
+    return { success: true, message: "Role updated successfully." };
+  } catch (e) {
+    return { success: false, message: "Failed to update role." };
+  }
+}
+
+export async function removeUser(userId: string) {
+  try {
+    const session = await requireAuth();
+
+    if ((session.id as string) === userId) {
+      return { success: false, message: "You cannot remove your own account." };
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isDeleted: true },
+    });
+
+    revalidatePath("/users");
+    return { success: true, message: "User removed successfully." };
+  } catch (e) {
+    return { success: false, message: "Failed to remove user." };
+  }
+}

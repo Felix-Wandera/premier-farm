@@ -4,7 +4,7 @@ import styles from "../../../(dashboard)/users/page.module.css";
 import { Plus, Shield, User, Clock, MoreHorizontal, Search, Info, X, Mail } from "lucide-react";
 import EmptyState from "../ui/EmptyState";
 import { useToast } from "../ui/Toast";
-import { inviteUser } from "@/actions/user.actions";
+import { inviteUser, updateUserRole, removeUser } from "@/actions/user.actions";
 
 const ROLE_COLORS: Record<string, string> = {
   ADMIN: "#f43f5e",
@@ -23,6 +23,11 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
   const [inviteRole, setInviteRole] = useState("WORKER");
   const [isInviting, setIsInviting] = useState(false);
   const [backupInviteInfo, setBackupInviteInfo] = useState<string | null>(null);
+
+  // Role Edit Modal
+  const [editingMember, setEditingMember] = useState<any>(null);
+  const [selectedRole, setSelectedRole] = useState("WORKER");
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   const toast = useToast();
 
@@ -46,7 +51,7 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
     
     if (res.success) {
       toast(res.message, res.message.includes("failed") ? "warning" : "success");
-      setBackupInviteInfo(res.backupInvite);
+      setBackupInviteInfo(res.backupInvite ?? null);
       setInviteEmail(""); // clear email but leave modal open so they can see backup
     } else {
       toast(res.message, "error");
@@ -135,9 +140,17 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                 
                 {openMenuId === member.id && (
                   <div className={styles.dropdown}>
-                    <button onClick={() => {toast("Edit feature coming soon", "info"); setOpenMenuId(null);}}>Edit Member</button>
-                    <button onClick={() => {toast("Permissions restricted", "warning"); setOpenMenuId(null);}}>Change Role</button>
-                    <button className={styles.deleteBtn} onClick={() => {toast("Cannot delete admin", "error"); setOpenMenuId(null);}}>Remove</button>
+                    <button onClick={() => {
+                      setEditingMember(member);
+                      setSelectedRole(member.role);
+                      setOpenMenuId(null);
+                    }}>Edit Role</button>
+                    <button className={styles.deleteBtn} onClick={async () => {
+                      setOpenMenuId(null);
+                      if (!confirm(`Remove ${member.name} from the team? This action is reversible by an admin.`)) return;
+                      const res = await removeUser(member.id);
+                      toast(res.message, res.success ? "success" : "error");
+                    }}>Remove</button>
                   </div>
                 )}
               </div>
@@ -203,6 +216,38 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                  </>
                )}
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Role Modal */}
+      {editingMember && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", padding: "1rem" }}>
+          <div style={{ backgroundColor: "#fff", borderRadius: "12px", width: "100%", maxWidth: "380px", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
+            <div style={{ padding: "1.5rem", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 600 }}>Change Role — {editingMember.name}</h2>
+              <button onClick={() => setEditingMember(null)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={22} color="#64748b" /></button>
+            </div>
+            <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <select style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white" }} value={selectedRole} onChange={e => setSelectedRole(e.target.value)}>
+                <option value="WORKER">Worker</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Administrator</option>
+              </select>
+              <button
+                onClick={async () => {
+                  setIsUpdatingRole(true);
+                  const res = await updateUserRole(editingMember.id, selectedRole);
+                  setIsUpdatingRole(false);
+                  toast(res.message, res.success ? "success" : "error");
+                  if (res.success) setEditingMember(null);
+                }}
+                disabled={isUpdatingRole}
+                style={{ width: "100%", padding: "0.75rem", backgroundColor: "#1e293b", color: "#fff", borderRadius: "8px", border: "none", fontWeight: 600, cursor: isUpdatingRole ? "not-allowed" : "pointer", opacity: isUpdatingRole ? 0.7 : 1 }}
+              >
+                {isUpdatingRole ? "Saving..." : "Save Role"}
+              </button>
+            </div>
           </div>
         </div>
       )}

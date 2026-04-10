@@ -1,14 +1,16 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { ThemeToggle } from "../../components/theme-toggle/ThemeToggle";
 import { ChevronRight, Download, Bell, Lock, HelpCircle, LogOut, Globe, Palette } from "lucide-react";
 import { useToast } from "../../components/ui/Toast";
+import ChangePasswordModal from "../../components/settings/ChangePasswordModal";
 
 export default function SettingsPage() {
   const router = useRouter();
   const toast = useToast();
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   return (
     <div className={styles.container}>
@@ -80,7 +82,7 @@ export default function SettingsPage() {
         <div className={styles.card}>
           <button
             className={styles.settingRow}
-            onClick={() => toast("Exporting farm data to CSV...", "info")}
+            onClick={() => { toast("Preparing export...", "info"); window.open("/api/export", "_blank"); }}
           >
             <div className={styles.rowLeft}>
               <Download size={20} className={styles.rowIcon} />
@@ -93,7 +95,7 @@ export default function SettingsPage() {
 
           <button
             className={styles.settingRow}
-            onClick={() => toast("Password reset enabled in next update", "info")}
+            onClick={() => setIsPasswordModalOpen(true)}
           >
             <div className={styles.rowLeft}>
               <Lock size={20} className={styles.rowIcon} />
@@ -139,6 +141,8 @@ export default function SettingsPage() {
       </section>
 
       <p className={styles.version}>Premier Farm v1.0.0</p>
+
+      <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
     </div>
   );
 }

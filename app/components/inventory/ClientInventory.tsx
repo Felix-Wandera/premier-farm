@@ -128,7 +128,7 @@ export default function ClientInventory({
               title="No items found"
               description={searchQuery ? `We couldn't find any stock items matching "${searchQuery}"` : "Your inventory is currently empty."}
               actionLabel="Add Item"
-              onAction={() => toast("New item form coming soon!", "info")}
+              onAction={() => setIsModalOpen(true)}
             />
           )}
         </>

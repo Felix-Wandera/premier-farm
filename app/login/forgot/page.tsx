@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "../../components/ui/Toast";
+import { requestPasswordReset } from "@/actions/settings.actions";
 
 export default function ForgotPassword() {
   const router = useRouter();
@@ -30,11 +31,14 @@ export default function ForgotPassword() {
 
     setIsSubmitting(true);
 
-    // Mock API call
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setIsSuccess(true);
-      toast("Reset link sent!", "success");
+      const res = await requestPasswordReset(email.trim());
+      if (res.success) {
+        setIsSuccess(true);
+        toast("Reset link sent!", "success");
+      } else {
+        setError(res.message);
+      }
     } catch (err) {
       setError("Something went wrong. Please try again.");
     } finally {

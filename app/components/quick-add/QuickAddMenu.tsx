@@ -35,19 +35,19 @@ export default function QuickAddMenu({ isOpen, onClose }: { isOpen: boolean; onC
                <span>Log Milk</span>
             </Link>
 
-            <button className={styles.actionCard} onClick={onClose}>
+            <Link href="/breeding" className={styles.actionCard} onClick={onClose}>
                <div className={`${styles.iconCircle} ${styles.bgHealth}`}>
                   <HeartPulse size={32} />
                </div>
                <span>Health Event</span>
-            </button>
+            </Link>
 
-            <button className={styles.actionCard} onClick={onClose}>
+            <Link href="/sales" className={styles.actionCard} onClick={onClose}>
                <div className={`${styles.iconCircle} ${styles.bgFinance}`}>
                   <DollarSign size={32} />
                </div>
                <span>Finance</span>
-            </button>
+            </Link>
          </div>
       </div>
     </div>

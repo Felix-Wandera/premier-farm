@@ -112,3 +112,37 @@ export async function getTransactions() {
 
   return unified.slice(0, 50); // returning top 50
 }
+
+export async function getWeeklyCashFlow() {
+  await requireAuth();
+
+  const days: { day: string; income: number; expense: number }[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const dayStart = new Date();
+    dayStart.setDate(dayStart.getDate() - i);
+    dayStart.setHours(0, 0, 0, 0);
+
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    const [salesAgg, expAgg] = await Promise.all([
+      prisma.sale.aggregate({
+        where: { isDeleted: false, date: { gte: dayStart, lt: dayEnd } },
+        _sum: { amount: true },
+      }),
+      prisma.expense.aggregate({
+        where: { isDeleted: false, date: { gte: dayStart, lt: dayEnd } },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    days.push({
+      day: dayStart.toLocaleDateString("en-US", { weekday: "short" }).charAt(0),
+      income: salesAgg._sum.amount || 0,
+      expense: expAgg._sum.amount || 0,
+    });
+  }
+
+  return days;
+}

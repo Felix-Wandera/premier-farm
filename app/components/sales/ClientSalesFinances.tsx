@@ -17,10 +17,12 @@ function formatCurrency(c: number) {
 
 export default function ClientSalesFinances({ 
   overview, 
-  transactions 
+  transactions,
+  cashFlow
 }: { 
   overview: { totalIncome: number; totalExpenses: number; net: number }, 
-  transactions: any[] 
+  transactions: any[],
+  cashFlow: { day: string; income: number; expense: number }[]
 }) {
   const toast = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,7 +63,7 @@ export default function ClientSalesFinances({
          </div>
       </div>
 
-      {/* Visual Chart Placeholder */}
+      {/* Cash Flow Chart */}
       <div className={styles.chartSection}>
          <div className={styles.chartHeader}>
            <h3>Cash Flow</h3>
@@ -69,16 +71,18 @@ export default function ClientSalesFinances({
          </div>
          
          <div className={styles.cssChart}>
-            {/* Simple CSS bars to represent graph */}
-            {[40, 65, 30, 80, 50, 90, 70].map((height, i) => (
-              <div key={i} className={styles.barColumn}>
-                 <div className={styles.barWrapper}>
-                    <div className={styles.barIncome} style={{ height: `${height}%` }}></div>
-                    <div className={styles.barExpense} style={{ height: `${height * 0.4}%` }}></div>
-                 </div>
-                 <span className={styles.dayLabel}>{['M','T','W','T','F','S','S'][i]}</span>
-              </div>
-            ))}
+            {(() => {
+              const maxVal = Math.max(...cashFlow.map(d => Math.max(d.income, d.expense)), 1);
+              return cashFlow.map((d, i) => (
+                <div key={i} className={styles.barColumn}>
+                   <div className={styles.barWrapper}>
+                      <div className={styles.barIncome} style={{ height: `${(d.income / maxVal) * 100}%` }}></div>
+                      <div className={styles.barExpense} style={{ height: `${(d.expense / maxVal) * 100}%` }}></div>
+                   </div>
+                   <span className={styles.dayLabel}>{d.day}</span>
+                </div>
+              ));
+            })()}
          </div>
       </div>
 

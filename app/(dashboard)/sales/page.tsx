@@ -1,12 +1,13 @@
 import React from "react";
 import ClientSalesFinances from "../../components/sales/ClientSalesFinances";
-import { getFinancialOverview, getTransactions } from "@/actions/financial.actions";
+import { getFinancialOverview, getTransactions, getWeeklyCashFlow } from "@/actions/financial.actions";
 
 export default async function SalesFinances() {
-  const [overview, transactions] = await Promise.all([
+  const [overview, transactions, cashFlow] = await Promise.all([
     getFinancialOverview(),
-    getTransactions()
+    getTransactions(),
+    getWeeklyCashFlow()
   ]);
 
-  return <ClientSalesFinances overview={overview} transactions={transactions} />;
+  return <ClientSalesFinances overview={overview} transactions={transactions} cashFlow={cashFlow} />;
 }
