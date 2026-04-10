@@ -42,12 +42,12 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
           <p className={styles.date}>{today}</p>
         </div>
         <div className={styles.headerActions}>
-          <div className={styles.mobileOnlyToggle}>
+          {/* <div className={styles.mobileOnlyToggle}>
             <ThemeToggle className={styles.iconBtn} showLabel={false} />
-          </div>
+          </div> */}
           <div style={{ position: 'relative' }}>
-            <button 
-              className={styles.iconBtn} 
+            <button
+              className={styles.iconBtn}
               aria-label="Notifications"
               onClick={() => setIsPopoverOpen(!isPopoverOpen)}
             >
@@ -55,9 +55,9 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
               {stats.alerts.length > 0 && <span className={styles.pulseBadge} />}
             </button>
             {isPopoverOpen && (
-              <NotificationPopover 
-                alerts={stats.alerts} 
-                onClose={() => setIsPopoverOpen(false)} 
+              <NotificationPopover
+                alerts={stats.alerts}
+                onClose={() => setIsPopoverOpen(false)}
               />
             )}
           </div>
@@ -84,34 +84,34 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
       <section className={styles.statsGrid}>
         <Link href="/herd" className={styles.statCard} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className={styles.statHeader}>
-             <h3>Active Herd</h3>
-             <ChevronRight size={18} className={styles.statIcon} />
+            <h3>Active Herd</h3>
+            <ChevronRight size={18} className={styles.statIcon} />
           </div>
           <p className={styles.statValue}>{stats.herd.total}</p>
           <div className={styles.statFooter}>
-             <span>{stats.herd.dairy} Dairy</span> • <span>{stats.herd.indigenous} Indigenous</span>
+            <span>{stats.herd.dairy} Dairy</span> • <span>{stats.herd.indigenous} Indigenous</span>
           </div>
         </Link>
 
         <Link href="/milk" className={styles.statCard} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className={styles.statHeader}>
-             <h3>Today's Yield</h3>
-             <ChevronRight size={18} className={styles.statIcon} />
+            <h3>Today's Yield</h3>
+            <ChevronRight size={18} className={styles.statIcon} />
           </div>
           <p className={styles.statValue}>{stats.milk.todayYield} <span className={styles.unit}>Liters</span></p>
           <div className={styles.statFooter}>
-             <span className={stats.milk.yieldDiff >= 0 ? styles.positive : ''}>{stats.milk.yieldDiff > 0 ? '↑' : '↓'} {Math.abs(stats.milk.yieldDiff)}L</span> from yesterday
+            <span className={stats.milk.yieldDiff >= 0 ? styles.positive : ''}>{stats.milk.yieldDiff > 0 ? '↑' : '↓'} {Math.abs(stats.milk.yieldDiff)}L</span> from yesterday
           </div>
         </Link>
-        
+
         <Link href="/sales" className={styles.statCard} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className={styles.statHeader}>
-             <h3>Revenue</h3>
-             <ChevronRight size={18} className={styles.statIcon} />
+            <h3>Revenue</h3>
+            <ChevronRight size={18} className={styles.statIcon} />
           </div>
           <p className={styles.statValue}>{formatCurrency(stats.finance.income)}</p>
           <div className={styles.statFooter}>
-             Expenses: {formatCurrency(stats.finance.expenses)}
+            Expenses: {formatCurrency(stats.finance.expenses)}
           </div>
         </Link>
       </section>

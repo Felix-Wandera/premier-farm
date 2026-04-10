@@ -94,6 +94,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: var(--shadow-sm);
+  text-decoration: none;
 }
 
 .actionCard:hover {
@@ -191,10 +192,18 @@
 }
 
 /* Alerts */
+.alertsSection {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
 .sectionTitle {
   font-size: 1.1rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   color: var(--color-text-main);
 }
 

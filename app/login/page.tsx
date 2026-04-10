@@ -67,29 +67,29 @@ export default function Login() {
         <div className={styles.formWrapper}>
           <div className={styles.mobileLogo}>
             <div className={styles.logoMark}></div>
-            <h2>PremierFarm</h2>
+            <h2>Premier Farm</h2>
           </div>
 
           <div className={styles.header}>
-            <h1>Welcome back</h1>
+            <h1 className={styles.desktopTitle}>Login to Premier Farm</h1>
             <p>Please enter your details to sign in.</p>
           </div>
 
           <form className={styles.form} onSubmit={handleSubmit}>
             {error && <div className={styles.errorMessage}>{error}</div>}
-            
+
             <div className={styles.inputGroup}>
               <label htmlFor="email">Email</label>
               <div className={styles.inputWrapper}>
                 <Mail className={styles.inputIcon} size={20} />
-                <input 
-                  id="email" 
-                  type="email" 
-                  placeholder="manager@premierfarm.com" 
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="your-email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSubmitting}
-                  required 
+                  required
                 />
               </div>
             </div>
@@ -98,14 +98,14 @@ export default function Login() {
               <label htmlFor="password">Password</label>
               <div className={styles.inputWrapper}>
                 <Lock className={styles.inputIcon} size={20} />
-                <input 
-                  id="password" 
-                  type="password" 
-                  placeholder="••••••••" 
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isSubmitting}
-                  required 
+                  required
                 />
               </div>
             </div>
@@ -115,8 +115,8 @@ export default function Login() {
                 <input type="checkbox" />
                 <span>Remember me</span>
               </label>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className={styles.forgotBtn}
                 onClick={() => router.push("/login/forgot")}
               >
@@ -124,8 +124,8 @@ export default function Login() {
               </button>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className={styles.submitBtn}
               disabled={isSubmitting}
             >

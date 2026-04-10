@@ -25,7 +25,7 @@ export function ThemeToggle({ className, showLabel = true }: { className?: strin
       className={className}
       aria-label="Toggle Dark Mode"
     >
-      {isDark ? <Moon size={20} /> : <Sun size={20} />}
+      {isDark ? <Sun size={20} /> : <Moon size={20} />}
       {showLabel && <span>{isDark ? "Light Mode" : "Dark Mode"}</span>}
     </button>
   );
