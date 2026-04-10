@@ -19,7 +19,7 @@ export default function BottomNav() {
     { icon: Home, label: "Home", href: "/" },
     { icon: Beef, label: "Herd", href: "/herd" },
   ];
-  
+
   const navItemsRight = [
     { icon: Droplet, label: "Milk", href: "/milk" },
   ];
@@ -28,9 +28,9 @@ export default function BottomNav() {
     items.map((item) => {
       const isActive = pathname === item.href;
       return (
-        <Link 
-          key={item.href} 
-          href={item.href} 
+        <Link
+          key={item.href}
+          href={item.href}
           className={`${styles.navItem} ${isActive ? styles.active : ""}`}
         >
           <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
@@ -55,10 +55,10 @@ export default function BottomNav() {
 
         <div className={styles.navGroup}>
           {renderNav(navItemsRight)}
-          
+
           {/* Menu Button swaps Sales out when on Mobile */}
-          <button 
-            className={styles.navItem} 
+          <button
+            className={styles.navItem}
             onClick={() => setIsMenuOpen(true)}
             aria-label="Open secondary menu"
           >

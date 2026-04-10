@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import styles from "../../../(dashboard)/users/page.module.css";
+import styles from "../../(dashboard)/users/page.module.css";
 import { Plus, Shield, User, Clock, MoreHorizontal, Search, Info, X, Mail } from "lucide-react";
 import EmptyState from "../ui/EmptyState";
 import { useToast } from "../ui/Toast";

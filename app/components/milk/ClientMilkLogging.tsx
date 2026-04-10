@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import styles from "../../../(dashboard)/milk/page.module.css";
+import styles from "../../(dashboard)/milk/page.module.css";
 import { CheckCircle2, History, Clock, Search, Info } from "lucide-react";
 import AnimalIcon from "../ui/AnimalIcon";
 import { useToast } from "../ui/Toast";

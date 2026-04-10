@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import styles from "../../../(dashboard)/page.module.css";
+import styles from "../../(dashboard)/page.module.css";
 import { Bell, ChevronRight, Activity, TrendingUp, AlertTriangle, Droplet, DollarSign, HeartPulse } from "lucide-react";
 import { ThemeToggle } from "../theme-toggle/ThemeToggle";
 import AnimalIcon from "../ui/AnimalIcon";
@@ -21,6 +21,7 @@ function formatCurrency(c: number) {
 }
 
 type DashboardStats = {
+  userName: string | null;
   herd: { total: number; dairy: number; indigenous: number };
   milk: { todayYield: number; yieldDiff: number };
   finance: { income: number; expenses: number };
@@ -34,7 +35,7 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
     <div className={styles.dashboard}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.greeting}>{getGreeting()}, Manager</h1>
+          <h1 className={styles.greeting}>{getGreeting()}{stats.userName ? `, ${stats.userName}` : ''}</h1>
           <p className={styles.date}>{today}</p>
         </div>
         <div className={styles.headerActions}>
@@ -63,38 +64,38 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
 
       {/* At a Glance Stats */}
       <section className={styles.statsGrid}>
-        <div className={styles.statCard}>
+        <Link href="/herd" className={styles.statCard} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className={styles.statHeader}>
-            <h3>Active Herd</h3>
-            <ChevronRight size={18} className={styles.statIcon} />
+             <h3>Active Herd</h3>
+             <ChevronRight size={18} className={styles.statIcon} />
           </div>
           <p className={styles.statValue}>{stats.herd.total}</p>
           <div className={styles.statFooter}>
-            <span>{stats.herd.dairy} Dairy</span> • <span>{stats.herd.indigenous} Indigenous</span>
+             <span>{stats.herd.dairy} Dairy</span> • <span>{stats.herd.indigenous} Indigenous</span>
           </div>
-        </div>
+        </Link>
 
-        <div className={styles.statCard}>
+        <Link href="/milk" className={styles.statCard} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className={styles.statHeader}>
-            <h3>Today's Yield</h3>
-            <ChevronRight size={18} className={styles.statIcon} />
+             <h3>Today's Yield</h3>
+             <ChevronRight size={18} className={styles.statIcon} />
           </div>
           <p className={styles.statValue}>{stats.milk.todayYield} <span className={styles.unit}>Liters</span></p>
           <div className={styles.statFooter}>
-            <span className={stats.milk.yieldDiff >= 0 ? styles.positive : ''}>{stats.milk.yieldDiff > 0 ? '↑' : '↓'} {Math.abs(stats.milk.yieldDiff)}L</span> from yesterday
+             <span className={stats.milk.yieldDiff >= 0 ? styles.positive : ''}>{stats.milk.yieldDiff > 0 ? '↑' : '↓'} {Math.abs(stats.milk.yieldDiff)}L</span> from yesterday
           </div>
-        </div>
-
-        <div className={styles.statCard}>
+        </Link>
+        
+        <Link href="/sales" className={styles.statCard} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className={styles.statHeader}>
-            <h3>Revenue</h3>
-            <ChevronRight size={18} className={styles.statIcon} />
+             <h3>Revenue</h3>
+             <ChevronRight size={18} className={styles.statIcon} />
           </div>
           <p className={styles.statValue}>{formatCurrency(stats.finance.income)}</p>
           <div className={styles.statFooter}>
-            Expenses: {formatCurrency(stats.finance.expenses)}
+             Expenses: {formatCurrency(stats.finance.expenses)}
           </div>
-        </div>
+        </Link>
       </section>
 
       {/* Smart Alerts */}

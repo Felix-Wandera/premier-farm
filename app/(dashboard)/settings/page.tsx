@@ -41,7 +41,7 @@ export default function SettingsPage() {
               <Palette size={20} className={styles.rowIcon} />
               <span>Theme</span>
             </div>
-            <ThemeToggle />
+            <ThemeToggle className={styles.themeToggle} />
           </div>
 
           <div className={styles.divider}></div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import styles from "../../../(dashboard)/breeding/page.module.css";
+import styles from "../../(dashboard)/breeding/page.module.css";
 import { Plus, Calendar, Activity, AlertCircle, CheckCircle2, Search, Info } from "lucide-react";
 import AnimalIcon from "../ui/AnimalIcon";
 import QuickAddMenu from "../quick-add/QuickAddMenu";

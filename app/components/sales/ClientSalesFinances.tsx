@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import styles from "../../../(dashboard)/sales/page.module.css";
+import styles from "../../(dashboard)/sales/page.module.css";
 import { TrendingUp, TrendingDown, Banknote, Filter, Plus, Search, Info } from "lucide-react";
 import { useToast } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";

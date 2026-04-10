@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import styles from "../../../(dashboard)/herd/page.module.css";
+import styles from "../../(dashboard)/herd/page.module.css";
 import Link from "next/link";
 import AnimalIcon from "../ui/AnimalIcon";
 import QuickAddMenu from "../quick-add/QuickAddMenu";

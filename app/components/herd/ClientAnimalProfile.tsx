@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Edit, Activity, Droplet, HeartPulse, Info } from "lucide-react";
-import styles from "../../../(dashboard)/herd/[id]/page.module.css";
+import styles from "../../(dashboard)/herd/[id]/page.module.css";
 import AnimalIcon from "../ui/AnimalIcon";
 
 function calculateAge(dob: Date | null) {

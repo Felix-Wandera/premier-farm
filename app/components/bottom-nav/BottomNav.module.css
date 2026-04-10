@@ -8,14 +8,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 1.5rem;
-  padding-bottom: env(safe-area-inset-bottom, 0); /* iPhone notch support */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  /* iPhone notch support */
   z-index: 50;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05); /* Slight shadow pointing up */
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+  /* Slight shadow pointing up */
+  background-color: white;
 }
 
 @media (min-width: 768px) {
   .bottomNav {
-    display: none; /* Hide entirely on desktop */
+    display: none;
+    /* Hide entirely on desktop */
   }
 }
 
@@ -36,6 +40,10 @@
   color: var(--color-text-sub);
   transition: all 0.2s ease;
   padding: 0.25rem 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .navItem:active {

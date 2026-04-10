@@ -4,7 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "./utils";
 
 export async function getDashboardStats() {
-  await requireAuth();
+  const session = await requireAuth();
+
+  // Get user's display name
+  let userName: string | null = null;
+  if (session.id && session.id !== "tech-admin-global") {
+    const user = await prisma.user.findUnique({ where: { id: session.id as string }, select: { name: true } });
+    userName = user?.name || null;
+  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -99,6 +106,7 @@ export async function getDashboardStats() {
   }
 
   return {
+    userName,
     herd: { total: totalActive, dairy: dairyCowCount, indigenous: indigenousCount },
     milk: { todayYield, yieldDiff },
     finance: { income, expenses },

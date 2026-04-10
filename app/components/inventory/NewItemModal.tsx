@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { X, Save } from "lucide-react";
 import { addInventoryItem } from "@/actions/inventory.actions";
 import { useToast } from "../ui/Toast";
-import styles from "../../../(dashboard)/inventory/page.module.css"; 
+import styles from "../../(dashboard)/inventory/page.module.css"; 
 
 export default function NewItemModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const [formData, setFormData] = useState({
