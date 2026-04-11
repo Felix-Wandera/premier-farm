@@ -5,7 +5,7 @@ import { verifyToken } from "./lib/auth";
 // Add any routes that should not be protected here
 const publicRoutes = ["/login", "/login/forgot", "/accept-invite"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Static files and internal Next.js routes are automatically handled
