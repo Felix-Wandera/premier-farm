@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
+import logoPic from "@/public/logo.png";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { Lock, Mail, ArrowRight, Loader2 } from "lucide-react";
@@ -66,7 +68,7 @@ export default function Login() {
       <div className={styles.formSection}>
         <div className={styles.formWrapper}>
           <div className={styles.mobileLogo}>
-            <div className={styles.logoMark}></div>
+            <Image src={logoPic} alt="Premier Farm Logo" width={32} height={32} className={styles.logoMark} />
             <h2>Premier Farm</h2>
           </div>
 

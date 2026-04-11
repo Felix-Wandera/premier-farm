@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import logoPic from "@/public/logo.png";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home, Beef, Droplet, LineChart, Package,
@@ -64,7 +66,7 @@ export default function Sidebar() {
         <div className={styles.logoMarkWrapper}>
           {!isCollapsed && (
             <>
-              <div className={styles.logoMark}></div>
+              <Image src={logoPic} alt="Premier Farm Logo" width={32} height={32} className={styles.logoMark} />
               <h1 className={styles.logoText}>Premier Farm</h1>
             </>
           )}

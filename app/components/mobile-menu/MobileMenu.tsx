@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { X, LineChart, HeartPulse, Package, Users, Settings, LogOut } from "lucide-react";
 import styles from "./MobileMenu.module.css";
 import { ThemeToggle } from "../theme-toggle/ThemeToggle";
+import { useToast } from "../ui/Toast";
 
 const menuItems = [
   { icon: LineChart, label: "Sales & Finances", href: "/sales" },
@@ -14,6 +15,20 @@ const menuItems = [
 
 export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const toast = useToast();
+
+  const handleLogout = async () => {
+    onClose();
+    toast("Logging out...", "success");
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch (err) {
+      router.push("/login");
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -53,7 +68,7 @@ export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClo
             <Settings size={20} />
             <span>Settings</span>
           </Link>
-          <button className={`${styles.settingsLink} ${styles.danger}`}>
+          <button className={`${styles.settingsLink} ${styles.danger}`} onClick={handleLogout}>
             <LogOut size={20} />
             <span>Log Out</span>
           </button>

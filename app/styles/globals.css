@@ -1,17 +1,18 @@
 :root {
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
-  --color-primary: #047857; /* Emerald */
+  --color-primary: #047857;
+  /* Emerald */
   --color-primary-dark: #064e3b;
   --color-primary-light: #d1fae5;
   --color-text-main: #0f172a;
   --color-text-sub: #475569;
   --color-border: #e2e8f0;
-  
+
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  
+
   /* Radius Scale */
   --radius-card: 16px;
   --radius-lg: 20px;
@@ -22,18 +23,20 @@
   --text-page: 1.75rem;
   --text-section: 1.1rem;
 
-  --app-bar-height: 72px; 
+  --app-bar-height: 72px;
   --sidebar-width: 260px;
 }
 
 [data-theme='dark'] {
-  --color-bg: #020617; /* Slate 950 */
-  --color-surface: #0f172a; /* Slate 900 */
-  --color-primary: #10b981; 
+  --color-bg: #020617;
+  /* Slate 950 */
+  --color-surface: #0f172a;
+  /* Slate 900 */
+  --color-primary: #10b981;
   --color-primary-dark: #047857;
   --color-primary-light: #064e3b;
   --color-text-main: #f8fafc;
-  --color-text-sub: #94a3b8;
+  --color-text-sub: #cdd5df;
   --color-border: #1e293b;
 }
 

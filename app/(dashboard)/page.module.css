@@ -61,7 +61,8 @@
   right: 6px;
   width: 10px;
   height: 10px;
-  background-color: #ef4444; /* red-500 */
+  background-color: #ef4444;
+  /* red-500 */
   border-radius: 50%;
   border: 2px solid var(--color-surface);
   box-shadow: 0 0 0 rgba(239, 68, 68, 0.4);
@@ -69,9 +70,20 @@
 }
 
 @keyframes pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
 }
 
 
@@ -106,13 +118,13 @@
 .actionCard span {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-text-main);
+  color: var(--color-text-sub);
   text-align: center;
 }
 
 .actionIcon {
   background: var(--color-primary-light);
-  color: var(--color-primary-dark);
+  color: var(--color-text-main);
   width: 48px;
   height: 48px;
   border-radius: 12px;
@@ -223,7 +235,8 @@
 }
 
 .alertWarning {
-  border-left: 4px solid #d97706; /* amber */
+  border-left: 4px solid #d97706;
+  /* amber */
 }
 
 .alertWarning .alertIcon {
@@ -231,7 +244,8 @@
 }
 
 .alertInfo {
-  border-left: 4px solid #3b82f6; /* blue */
+  border-left: 4px solid #3b82f6;
+  /* blue */
 }
 
 .alertInfo .alertIcon {
