@@ -98,12 +98,40 @@ export async function logBatchMilkSession(data: any) {
   }
 }
 
+export async function deleteMilkLogSession(date: Date, session: string) {
+  try {
+    await requireAuth();
+
+    await prisma.milkLog.updateMany({
+      where: {
+        date: date,
+        milkingTime: session as any,
+        isDeleted: false,
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
+
+    revalidatePath("/milk");
+    return { success: true, message: "Session deleted successfully." };
+  } catch (error) {
+    console.error("Failed to delete milk log session:", error);
+    return { success: false, message: "Failed to delete session." };
+  }
+}
+
 export async function getMilkHistory() {
   await requireAuth();
 
   // Group by exact date and session
+  // Only include logs that are not deleted
   const rawHistory = await prisma.milkLog.groupBy({
     by: ["date", "milkingTime"],
+    where: {
+      isDeleted: false,
+    },
     _sum: {
       amountLiters: true,
     },

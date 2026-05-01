@@ -114,6 +114,124 @@ export async function createAnimal(formData: any): Promise<ActionState> {
   }
 }
 
+const updateAnimalSchema = z.object({
+  species: z.string().min(1, "Species is required"),
+  gender: z.enum(["MALE", "FEMALE"]),
+  tagNumber: z.string().min(1, "Official Tag Number is required"),
+  name: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+});
+
+const statusUpdateSchema = z.object({
+  status: z.enum(["DECEASED", "SOLD"]),
+  date: z.string().min(1, "Date is required"),
+  cause: z.string().optional(),
+});
+
+export async function updateAnimalStatus(id: string, status: string, formData: any): Promise<ActionState> {
+  try {
+    await requireAuth();
+
+    const validatedFields = statusUpdateSchema.safeParse({ status, ...formData });
+
+    if (!validatedFields.success) {
+      return {
+        success: false,
+        message: "Please fill out all required fields correctly.",
+      };
+    }
+
+    const data = validatedFields.data;
+
+    let updateData: any = {
+      status: data.status,
+    };
+
+    if (data.status === "DECEASED") {
+      updateData.dateOfDeath = new Date(data.date);
+      updateData.causeOfDeath = data.cause || null;
+    }
+
+    await prisma.animal.update({
+      where: { id },
+      data: updateData,
+    });
+
+    revalidatePath("/herd");
+    revalidatePath(`/herd/${id}`);
+
+    return {
+      success: true,
+      message: `Successfully updated animal status to ${data.status}!`,
+    };
+
+  } catch (error: any) {
+    console.error("Failed to update animal status:", error);
+
+    return {
+      success: false,
+      message: "An unexpected database error occurred. Please try again later.",
+    };
+  }
+}
+
+export async function updateAnimal(id: string, formData: any): Promise<ActionState> {
+  try {
+    await requireAuth();
+
+    const validatedFields = updateAnimalSchema.safeParse(formData);
+
+    if (!validatedFields.success) {
+      return {
+        success: false,
+        message: "Please fill out all required fields correctly.",
+        fieldErrors: validatedFields.error.flatten().fieldErrors,
+      };
+    }
+
+    const data = validatedFields.data;
+    const dbSpecies = SPECIES_MAP[data.species];
+
+    if (!dbSpecies) {
+      return { success: false, message: `Invalid species: ${data.species}` };
+    }
+
+    await prisma.animal.update({
+      where: { id },
+      data: {
+        tagNumber: data.tagNumber.trim(),
+        name: data.name?.trim() || null,
+        species: dbSpecies,
+        gender: data.gender,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+      },
+    });
+
+    revalidatePath("/herd");
+    revalidatePath(`/herd/${id}`);
+
+    return {
+      success: true,
+      message: `Successfully updated animal details!`,
+    };
+
+  } catch (error: any) {
+    console.error("Failed to update animal:", error);
+
+    if (error.code === "P2002") {
+      return {
+        success: false,
+        message: "An animal with this Tag Number already exists. Please check your records.",
+      };
+    }
+
+    return {
+      success: false,
+      message: "An unexpected database error occurred. Please try again later.",
+    };
+  }
+}
+
 export async function getAnimals() {
   await requireAuth();
   

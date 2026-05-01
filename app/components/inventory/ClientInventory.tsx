@@ -6,6 +6,8 @@ import { useToast } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
 import { transactInventory } from "@/actions/inventory.actions";
 import NewItemModal from "./NewItemModal";
+import StockTransactionModal from "./StockTransactionModal";
+import EditItemModal from "./EditItemModal";
 
 export default function ClientInventory({ 
   initialItems, 
@@ -17,6 +19,8 @@ export default function ClientInventory({
   const [activeTab, setActiveTab] = useState<"stock" | "ledger">("stock");
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [transactionModalState, setTransactionModalState] = useState<{isOpen: boolean, item: any, type: "STOCK_IN" | "STOCK_OUT"}>({isOpen: false, item: null, type: "STOCK_IN"});
+  const [editModalState, setEditModalState] = useState<{isOpen: boolean, item: any}>({isOpen: false, item: null});
   const toast = useToast();
 
   const filteredItems = initialItems.filter(item => 
@@ -105,7 +109,7 @@ export default function ClientInventory({
                          {isCritical && <ShieldAlert size={20} className={styles.alertIcon} />}
                       </div>
 
-                      <h3 className={styles.itemName}>{item.name}</h3>
+                      <h3 className={styles.itemName} onClick={() => setEditModalState({isOpen: true, item})} style={{cursor: "pointer"}}>{item.name}</h3>
                       <div className={styles.quantityDisplay}>
                         <span className={`${styles.bigNumber} ${isCritical ? styles.textCritical : ''}`}>{item.quantity}</span>
                         <span className={styles.unit}>{item.unit}</span>
@@ -114,8 +118,8 @@ export default function ClientInventory({
                       {isCritical && <p className={styles.warningText}>Restock needed! (Min: {minThreshold})</p>}
 
                       <div className={styles.quickActions}>
-                        <button className={styles.actionBtn} onClick={() => handleTransaction(item.id, "STOCK_OUT")}>-</button>
-                        <button className={styles.actionBtn} onClick={() => handleTransaction(item.id, "STOCK_IN")}>+</button>
+                        <button className={styles.actionBtn} onClick={() => setTransactionModalState({isOpen: true, item, type: "STOCK_OUT"})}>-</button>
+                        <button className={styles.actionBtn} onClick={() => setTransactionModalState({isOpen: true, item, type: "STOCK_IN"})}>+</button>
                       </div>
                     </div>
                   </div>
@@ -164,6 +168,12 @@ export default function ClientInventory({
 
       {/* Add Item Modal */}
       <NewItemModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+      {/* Edit Item Modal */}
+      <EditItemModal isOpen={editModalState.isOpen} onClose={() => setEditModalState({isOpen: false, item: null})} item={editModalState.item} />
+
+      {/* Stock Transaction Modal */}
+      <StockTransactionModal isOpen={transactionModalState.isOpen} onClose={() => setTransactionModalState({isOpen: false, item: null, type: "STOCK_IN"})} item={transactionModalState.item} type={transactionModalState.type} />
     </div>
   );
 }

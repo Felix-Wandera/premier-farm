@@ -4,6 +4,9 @@ import Link from "next/link";
 import { ArrowLeft, Edit, Activity, Droplet, HeartPulse, Info } from "lucide-react";
 import styles from "../../(dashboard)/herd/[id]/page.module.css";
 import AnimalIcon from "../ui/AnimalIcon";
+import EditAnimalModal from "./EditAnimalModal";
+import StatusUpdateModal from "./StatusUpdateModal";
+import { updateAnimal, updateAnimalStatus } from "@/actions/animal.actions";
 
 function calculateAge(dob: Date | null) {
   if (!dob) return "Unknown";
@@ -28,6 +31,8 @@ function formatSpecies(s: string) {
 
 export default function ClientAnimalProfile({ initialData }: { initialData: any }) {
   const [activeTab, setActiveTab] = useState<"info" | "milk" | "health" | "breeding">("info");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
 
   if (!initialData) {
     return <div style={{padding: '2rem', textAlign: 'center'}}>Animal not found.</div>;
@@ -51,13 +56,27 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
           <ArrowLeft size={24} />
         </Link>
         <div className={styles.headerActions}>
-           <button className={styles.iconBtn} aria-label="Edit Profile"><Edit size={20} /></button>
+           <button className={styles.iconBtn} aria-label="Edit Profile" onClick={() => setIsEditModalOpen(true)}><Edit size={20} /></button>
         </div>
       </header>
 
+      <EditAnimalModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        animal={initialData}
+        onSave={(data) => updateAnimal(initialData.id, data)}
+      />
+
+      <StatusUpdateModal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        animal={initialData}
+        onSave={(id, status, data) => updateAnimalStatus(id, status, data)}
+      />
+
       {/* Cover Profile */}
       <section className={styles.cover}>
-        <div className={styles.profileBadge}>
+        <div className={styles.profileBadge} onClick={() => {if(initialData.status !== "DECEASED" && initialData.status !== "SOLD") setIsStatusModalOpen(true)}} style={{cursor: (initialData.status !== "DECEASED" && initialData.status !== "SOLD") ? "pointer" : "default"}}>
           <div className={`${styles.statusDot} ${initialData.status === 'SICK' ? styles.dotSick : ''}`}></div>
           {displayStatus}
         </div>
