@@ -42,15 +42,21 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
   const [editingMember, setEditingMember] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState("WORKER");
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
-
   const toast = useToast();
+
+  const pendingCount = initialUsers.filter(m => m.isPending).length;
 
   const filtered = initialUsers.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           member.email.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+
+    if (activeFilter === "Pending") {
+      return member.isPending;
+    }
     const filterRole = activeFilter.toUpperCase();
     const matchesRole = activeFilter === "All" || member.role === filterRole;
-    return matchesSearch && matchesRole;
+    return matchesRole;
   });
 
   const handleInvite = async () => {
@@ -115,6 +121,28 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
             {f}
           </button>
         ))}
+        <button 
+          className={`${styles.filterPill} ${activeFilter === "Pending" ? styles.activePill : ''}`}
+          onClick={() => setActiveFilter("Pending")}
+          role="tab"
+          aria-selected={activeFilter === "Pending"}
+          aria-pressed={activeFilter === "Pending"}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+        >
+          Pending
+          {pendingCount > 0 && (
+            <span style={{ 
+              backgroundColor: activeFilter === "Pending" ? "rgba(255,255,255,0.25)" : "#fef08a", 
+              color: activeFilter === "Pending" ? "#fff" : "#854d0e", 
+              fontSize: "0.7rem", 
+              fontWeight: 700, 
+              padding: "1px 6px", 
+              borderRadius: "10px" 
+            }}>
+              {pendingCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className={styles.teamList}>
@@ -129,8 +157,21 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                   <h3 style={{ margin: 0 }}>{member.name}</h3>
                   {member.isPending && (
-                    <span style={{ backgroundColor: "#fef9c3", color: "#854d0e", fontSize: "0.65rem", fontWeight: 800, padding: "1px 6px", borderRadius: "4px", border: "1px solid #fef08a" }}>
-                      PENDING
+                    <span style={{ 
+                      backgroundColor: member.isExpired ? "#fee2e2" : "#fef9c3", 
+                      color: member.isExpired ? "#991b1b" : "#854d0e", 
+                      fontSize: "0.65rem", 
+                      fontWeight: 800, 
+                      padding: "1px 6px", 
+                      borderRadius: "4px", 
+                      border: `1px solid ${member.isExpired ? '#fca5a5' : '#fef08a'}` 
+                    }}>
+                      {member.isExpired ? "EXPIRED INVITE" : "PENDING"}
+                    </span>
+                  )}
+                  {member.isPending && member.expiryText && !member.isExpired && (
+                    <span style={{ fontSize: "0.7rem", color: "var(--color-text-sub)", fontWeight: 500 }}>
+                      ({member.expiryText})
                     </span>
                   )}
                 </div>
@@ -138,7 +179,7 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                   <Mail size={12} strokeWidth={3} /> {member.email}
                 </p>
                 <div className={styles.lastSeen}>
-                  <Clock size={12} /> {member.lastActive}
+                  <Clock size={12} /> {member.isPending ? `Invited on ${member.lastActive}` : member.lastActive}
                   <span style={{ fontSize: "0.9em", opacity: 0.5 }}>•</span>
                   <span style={{ color: ROLE_COLORS[member.role], fontWeight: 700, fontSize: "0.75rem" }}>{member.role}</span>
                 </div>
@@ -169,7 +210,7 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                           const res = await resendInvitation(member.id);
                           toast(res.message, res.success ? "success" : "error");
                         }}>
-                          <Send size={14} /> Resend Invite
+                          <Send size={14} /> {member.isExpired ? "Renew & Resend" : "Resend Invite"}
                         </button>
                         <button onClick={async () => {
                           setOpenMenuId(null);
@@ -313,7 +354,7 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                     toast(res.message, res.success ? "success" : "error");
                     setActionMember(null);
                   }}>
-                    <Send size={20} color="#10b981" /> Resend Invitation Email
+                    <Send size={20} color="#10b981" /> {actionMember.isExpired ? "Renew & Resend Invitation" : "Resend Invitation Email"}
                   </button>
                   <button className={styles.actionSheetButton} onClick={async () => {
                     const res = await getInviteLinkByUserId(actionMember.id);

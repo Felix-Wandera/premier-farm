@@ -21,18 +21,43 @@ export async function getUsers() {
       lastName: true,
       role: true,
       createdAt: true,
-      inviteToken: true
+      inviteToken: true,
+      inviteTokenExp: true
     }
   });
 
-  return users.map(u => ({
-    id: u.id,
-    name: u.firstName ? `${u.firstName} ${u.lastName || ""}`.trim() : u.email.split("@")[0].replace(".", " "),
-    email: u.email,
-    role: u.role,
-    lastActive: u.createdAt.toLocaleDateString(),
-    isPending: !!u.inviteToken
-  }));
+  const now = new Date();
+
+  return users.map(u => {
+    const isPending = !!u.inviteToken;
+    const isExpired = isPending && !!u.inviteTokenExp && u.inviteTokenExp < now;
+    let expiryRemainingText: string | null = null;
+
+    if (isPending && u.inviteTokenExp) {
+      if (isExpired) {
+        expiryRemainingText = "Expired";
+      } else {
+        const diffHours = Math.round((u.inviteTokenExp.getTime() - now.getTime()) / (1000 * 60 * 60));
+        if (diffHours < 24) {
+          expiryRemainingText = `Expires in ${Math.max(1, diffHours)}h`;
+        } else {
+          const diffDays = Math.round(diffHours / 24);
+          expiryRemainingText = `Expires in ${diffDays}d`;
+        }
+      }
+    }
+
+    return {
+      id: u.id,
+      name: u.firstName ? `${u.firstName} ${u.lastName || ""}`.trim() : u.email.split("@")[0].replace(".", " "),
+      email: u.email,
+      role: u.role,
+      lastActive: u.createdAt.toLocaleDateString(),
+      isPending,
+      isExpired,
+      expiryText: expiryRemainingText
+    };
+  });
 }
 
 const inviteSchema = z.object({
@@ -88,7 +113,8 @@ export async function inviteUser(data: any) {
       });
     }
 
-    const setupLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/accept-invite?token=${token}`;
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://premier-farm.wandera.online').replace(/\/$/, '');
+    const setupLink = `${appUrl}/accept-invite?token=${token}`;
 
     // Send email via central utility with templates
     console.log(`[INVITE TRACE] Dispatching email to central utility...`);
@@ -263,7 +289,8 @@ export async function getInviteLinkByUserId(userId: string) {
 
         if (!user || !user.inviteToken) return { success: false, message: "No active invitation found." };
 
-        const setupLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/accept-invite?token=${user.inviteToken}`;
+        const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://premier-farm.wandera.online').replace(/\/$/, '');
+        const setupLink = `${appUrl}/accept-invite?token=${user.inviteToken}`;
         return { success: true, link: setupLink };
     } catch (e) {
         return { success: false, message: "Failed to fetch invite link." };

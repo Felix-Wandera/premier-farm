@@ -83,7 +83,8 @@ export async function requestPasswordReset(email: string) {
       data: { resetToken: hashedToken, resetTokenExp: expiry },
     });
 
-    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login/reset?token=${rawToken}`;
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://premier-farm.wandera.online').replace(/\/$/, '');
+    const resetLink = `${appUrl}/login/reset?token=${rawToken}`;
 
     // Send email via central utility with templates
     await sendEmail({
