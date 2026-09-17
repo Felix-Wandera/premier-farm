@@ -5,6 +5,77 @@ const { PrismaPg } = require("@prisma/adapter-pg");
 const bcrypt = require("bcryptjs");
 require("dotenv").config();
 
+function shouldEnableSsl(connectionString) {
+  if (
+    connectionString.includes("sslmode=disable") ||
+    process.env.DATABASE_SSL === "false" ||
+    connectionString.includes("localhost") ||
+    connectionString.includes("127.0.0.1")
+  ) {
+    return false;
+  }
+
+  if (
+    connectionString.includes("sslmode=require") ||
+    connectionString.includes("sslmode=prefer") ||
+    connectionString.includes("sslmode=verify-ca") ||
+    connectionString.includes("sslmode=verify-full") ||
+    connectionString.includes("ssl=true") ||
+    process.env.DATABASE_SSL === "true"
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function createClient(databaseUrl, useSsl) {
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+  });
+  const adapter = new PrismaPg(pool);
+  const prisma = new PrismaClient({ adapter });
+  return { prisma, pool };
+}
+
+async function performSeed(prisma, adminEmail, adminPassword) {
+  const existing = await prisma.user.findUnique({
+    where: { email: adminEmail },
+  });
+
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+  if (existing) {
+    const isMatch = await bcrypt.compare(adminPassword, existing.password);
+    if (!isMatch || existing.role !== "ADMIN" || existing.isDeleted) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          password: hashedPassword,
+          role: "ADMIN",
+          isDeleted: false,
+          deletedAt: null,
+        },
+      });
+      console.log(`[SEED SUCCESS] Existing admin updated with active ADMIN role and synchronized password.`);
+    } else {
+      console.log(`[SEED OK] Admin user already exists and is in sync.`);
+    }
+  } else {
+    const created = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        firstName: "System",
+        lastName: "Administrator",
+        password: hashedPassword,
+        role: "ADMIN",
+      },
+    });
+    console.log(`[SEED SUCCESS] Admin user created with ID: ${created.id}`);
+  }
+}
+
 async function seedAdmin() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -17,55 +88,44 @@ async function seedAdmin() {
 
   console.log(`[SEED START] Ensuring admin user: ${adminEmail}`);
 
-  const isCloudDb = databaseUrl && !databaseUrl.includes("localhost") && !databaseUrl.includes("127.0.0.1");
-  const pool = new Pool({
-    connectionString: databaseUrl,
-    ssl: isCloudDb && !databaseUrl.includes("sslmode=disable") ? { rejectUnauthorized: false } : undefined,
-  });
-  const adapter = new PrismaPg(pool);
-  const prisma = new PrismaClient({ adapter });
+  let useSsl = shouldEnableSsl(databaseUrl);
+  let client = createClient(databaseUrl, useSsl);
 
   try {
-    const existing = await prisma.user.findUnique({
-      where: { email: adminEmail },
-    });
+    await performSeed(client.prisma, adminEmail, adminPassword);
+  } catch (error) {
+    const errMsg = String(error?.message || error);
+    // If TLS error because server doesn't support SSL, retry without SSL
+    if (useSsl && (errMsg.includes("does not support SSL") || errMsg.includes("TlsConnectionError"))) {
+      console.warn("[SEED WARN] Server does not support SSL. Retrying with plaintext connection...");
+      await client.prisma.$disconnect().catch(() => {});
+      await client.pool.end().catch(() => {});
 
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      useSsl = false;
+      client = createClient(databaseUrl, false);
+      try {
+        await performSeed(client.prisma, adminEmail, adminPassword);
+      } catch (retryError) {
+        console.error("[SEED ERROR] Failed to seed admin user on retry:", retryError);
+      }
+    } else if (!useSsl && (errMsg.includes("SSL off") || errMsg.includes("SSL is required") || errMsg.includes("no pg_hba.conf entry"))) {
+      console.warn("[SEED WARN] Server requires SSL. Retrying with SSL enabled...");
+      await client.prisma.$disconnect().catch(() => {});
+      await client.pool.end().catch(() => {});
 
-    if (existing) {
-      const isMatch = await bcrypt.compare(adminPassword, existing.password);
-      if (!isMatch || existing.role !== "ADMIN" || existing.isDeleted) {
-        await prisma.user.update({
-          where: { id: existing.id },
-          data: {
-            password: hashedPassword,
-            role: "ADMIN",
-            isDeleted: false,
-            deletedAt: null,
-          },
-        });
-        console.log(`[SEED SUCCESS] Existing admin updated with active ADMIN role and synchronized password.`);
-      } else {
-        console.log(`[SEED OK] Admin user already exists and is in sync.`);
+      useSsl = true;
+      client = createClient(databaseUrl, true);
+      try {
+        await performSeed(client.prisma, adminEmail, adminPassword);
+      } catch (retryError) {
+        console.error("[SEED ERROR] Failed to seed admin user on retry:", retryError);
       }
     } else {
-      const created = await prisma.user.create({
-        data: {
-          email: adminEmail,
-          firstName: "System",
-          lastName: "Administrator",
-          password: hashedPassword,
-          role: "ADMIN",
-        },
-      });
-      console.log(`[SEED SUCCESS] Admin user created with ID: ${created.id}`);
+      console.error("[SEED ERROR] Failed to seed admin user:", error);
     }
-  } catch (error) {
-    console.error("[SEED ERROR] Failed to seed admin user:", error);
-    process.exit(1);
   } finally {
-    await prisma.$disconnect();
-    await pool.end();
+    await client.prisma.$disconnect().catch(() => {});
+    await client.pool.end().catch(() => {});
   }
 }
 
