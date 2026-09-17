@@ -148,3 +148,126 @@ export async function getMilkHistory() {
     total: row._sum.amountLiters || 0
   }));
 }
+
+export async function getSessionMilkLogs(dateStr: string, sessionName: string) {
+  try {
+    await requireAuth();
+
+    const targetDate = new Date(dateStr);
+    const dbMilkingTime = sessionName.toUpperCase() as "MORNING" | "EVENING" | "OTHER";
+
+    const logs = await prisma.milkLog.findMany({
+      where: {
+        date: targetDate,
+        milkingTime: dbMilkingTime,
+        isDeleted: false,
+      },
+      include: {
+        animal: {
+          select: {
+            id: true,
+            tagNumber: true,
+            name: true,
+            species: true,
+          },
+        },
+        recordedBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: {
+        animal: { tagNumber: "asc" },
+      },
+    });
+
+    return {
+      success: true,
+      data: logs.map((log) => ({
+        id: log.id,
+        amountLiters: log.amountLiters,
+        animalId: log.animalId,
+        tagNumber: log.animal.tagNumber,
+        name: log.animal.name,
+        species: log.animal.species,
+        recordedBy: log.recordedBy ? `${log.recordedBy.firstName || ""} ${log.recordedBy.lastName || ""}`.trim() : "System",
+      })),
+    };
+  } catch (error: any) {
+    console.error("Failed to fetch session milk logs:", error);
+    return { success: false, message: error.message || "Failed to load session details.", data: [] };
+  }
+}
+
+export async function updateSingleMilkLog(logId: string, amountLiters: number) {
+  try {
+    await requireAuth();
+
+    if (typeof amountLiters !== "number" || amountLiters <= 0 || amountLiters > 100) {
+      return { success: false, message: "Please provide a valid milk yield between 0.1 and 100 Liters." };
+    }
+
+    const log = await prisma.milkLog.findUnique({
+      where: { id: logId },
+      include: { animal: { select: { id: true, tagNumber: true } } },
+    });
+
+    if (!log) {
+      return { success: false, message: "Milk log entry not found." };
+    }
+
+    await prisma.milkLog.update({
+      where: { id: logId },
+      data: { amountLiters },
+    });
+
+    revalidatePath("/milk");
+    revalidatePath(`/herd/${log.animal.id}`);
+    revalidatePath("/");
+
+    return {
+      success: true,
+      message: `Updated ${log.animal.tagNumber}'s yield to ${amountLiters} L.`,
+    };
+  } catch (error: any) {
+    console.error("Failed to update milk log:", error);
+    return { success: false, message: error.message || "Failed to update milk log." };
+  }
+}
+
+export async function deleteSingleMilkLog(logId: string) {
+  try {
+    await requireAuth();
+
+    const log = await prisma.milkLog.findUnique({
+      where: { id: logId },
+      include: { animal: { select: { id: true, tagNumber: true } } },
+    });
+
+    if (!log) {
+      return { success: false, message: "Milk log entry not found." };
+    }
+
+    await prisma.milkLog.update({
+      where: { id: logId },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
+
+    revalidatePath("/milk");
+    revalidatePath(`/herd/${log.animal.id}`);
+    revalidatePath("/");
+
+    return {
+      success: true,
+      message: `Deleted record for ${log.animal.tagNumber}.`,
+    };
+  } catch (error: any) {
+    console.error("Failed to delete milk log:", error);
+    return { success: false, message: error.message || "Failed to delete milk log." };
+  }
+}

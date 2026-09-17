@@ -1,13 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import styles from "../../(dashboard)/milk/page.module.css";
-import { CheckCircle2, History, Clock, Search, Info } from "lucide-react";
+import { CheckCircle2, History, Clock, Search, Info, Trash2, Download, ExternalLink } from "lucide-react";
 import AnimalIcon from "../ui/AnimalIcon";
 import { useToast } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
 import { logBatchMilkSession, deleteMilkLogSession } from "@/actions/milk.actions";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import SessionDetailsModal from "./SessionDetailsModal";
 
 // Formatter helper
 function formatSpecies(s: string) {
@@ -32,6 +32,7 @@ export default function ClientMilkLogging({
   const [activeTab, setActiveTab] = useState<"log" | "history">("log");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<{ date: string; session: string } | null>(null);
   const toast = useToast();
   const router = useRouter();
 
@@ -265,6 +266,28 @@ export default function ClientMilkLogging({
 
       {activeTab === 'history' && (
         <div className={styles.batchList}>
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 0.5rem 0.5rem" }}>
+            <a
+              href="/api/export?type=milk"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                color: "var(--color-primary, #16a34a)",
+                textDecoration: "none",
+                padding: "0.4rem 0.8rem",
+                borderRadius: "8px",
+                backgroundColor: "rgba(22, 163, 74, 0.1)",
+              }}
+            >
+              <Download size={14} /> Export Milk CSV
+            </a>
+          </div>
+
           {historyData.length === 0 ? (
              <div style={{padding: '2rem', textAlign: 'center', opacity: 0.6}}>No milk history found.</div>
           ) : (
@@ -273,7 +296,7 @@ export default function ClientMilkLogging({
                 <span>Date</span>
                 <span>Session</span>
                 <span>Total</span>
-                <span></span>
+                <span style={{ textAlign: "right" }}>Actions</span>
               </div>
               {historyData.map((entry, i) => {
                 // Determine 'Today', 'Yesterday', or Date String
@@ -297,11 +320,32 @@ export default function ClientMilkLogging({
                     <div className={styles.cowTag}>
                       <strong>{entry.total} L</strong>
                     </div>
-                    <div className={styles.cowTag} style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <div className={styles.cowTag} style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                      <button
+                        onClick={() => setSelectedSession({ date: new Date(entry.date).toISOString(), session: entry.session })}
+                        style={{
+                          background: "none",
+                          border: "1px solid var(--color-border, #cbd5e1)",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          color: "var(--color-primary, #16a34a)",
+                          padding: "4px 8px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                        }}
+                        title="View and Edit Individual Cows"
+                      >
+                        <ExternalLink size={13} />
+                        <span>Edit</span>
+                      </button>
                       <button
                         onClick={() => handleDeleteSession(entry.date, entry.session)}
                         disabled={isDeleting}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-sub)" }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-sub)", padding: "4px" }}
+                        title="Delete Entire Session"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -312,6 +356,16 @@ export default function ClientMilkLogging({
             </>
           )}
         </div>
+      )}
+
+      {selectedSession && (
+        <SessionDetailsModal
+          isOpen={true}
+          sessionDate={selectedSession.date}
+          sessionName={selectedSession.session}
+          onClose={() => setSelectedSession(null)}
+          onUpdated={() => router.refresh()}
+        />
       )}
     </div>
   );

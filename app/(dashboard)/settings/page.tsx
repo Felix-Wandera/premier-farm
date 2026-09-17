@@ -8,6 +8,7 @@ import { useToast } from "../../components/ui/Toast";
 import { useAuth } from "../../components/auth/AuthProvider";
 import ChangePasswordModal from "../../components/settings/ChangePasswordModal";
 import EditProfileModal from "../../components/settings/EditProfileModal";
+import DataExportModal from "../../components/settings/DataExportModal";
 import { subscribeUser, unsubscribeUser } from "../../components/notifications/NotificationManager";
 import { sendTestNotification } from "@/actions/push.actions";
 
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const toast = useToast();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
 
@@ -191,7 +193,7 @@ export default function SettingsPage() {
         <div className={styles.card}>
           <button
             className={styles.settingRow}
-            onClick={() => { toast("Preparing export...", "info"); window.open("/api/export", "_blank"); }}
+            onClick={() => setIsExportModalOpen(true)}
           >
             <div className={styles.rowLeft}>
               <Download size={20} className={styles.rowIcon} />
@@ -253,6 +255,7 @@ export default function SettingsPage() {
 
       <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
       <EditProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+      <DataExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </div>
   );
 }
