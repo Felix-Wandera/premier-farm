@@ -9,6 +9,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (session.role !== "ADMIN" && session.role !== "MANAGER") {
+      return NextResponse.json({ error: "Forbidden: Only administrators and managers can export farm data." }, { status: 403 });
+    }
+
     const [animals, milkLogs, sales, expenses] = await Promise.all([
       prisma.animal.findMany({ where: { isDeleted: false }, orderBy: { tagNumber: "asc" } }),
       prisma.milkLog.findMany({ where: { isDeleted: false }, orderBy: { date: "desc" }, take: 500 }),

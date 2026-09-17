@@ -2,14 +2,14 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./utils";
+import { requireAuth, requireRole } from "./utils";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { sendEmail } from "@/lib/mail";
 import crypto from "crypto";
 
 export async function getUsers() {
-  await requireAuth();
+  await requireRole(["ADMIN", "MANAGER"]);
 
   const users = await prisma.user.findMany({
     where: { isDeleted: false },
@@ -42,7 +42,7 @@ const inviteSchema = z.object({
 
 export async function inviteUser(data: any) {
   try {
-    await requireAuth();
+    await requireRole(["ADMIN"]);
 
     const val = inviteSchema.safeParse(data);
     if (!val.success) return { success: false, message: "Invalid email or role." };
@@ -125,7 +125,7 @@ export async function inviteUser(data: any) {
 
 export async function updateUserRole(userId: string, newRole: string) {
   try {
-    const session = await requireAuth();
+    const session = await requireRole(["ADMIN"]);
 
     if (!["ADMIN", "MANAGER", "WORKER"].includes(newRole)) {
       return { success: false, message: "Invalid role." };
@@ -150,7 +150,7 @@ export async function updateUserRole(userId: string, newRole: string) {
 
 export async function removeUser(userId: string) {
   try {
-    const session = await requireAuth();
+    const session = await requireRole(["ADMIN"]);
 
     if ((session.id as string) === userId) {
       return { success: false, message: "You cannot remove your own account." };

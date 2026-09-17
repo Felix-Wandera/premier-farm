@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./utils";
+import { requireAuth, requireRole } from "./utils";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -36,7 +36,7 @@ type ActionState = {
 
 export async function createAnimal(formData: any): Promise<ActionState> {
   try {
-    await requireAuth();
+    await requireRole(["ADMIN", "MANAGER"]);
 
     // 1. Zod Validation
     const validatedFields = animalSchema.safeParse(formData);
@@ -130,7 +130,7 @@ const statusUpdateSchema = z.object({
 
 export async function updateAnimalStatus(id: string, status: string, formData: any): Promise<ActionState> {
   try {
-    await requireAuth();
+    await requireRole(["ADMIN", "MANAGER"]);
 
     const validatedFields = statusUpdateSchema.safeParse({ status, ...formData });
 
@@ -177,7 +177,7 @@ export async function updateAnimalStatus(id: string, status: string, formData: a
 
 export async function updateAnimal(id: string, formData: any): Promise<ActionState> {
   try {
-    await requireAuth();
+    await requireRole(["ADMIN", "MANAGER"]);
 
     const validatedFields = updateAnimalSchema.safeParse(formData);
 

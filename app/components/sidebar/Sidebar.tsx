@@ -20,9 +20,9 @@ const navItems = [
   { icon: Beef, label: "Herd", href: "/herd" },
   { icon: HeartPulse, label: "Breeding", href: "/breeding" },
   { icon: Droplet, label: "Milk Production", href: "/milk" },
-  { icon: LineChart, label: "Sales & Finances", href: "/sales" },
+  { icon: LineChart, label: "Sales & Finances", href: "/sales", allowedRoles: ["ADMIN", "MANAGER"] },
   { icon: Package, label: "Inventory", href: "/inventory" },
-  { icon: Users, label: "User Management", href: "/users" },
+  { icon: Users, label: "User Management", href: "/users", allowedRoles: ["ADMIN"] },
 ];
 
 export default function Sidebar() {
@@ -81,7 +81,12 @@ export default function Sidebar() {
       </div>
 
       <nav className={styles.navItems}>
-        {navItems.map((item) => {
+        {navItems
+          .filter((item) => {
+            if (!item.allowedRoles) return true;
+            return user?.role && item.allowedRoles.includes(user.role);
+          })
+          .map((item) => {
           const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
           return (
             <Link

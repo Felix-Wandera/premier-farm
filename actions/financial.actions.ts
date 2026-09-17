@@ -1,12 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./utils";
+import { requireAuth, requireRole } from "./utils";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
 export async function getFinancialOverview() {
-  await requireAuth();
+  await requireRole(["ADMIN", "MANAGER"]);
 
   const [salesResult,  expensesResult] = await Promise.all([
     prisma.sale.aggregate({
@@ -38,7 +38,7 @@ const txSchema = z.object({
 
 export async function recordTransaction(data: any) {
   try {
-    const user = await requireAuth();
+    const user = await requireRole(["ADMIN", "MANAGER"]);
     
     const val = txSchema.safeParse(data);
     if (!val.success) return { success: false, message: "Invalid data." };
@@ -72,7 +72,7 @@ export async function recordTransaction(data: any) {
 }
 
 export async function getTransactions() {
-  await requireAuth();
+  await requireRole(["ADMIN", "MANAGER"]);
 
   // Fetch both and merge in code since Prisma doesn't do polymorphic queries easily
   const [sales, expenses] = await Promise.all([
@@ -114,7 +114,7 @@ export async function getTransactions() {
 }
 
 export async function getWeeklyCashFlow() {
-  await requireAuth();
+  await requireRole(["ADMIN", "MANAGER"]);
 
   const days: { day: string; income: number; expense: number }[] = [];
 

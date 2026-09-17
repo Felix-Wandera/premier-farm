@@ -9,9 +9,8 @@ export async function GET() {
     return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
   }
 
-  // Fetch full user details from DB to stay in sync with profile updates
   let fullUser = null;
-  if (session.id && session.id !== "tech-admin-global") {
+  if (session.id) {
     fullUser = await prisma.user.findUnique({
       where: { id: session.id as string },
       select: {
@@ -23,9 +22,10 @@ export async function GET() {
         phoneNumber: true,
       }
     });
-  } else if (session.id === "tech-admin-global") {
-    // Tech admin doesn't exist in DB, return session payload
-    fullUser = session;
+  }
+
+  if (!fullUser) {
+    return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
   }
 
   return NextResponse.json({

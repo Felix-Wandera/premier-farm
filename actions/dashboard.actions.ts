@@ -8,7 +8,7 @@ export async function getDashboardStats() {
 
   // Get user's display name
   let userName: string | null = null;
-  if (session.id && session.id !== "tech-admin-global") {
+  if (session.id) {
     const user = await prisma.user.findUnique({ where: { id: session.id as string }, select: { firstName: true } });
     userName = user?.firstName || null;
   }

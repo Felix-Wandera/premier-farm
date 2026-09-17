@@ -5,18 +5,20 @@ import { X, LineChart, HeartPulse, Package, Users, Settings, LogOut } from "luci
 import styles from "./MobileMenu.module.css";
 import { ThemeToggle } from "../theme-toggle/ThemeToggle";
 import { useToast } from "../ui/Toast";
+import { useAuth } from "../auth/AuthProvider";
 
 const menuItems = [
-  { icon: LineChart, label: "Sales & Finances", href: "/sales" },
+  { icon: LineChart, label: "Sales & Finances", href: "/sales", allowedRoles: ["ADMIN", "MANAGER"] },
   { icon: HeartPulse, label: "Breeding", href: "/breeding" },
   { icon: Package, label: "Inventory", href: "/inventory" },
-  { icon: Users, label: "User Management", href: "/users" },
+  { icon: Users, label: "User Management", href: "/users", allowedRoles: ["ADMIN"] },
 ];
 
 export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const toast = useToast();
+  const { user } = useAuth();
 
   const handleLogout = async () => {
     onClose();
@@ -44,7 +46,12 @@ export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClo
         </div>
         
         <nav className={styles.navGrid}>
-          {menuItems.map((item) => {
+          {menuItems
+            .filter((item) => {
+              if (!item.allowedRoles) return true;
+              return user?.role && item.allowedRoles.includes(user.role);
+            })
+            .map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link

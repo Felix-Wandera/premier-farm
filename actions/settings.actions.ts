@@ -19,11 +19,6 @@ export async function changePassword(data: any) {
     const sessionUser = await requireAuth();
     const userId = sessionUser.id as string;
 
-    // Tech admin cannot change password via this flow
-    if (userId === "tech-admin-global") {
-      return { success: false, message: "Tech Admin password is managed via environment variables." };
-    }
-
     const val = changePasswordSchema.safeParse(data);
     if (!val.success) {
       const firstError = val.error.issues[0]?.message || "Invalid input.";
@@ -165,10 +160,6 @@ export async function updateUserProfile(data: any) {
   try {
     const sessionUser = await requireAuth();
     const userId = sessionUser.id as string;
-
-    if (userId === "tech-admin-global") {
-      return { success: false, message: "Tech Admin profile is immutable." };
-    }
 
     const val = updateProfileSchema.safeParse(data);
     if (!val.success) {

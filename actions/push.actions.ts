@@ -25,8 +25,6 @@ export async function savePushSubscription(subString: string | null) {
   const sessionUser = await requireAuth();
   const userId = sessionUser.id as string;
 
-  if (userId === "tech-admin-global") return { success: false, message: "Tech admin cannot receive push." };
-
   if (!subString) {
     // Basic unsubscribe logic (simplified: remove all for user or specific endpoint)
     // Here we'll just handle adding/removing.

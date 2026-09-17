@@ -15,14 +15,11 @@ export async function requireAuth() {
   return session;
 }
 
-/**
- * Ensures the caller has one of the allowed roles.
- */
 export async function requireRole(allowedRoles: Role[]) {
   const session = await requireAuth();
+  const role = session.role as Role | undefined;
   
-  // @ts-ignore
-  if (!allowedRoles.includes(session.role as Role)) {
+  if (!role || !allowedRoles.includes(role)) {
     throw new Error("Forbidden: You do not have permission to perform this action.");
   }
   

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./utils";
+import { requireAuth, requireRole } from "./utils";
 import { revalidatePath } from "next/cache";
 
 export async function getInventoryItems() {
@@ -40,7 +40,7 @@ const newItemSchema = z.object({
 
 export async function addInventoryItem(data: any) {
   try {
-    await requireAuth();
+    await requireRole(["ADMIN", "MANAGER"]);
     
     const validated = newItemSchema.safeParse(data);
     if (!validated.success) return { success: false, message: "Invalid form data." };
@@ -77,7 +77,7 @@ const updateItemSchema = z.object({
 
 export async function updateInventoryItem(id: string, data: any) {
   try {
-    await requireAuth();
+    await requireRole(["ADMIN", "MANAGER"]);
 
     const validated = updateItemSchema.safeParse(data);
     if (!validated.success) return { success: false, message: "Invalid form data." };
@@ -101,7 +101,7 @@ export async function updateInventoryItem(id: string, data: any) {
 
 export async function deleteInventoryItem(id: string) {
   try {
-    await requireAuth();
+    await requireRole(["ADMIN", "MANAGER"]);
 
     await prisma.inventoryItem.update({
       where: { id },
