@@ -8,9 +8,12 @@ import { useToast } from "../../components/ui/Toast";
 import { useAuth } from "../../components/auth/AuthProvider";
 import ChangePasswordModal from "../../components/settings/ChangePasswordModal";
 import EditProfileModal from "../../components/settings/EditProfileModal";
+import EditFarmProfileModal from "../../components/settings/EditFarmProfileModal";
+import HelpGuideModal from "../../components/settings/HelpGuideModal";
 import DataExportModal from "../../components/settings/DataExportModal";
 import { subscribeUser, unsubscribeUser } from "../../components/notifications/NotificationManager";
 import { sendTestNotification } from "@/actions/push.actions";
+import { getFarmSettings } from "@/actions/settings.actions";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -18,11 +21,21 @@ export default function SettingsPage() {
   const toast = useToast();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isFarmModalOpen, setIsFarmModalOpen] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [farmSettings, setFarmSettings] = useState({
+    id: "default",
+    farmName: "Premier Farm",
+    location: "Nakuru County, Kenya",
+    phoneNumber: "+254 700 000 000",
+    email: "info@premierfarm.com",
+    currencySymbol: "KES",
+  });
 
-  // Sync push status on mount
+  // Sync push status & fetch farm settings on mount
   useEffect(() => {
     if ("serviceWorker" in navigator && "PushManager" in window) {
       navigator.serviceWorker.ready.then(reg => {
@@ -31,6 +44,12 @@ export default function SettingsPage() {
         });
       });
     }
+
+    getFarmSettings().then(res => {
+      if (res.success && res.data) {
+        setFarmSettings(res.data);
+      }
+    });
   }, []);
 
   const handlePushToggle = async () => {
@@ -105,12 +124,42 @@ export default function SettingsPage() {
         <h2 className={styles.sectionTitle}>Farm Profile</h2>
         <div className={styles.card}>
           <div className={styles.farmBanner}>
-            <div className={styles.farmAvatar}>PF</div>
-            <div>
-              <h3 className={styles.farmName}>Premier Farm</h3>
-              <p className={styles.farmSub}>Nakuru County, Kenya</p>
+            <div className={styles.farmAvatar}>
+              {farmSettings.farmName
+                ? farmSettings.farmName
+                    .split(" ")
+                    .map((w) => w[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()
+                : "PF"}
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 className={styles.farmName}>{farmSettings.farmName}</h3>
+              <p className={styles.farmSub}>{farmSettings.location}</p>
+              <div style={{ display: "flex", gap: "1rem", marginTop: "0.35rem", fontSize: "0.8rem", color: "var(--color-text-sub)" }}>
+                {farmSettings.phoneNumber && <span>📞 {farmSettings.phoneNumber}</span>}
+                {farmSettings.currencySymbol && <span>💰 Currency: {farmSettings.currencySymbol}</span>}
+              </div>
             </div>
           </div>
+          {user?.role === "ADMIN" && (
+            <button
+              onClick={() => setIsFarmModalOpen(true)}
+              style={{
+                width: "100%",
+                padding: "0.85rem",
+                color: "var(--color-primary)",
+                fontWeight: 600,
+                border: "none",
+                background: "var(--color-bg)",
+                borderTop: "1px solid var(--color-border)",
+                cursor: "pointer",
+              }}
+            >
+              Edit Farm Details
+            </button>
+          )}
         </div>
       </section>
 
@@ -223,11 +272,11 @@ export default function SettingsPage() {
         <div className={styles.card}>
           <button
             className={styles.settingRow}
-            onClick={() => toast("Opening help center...", "info")}
+            onClick={() => setIsHelpModalOpen(true)}
           >
             <div className={styles.rowLeft}>
               <HelpCircle size={20} className={styles.rowIcon} />
-              <span>Help & FAQ</span>
+              <span>Help & FAQ (Operations Guide)</span>
             </div>
             <ChevronRight size={18} className={styles.chevron} />
           </button>
@@ -251,10 +300,17 @@ export default function SettingsPage() {
         </button>
       </section>
 
-      <p className={styles.version}>Premier Farm v1.0.0</p>
+      <p className={styles.version}>{farmSettings.farmName} Operations Portal</p>
 
       <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
       <EditProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+      <EditFarmProfileModal
+        isOpen={isFarmModalOpen}
+        onClose={() => setIsFarmModalOpen(false)}
+        initialData={farmSettings}
+        onSuccess={(updated) => setFarmSettings(updated)}
+      />
+      <HelpGuideModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
       <DataExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </div>
   );

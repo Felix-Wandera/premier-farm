@@ -292,3 +292,16 @@ enum ExpenseCategory {
   MAINTENANCE
   OTHER
 }
+
+// =======================
+// Farm Profile & Settings
+// =======================
+model FarmSetting {
+  id             String   @id @default("default")
+  farmName       String   @default("Premier Farm")
+  location       String   @default("Nakuru County, Kenya")
+  phoneNumber    String?  @default("+254 700 000 000")
+  email          String?  @default("info@premierfarm.com")
+  currencySymbol String   @default("KES")
+  updatedAt      DateTime @updatedAt
+}

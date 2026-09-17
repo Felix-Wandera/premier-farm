@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./utils";
+import { requireAuth, requireRole } from "./utils";
+import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 
 const changePasswordSchema = z.object({
@@ -196,6 +197,111 @@ export async function updateUserProfile(data: any) {
   } catch (e) {
     console.error("Profile update error:", e);
     return { success: false, message: "Failed to update profile." };
+  }
+}
+
+// ============================================
+// Farm Profile Configuration
+// ============================================
+export async function getFarmSettings() {
+  try {
+    await requireAuth();
+
+    let setting = await prisma.farmSetting.findUnique({
+      where: { id: "default" },
+    });
+
+    if (!setting) {
+      setting = await prisma.farmSetting.create({
+        data: {
+          id: "default",
+          farmName: "Premier Farm",
+          location: "Nakuru County, Kenya",
+          phoneNumber: "+254 700 000 000",
+          email: "info@premierfarm.com",
+          currencySymbol: "KES",
+        },
+      });
+    }
+
+    return {
+      success: true,
+      data: {
+        id: setting.id,
+        farmName: setting.farmName,
+        location: setting.location,
+        phoneNumber: setting.phoneNumber || "",
+        email: setting.email || "",
+        currencySymbol: setting.currencySymbol || "KES",
+      },
+    };
+  } catch (e) {
+    console.error("getFarmSettings error:", e);
+    return {
+      success: false,
+      data: {
+        id: "default",
+        farmName: "Premier Farm",
+        location: "Nakuru County, Kenya",
+        phoneNumber: "+254 700 000 000",
+        email: "info@premierfarm.com",
+        currencySymbol: "KES",
+      },
+    };
+  }
+}
+
+const farmSettingSchema = z.object({
+  farmName: z.string().min(1, "Farm name is required."),
+  location: z.string().min(1, "Location is required."),
+  phoneNumber: z.string().optional().nullable(),
+  email: z.string().email("Invalid email address.").optional().or(z.literal("")),
+  currencySymbol: z.string().min(1, "Currency symbol is required."),
+});
+
+export async function updateFarmSettings(data: any) {
+  try {
+    await requireRole(["ADMIN"]);
+
+    const val = farmSettingSchema.safeParse(data);
+    if (!val.success) {
+      return { success: false, message: val.error.issues[0]?.message || "Invalid input." };
+    }
+
+    const { farmName, location, phoneNumber, email, currencySymbol } = val.data;
+
+    const updated = await prisma.farmSetting.upsert({
+      where: { id: "default" },
+      update: {
+        farmName,
+        location,
+        phoneNumber: phoneNumber || null,
+        email: email || null,
+        currencySymbol,
+      },
+      create: {
+        id: "default",
+        farmName,
+        location,
+        phoneNumber: phoneNumber || null,
+        email: email || null,
+        currencySymbol,
+      },
+    });
+
+    revalidatePath("/settings");
+    revalidatePath("/");
+    revalidatePath("/herd");
+    revalidatePath("/sales");
+
+    return {
+      success: true,
+      message: "Farm profile updated successfully!",
+      data: updated,
+    };
+  } catch (e: any) {
+    console.error("updateFarmSettings error:", e);
+    return { success: false, message: e.message || "Failed to update farm settings." };
   }
 }
 

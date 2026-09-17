@@ -74,6 +74,25 @@ async function performSeed(prisma, adminEmail, adminPassword) {
     });
     console.log(`[SEED SUCCESS] Admin user created with ID: ${created.id}`);
   }
+
+  // Ensure default farm profile exists
+  try {
+    const defaultFarm = await prisma.farmSetting.upsert({
+      where: { id: "default" },
+      update: {},
+      create: {
+        id: "default",
+        farmName: "Premier Farm",
+        location: "Nakuru County, Kenya",
+        phoneNumber: "+254 700 000 000",
+        email: "info@premierfarm.com",
+        currencySymbol: "KES",
+      },
+    });
+    console.log(`[SEED SUCCESS] Farm settings initialized: ${defaultFarm.farmName} (${defaultFarm.currencySymbol})`);
+  } catch (farmErr) {
+    console.warn(`[SEED WARN] Could not seed farm settings:`, farmErr.message);
+  }
 }
 
 async function seedAdmin() {
