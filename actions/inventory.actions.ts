@@ -68,6 +68,57 @@ const transactionSchema = z.object({
   quantity: z.number().positive(),
 });
 
+const updateItemSchema = z.object({
+  name: z.string().min(2),
+  category: z.enum(["FEED", "MEDICINE", "EQUIPMENT", "OTHER"]),
+  unit: z.string().min(1),
+  minThreshold: z.number().min(0)
+});
+
+export async function updateInventoryItem(id: string, data: any) {
+  try {
+    await requireAuth();
+
+    const validated = updateItemSchema.safeParse(data);
+    if (!validated.success) return { success: false, message: "Invalid form data." };
+
+    await prisma.inventoryItem.update({
+      where: { id },
+      data: {
+        name: validated.data.name,
+        category: validated.data.category,
+        unit: validated.data.unit,
+        minThreshold: validated.data.minThreshold,
+      }
+    });
+
+    revalidatePath("/inventory");
+    return { success: true, message: "Item updated successfully." };
+  } catch (err: any) {
+    return { success: false, message: "Failed to update item." };
+  }
+}
+
+export async function deleteInventoryItem(id: string) {
+  try {
+    await requireAuth();
+
+    await prisma.inventoryItem.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date() }
+    });
+
+    revalidatePath("/inventory");
+    return { success: true, message: "Item deleted successfully." };
+  } catch (err: any) {
+    return { success: false, message: "Failed to delete item." };
+  }
+}
+
+export async function transactInventoryExact(data: any) {
+  return transactInventory(data);
+}
+
 export async function transactInventory(data: any) {
   try {
     await requireAuth();

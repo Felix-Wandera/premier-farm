@@ -5,8 +5,9 @@ import { CheckCircle2, History, Clock, Search, Info } from "lucide-react";
 import AnimalIcon from "../ui/AnimalIcon";
 import { useToast } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
-import { logBatchMilkSession } from "@/actions/milk.actions";
+import { logBatchMilkSession, deleteMilkLogSession } from "@/actions/milk.actions";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 
 // Formatter helper
 function formatSpecies(s: string) {
@@ -27,6 +28,7 @@ export default function ClientMilkLogging({
   historyData: any[] 
 }) {
   const [session, setSession] = useState<"Morning" | "Evening">("Morning");
+  const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<"log" | "history">("log");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,6 +76,25 @@ export default function ClientMilkLogging({
   };
 
   const totalYield = records.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+  const handleDeleteSession = async (date: Date, sessionType: string) => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+
+    try {
+      const response = await deleteMilkLogSession(date, sessionType.toUpperCase());
+      if (response.success) {
+        toast(response.message, "success");
+        router.refresh();
+      } else {
+        toast(response.message, "error");
+      }
+    } catch (e: any) {
+      toast("An unexpected error occurred.", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleSaveSession = async () => {
     if (isSubmitting) return;
@@ -252,6 +273,7 @@ export default function ClientMilkLogging({
                 <span>Date</span>
                 <span>Session</span>
                 <span>Total</span>
+                <span></span>
               </div>
               {historyData.map((entry, i) => {
                 // Determine 'Today', 'Yesterday', or Date String
@@ -274,6 +296,15 @@ export default function ClientMilkLogging({
                     </div>
                     <div className={styles.cowTag}>
                       <strong>{entry.total} L</strong>
+                    </div>
+                    <div className={styles.cowTag} style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        onClick={() => handleDeleteSession(entry.date, entry.session)}
+                        disabled={isDeleting}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-sub)" }}
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </div>
                 )
