@@ -35,7 +35,7 @@ export default function QuickAddMenu({ isOpen, onClose }: { isOpen: boolean; onC
                <span>Log Milk</span>
             </Link>
 
-            <Link href="/breeding" className={styles.actionCard} onClick={onClose}>
+            <Link href="/breeding?action=health" className={styles.actionCard} onClick={onClose}>
                <div className={`${styles.iconCircle} ${styles.bgHealth}`}>
                   <HeartPulse size={32} />
                </div>
