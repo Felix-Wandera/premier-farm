@@ -24,7 +24,8 @@ export async function getInventoryLogs() {
     take: 50,
     orderBy: { date: "desc" },
     include: {
-      item: { select: { name: true, unit: true } }
+      item: { select: { name: true, unit: true } },
+      user: { select: { firstName: true, lastName: true, email: true } },
     }
   });
 
@@ -121,7 +122,7 @@ export async function transactInventoryExact(data: any) {
 
 export async function transactInventory(data: any) {
   try {
-    await requireAuth();
+    const session = await requireAuth();
     
     const validated = transactionSchema.safeParse(data);
     if (!validated.success) {
@@ -157,7 +158,8 @@ export async function transactInventory(data: any) {
           itemId,
           type,
           quantity,
-          notes: desc
+          notes: desc,
+          userId: (session.id as string) || null,
         }
       });
     });

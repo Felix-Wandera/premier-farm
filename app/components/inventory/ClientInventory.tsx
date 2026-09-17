@@ -150,7 +150,7 @@ export default function ClientInventory({
                     <div className={styles.txInfo}>
                        <h4>{entry.notes}</h4>
                        <div className={styles.txMeta}>
-                         <User size={12} /> <span>System User</span> &bull; <span>{new Date(entry.date).toLocaleString()}</span>
+                         <User size={12} /> <span>{entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : "Staff Member"}</span> &bull; <span>{new Date(entry.date).toLocaleString()}</span>
                        </div>
                     </div>
                  </div>

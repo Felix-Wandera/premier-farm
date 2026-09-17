@@ -38,6 +38,7 @@ model User {
   // Relations
   expenses Expense[]
   milkLogs MilkLog[]
+  inventoryTransactions InventoryTransaction[]
   pushSubscriptions PushSubscription[]
 }
 
@@ -255,6 +256,9 @@ model InventoryTransaction {
 
   itemId String
   item   InventoryItem @relation(fields: [itemId], references: [id])
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
 
   createdAt DateTime  @default(now())
   isDeleted Boolean   @default(false)

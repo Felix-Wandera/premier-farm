@@ -126,6 +126,9 @@ const statusUpdateSchema = z.object({
   status: z.enum(["DECEASED", "SOLD"]),
   date: z.string().min(1, "Date is required"),
   cause: z.string().optional(),
+  amount: z.coerce.number().min(0).optional(),
+  buyerName: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export async function updateAnimalStatus(id: string, status: string, formData: any): Promise<ActionState> {
@@ -143,22 +146,59 @@ export async function updateAnimalStatus(id: string, status: string, formData: a
 
     const data = validatedFields.data;
 
-    let updateData: any = {
-      status: data.status,
-    };
-
-    if (data.status === "DECEASED") {
-      updateData.dateOfDeath = new Date(data.date);
-      updateData.causeOfDeath = data.cause || null;
+    if (data.status === "SOLD" && (!data.amount || data.amount <= 0)) {
+      return {
+        success: false,
+        message: "Sale price must be greater than zero.",
+      };
     }
 
-    await prisma.animal.update({
-      where: { id },
-      data: updateData,
+    await prisma.$transaction(async (tx) => {
+      const animal = await tx.animal.findUnique({
+        where: { id },
+        select: { id: true, tagNumber: true, name: true },
+      });
+
+      if (!animal) {
+        throw new Error("Animal not found.");
+      }
+
+      if (data.status === "SOLD") {
+        const saleDesc = `Sale of ${animal.tagNumber}${animal.name ? ` (${animal.name})` : ""}`;
+        const sale = await tx.sale.create({
+          data: {
+            saleType: "ANIMAL",
+            amount: data.amount!,
+            quantity: 1,
+            date: new Date(data.date),
+            buyerName: data.buyerName?.trim() || null,
+            notes: data.notes?.trim() || saleDesc,
+          },
+        });
+
+        await tx.animal.update({
+          where: { id },
+          data: {
+            status: "SOLD",
+            saleId: sale.id,
+          },
+        });
+      } else if (data.status === "DECEASED") {
+        await tx.animal.update({
+          where: { id },
+          data: {
+            status: "DECEASED",
+            dateOfDeath: new Date(data.date),
+            causeOfDeath: data.cause?.trim() || null,
+          },
+        });
+      }
     });
 
     revalidatePath("/herd");
     revalidatePath(`/herd/${id}`);
+    revalidatePath("/sales");
+    revalidatePath("/");
 
     return {
       success: true,
@@ -170,7 +210,7 @@ export async function updateAnimalStatus(id: string, status: string, formData: a
 
     return {
       success: false,
-      message: "An unexpected database error occurred. Please try again later.",
+      message: error.message || "An unexpected database error occurred. Please try again later.",
     };
   }
 }
@@ -257,8 +297,29 @@ export async function getAnimalProfile(id: string) {
   const animal = await prisma.animal.findUnique({
     where: { id, isDeleted: false },
     include: {
-      mother: { select: { tagNumber: true, name: true } },
-      offspring: { select: { tagNumber: true, name: true, dateOfBirth: true } },
+      mother: { select: { id: true, tagNumber: true, name: true } },
+      offspring: {
+        where: { isDeleted: false },
+        orderBy: { dateOfBirth: "desc" },
+        select: {
+          id: true,
+          tagNumber: true,
+          name: true,
+          gender: true,
+          species: true,
+          status: true,
+          dateOfBirth: true,
+        },
+      },
+      sale: {
+        select: {
+          id: true,
+          amount: true,
+          buyerName: true,
+          date: true,
+          notes: true,
+        },
+      },
       milkLogs: {
         orderBy: { date: "desc" },
         take: 10,
