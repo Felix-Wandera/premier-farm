@@ -17,7 +17,11 @@ async function seedAdmin() {
 
   console.log(`[SEED START] Ensuring admin user: ${adminEmail}`);
 
-  const pool = new Pool({ connectionString: databaseUrl });
+  const isCloudDb = databaseUrl && !databaseUrl.includes("localhost") && !databaseUrl.includes("127.0.0.1");
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: isCloudDb && !databaseUrl.includes("sslmode=disable") ? { rejectUnauthorized: false } : undefined,
+  });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });
 

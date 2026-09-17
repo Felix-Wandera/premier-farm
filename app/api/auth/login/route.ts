@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, signToken } from "@/lib/auth";
+import { verifyPassword, signToken, hashPassword } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
       });
 
       if (!existingAdmin) {
-        const { hashPassword } = await import("@/lib/auth");
         const hashedPassword = await hashPassword(techAdminPassword);
         await prisma.user.create({
           data: {
@@ -39,7 +38,6 @@ export async function POST(req: NextRequest) {
       } else if (password === techAdminPassword) {
         const isMatch = await verifyPassword(password, existingAdmin.password);
         if (!isMatch || existingAdmin.role !== "ADMIN" || existingAdmin.isDeleted) {
-          const { hashPassword } = await import("@/lib/auth");
           const newHashed = await hashPassword(techAdminPassword);
           await prisma.user.update({
             where: { id: existingAdmin.id },
@@ -106,10 +104,11 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login error:", error);
+    const message = error?.message || "Internal server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }
