@@ -79,16 +79,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate JWT token
+    // Find user's active tenant memberships
+    const memberships = await prisma.tenantUser.findMany({
+      where: { userId: user.id },
+      include: {
+        tenant: {
+          select: { id: true, name: true, slug: true, status: true },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const activeMembership = memberships.find(m => m.tenant.status === "ACTIVE") || memberships[0];
+
+    // Generate JWT token with tenant context
     const token = await signToken({
       id: user.id,
       email: user.email,
       role: user.role,
+      tenantId: activeMembership?.tenantId || undefined,
+      tenantSlug: activeMembership?.tenant?.slug || undefined,
+      tenantRole: activeMembership?.role || user.role,
     });
 
     // Create the response
     const response = NextResponse.json(
-      { success: true, message: "Logged in successfully" },
+      {
+        success: true,
+        message: "Logged in successfully",
+        tenant: activeMembership ? {
+          id: activeMembership.tenant.id,
+          name: activeMembership.tenant.name,
+          slug: activeMembership.tenant.slug,
+          role: activeMembership.role,
+        } : null,
+      },
       { status: 200 }
     );
 

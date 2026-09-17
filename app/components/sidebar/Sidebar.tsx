@@ -14,6 +14,7 @@ import styles from "./Sidebar.module.css";
 import { ThemeToggle } from "../theme-toggle/ThemeToggle";
 import { useToast } from "../ui/Toast";
 import { useAuth } from "../auth/AuthProvider";
+import TenantSwitcher from "../tenant/TenantSwitcher";
 
 const navItems = [
   { icon: Home, label: "Dashboard", href: "/" },
@@ -29,7 +30,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, tenantRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Persistence
@@ -80,11 +81,14 @@ export default function Sidebar() {
         </button>
       </div>
 
+      <TenantSwitcher isCollapsed={isCollapsed} />
+
       <nav className={styles.navItems}>
         {navItems
           .filter((item) => {
             if (!item.allowedRoles) return true;
-            return user?.role && item.allowedRoles.includes(user.role);
+            const effectiveRole = tenantRole || user?.role;
+            return effectiveRole && item.allowedRoles.includes(effectiveRole);
           })
           .map((item) => {
           const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);

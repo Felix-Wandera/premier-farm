@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import logoPic from "@/public/logo.png";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import styles from "./page.module.css";
 import { Lock, Mail, ArrowRight, Loader2 } from "lucide-react";
 import { useToast } from "../components/ui/Toast";
@@ -140,7 +141,7 @@ export default function Login() {
           </form>
 
           <p className={styles.footerText}>
-            Don't have an account? <a href="#">Contact admin</a>
+            Want to register a new farm? <Link href="/register-farm" style={{ color: "#10b981", fontWeight: 600 }}>Create organization</Link>
           </p>
         </div>
       </div>

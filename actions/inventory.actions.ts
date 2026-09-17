@@ -2,14 +2,14 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "./utils";
+import { requireTenantContext, requireTenantRole } from "./utils";
 import { revalidatePath } from "next/cache";
 
 export async function getInventoryItems() {
-  await requireAuth();
+  const { tenantId } = await requireTenantContext();
 
   const items = await prisma.inventoryItem.findMany({
-    where: { isDeleted: false },
+    where: { tenantId, isDeleted: false },
     orderBy: { name: "asc" },
   });
 
@@ -17,10 +17,13 @@ export async function getInventoryItems() {
 }
 
 export async function getInventoryLogs() {
-  await requireAuth();
+  const { tenantId } = await requireTenantContext();
 
   const logs = await prisma.inventoryTransaction.findMany({
-    where: { isDeleted: false },
+    where: {
+      item: { tenantId },
+      isDeleted: false
+    },
     take: 50,
     orderBy: { date: "desc" },
     include: {
@@ -41,13 +44,14 @@ const newItemSchema = z.object({
 
 export async function addInventoryItem(data: any) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
     
     const validated = newItemSchema.safeParse(data);
     if (!validated.success) return { success: false, message: "Invalid form data." };
 
     await prisma.inventoryItem.create({
       data: {
+        tenantId,
         name: validated.data.name,
         category: validated.data.category,
         unit: validated.data.unit,
@@ -61,7 +65,7 @@ export async function addInventoryItem(data: any) {
   } catch (err: any) {
     return { success: false, message: "Failed to create item." };
   }
-} // end addInventoryItem
+}
 
 const transactionSchema = z.object({
   itemId: z.string(),
@@ -78,10 +82,18 @@ const updateItemSchema = z.object({
 
 export async function updateInventoryItem(id: string, data: any) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
     const validated = updateItemSchema.safeParse(data);
     if (!validated.success) return { success: false, message: "Invalid form data." };
+
+    const existing = await prisma.inventoryItem.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return { success: false, message: "Inventory item not found in your farm." };
+    }
 
     await prisma.inventoryItem.update({
       where: { id },
@@ -102,7 +114,15 @@ export async function updateInventoryItem(id: string, data: any) {
 
 export async function deleteInventoryItem(id: string) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
+
+    const existing = await prisma.inventoryItem.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return { success: false, message: "Inventory item not found in your farm." };
+    }
 
     await prisma.inventoryItem.update({
       where: { id },
@@ -122,7 +142,7 @@ export async function transactInventoryExact(data: any) {
 
 export async function transactInventory(data: any) {
   try {
-    const session = await requireAuth();
+    const { userId, tenantId } = await requireTenantContext();
     
     const validated = transactionSchema.safeParse(data);
     if (!validated.success) {
@@ -133,8 +153,8 @@ export async function transactInventory(data: any) {
 
     // Use a Prisma transaction to ensure the item quantity and log are in sync
     await prisma.$transaction(async (tx) => {
-      const item = await tx.inventoryItem.findUnique({ where: { id: itemId } });
-      if (!item) throw new Error("Item not found");
+      const item = await tx.inventoryItem.findFirst({ where: { id: itemId, tenantId } });
+      if (!item) throw new Error("Item not found in your farm");
 
       if (type === "STOCK_OUT" && item.quantity < quantity) {
         throw new Error(`Insufficient stock. Only ${item.quantity} ${item.unit} remaining.`);
@@ -159,7 +179,7 @@ export async function transactInventory(data: any) {
           type,
           quantity,
           notes: desc,
-          userId: (session.id as string) || null,
+          userId,
         }
       });
     });

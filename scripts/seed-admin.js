@@ -75,7 +75,7 @@ async function performSeed(prisma, adminEmail, adminPassword) {
     console.log(`[SEED SUCCESS] Admin user created with ID: ${created.id}`);
   }
 
-  // Ensure default farm profile exists
+  // Ensure default farm profile and primary tenant exist
   try {
     const defaultFarm = await prisma.farmSetting.upsert({
       where: { id: "default" },
@@ -90,8 +90,43 @@ async function performSeed(prisma, adminEmail, adminPassword) {
       },
     });
     console.log(`[SEED SUCCESS] Farm settings initialized: ${defaultFarm.farmName} (${defaultFarm.currencySymbol})`);
+
+    const primaryTenant = await prisma.tenant.upsert({
+      where: { slug: "premier-farm" },
+      update: {},
+      create: {
+        id: "tenant-premier-farm",
+        name: defaultFarm.farmName || "Premier Farm",
+        slug: "premier-farm",
+        location: defaultFarm.location || "Nakuru County, Kenya",
+        phoneNumber: defaultFarm.phoneNumber || "+254 700 000 000",
+        email: defaultFarm.email || "info@premierfarm.com",
+        currencySymbol: defaultFarm.currencySymbol || "KES",
+        status: "ACTIVE",
+        plan: "PRO_ENTERPRISE",
+      },
+    });
+
+    const adminUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+    if (adminUser) {
+      await prisma.tenantUser.upsert({
+        where: {
+          tenantId_userId: {
+            tenantId: primaryTenant.id,
+            userId: adminUser.id,
+          },
+        },
+        update: { role: "ADMIN" },
+        create: {
+          tenantId: primaryTenant.id,
+          userId: adminUser.id,
+          role: "ADMIN",
+        },
+      });
+      console.log(`[SEED SUCCESS] Admin membership linked to primary tenant.`);
+    }
   } catch (farmErr) {
-    console.warn(`[SEED WARN] Could not seed farm settings:`, farmErr.message);
+    console.warn(`[SEED WARN] Could not seed farm settings/tenant:`, farmErr.message);
   }
 }
 

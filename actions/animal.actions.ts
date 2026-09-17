@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "./utils";
+import { requireTenantContext, requireTenantRole } from "./utils";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -36,7 +36,7 @@ type ActionState = {
 
 export async function createAnimal(formData: any): Promise<ActionState> {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
     // 1. Zod Validation
     const validatedFields = animalSchema.safeParse(formData);
@@ -56,11 +56,14 @@ export async function createAnimal(formData: any): Promise<ActionState> {
       return { success: false, message: `Invalid species: ${data.species}` };
     }
 
-    // 2. Mother Tag Lookup (If provided)
+    // 2. Mother Tag Lookup (Scoped to this tenant)
     let motherId = null;
     if (data.motherTag && data.motherTag.trim() !== "") {
-      const mother = await prisma.animal.findUnique({
-        where: { tagNumber: data.motherTag.trim() },
+      const mother = await prisma.animal.findFirst({
+        where: {
+          tenantId,
+          tagNumber: data.motherTag.trim(),
+        },
         select: { id: true },
       });
 
@@ -73,9 +76,10 @@ export async function createAnimal(formData: any): Promise<ActionState> {
       motherId = mother.id;
     }
 
-    // 3. Database Insertion
+    // 3. Database Insertion (Scoped to tenantId)
     const newAnimal = await prisma.animal.create({
       data: {
+        tenantId,
         tagNumber: data.tagNumber.trim(),
         name: data.name?.trim() || null,
         species: dbSpecies,
@@ -87,7 +91,7 @@ export async function createAnimal(formData: any): Promise<ActionState> {
       },
     });
 
-    revalidatePath("/herd"); // Tell Next.js to flush cache for directory
+    revalidatePath("/herd");
 
     return {
       success: true,
@@ -133,7 +137,7 @@ const statusUpdateSchema = z.object({
 
 export async function updateAnimalStatus(id: string, status: string, formData: any): Promise<ActionState> {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
     const validatedFields = statusUpdateSchema.safeParse({ status, ...formData });
 
@@ -154,19 +158,20 @@ export async function updateAnimalStatus(id: string, status: string, formData: a
     }
 
     await prisma.$transaction(async (tx) => {
-      const animal = await tx.animal.findUnique({
-        where: { id },
+      const animal = await tx.animal.findFirst({
+        where: { id, tenantId },
         select: { id: true, tagNumber: true, name: true },
       });
 
       if (!animal) {
-        throw new Error("Animal not found.");
+        throw new Error("Animal not found in your farm records.");
       }
 
       if (data.status === "SOLD") {
         const saleDesc = `Sale of ${animal.tagNumber}${animal.name ? ` (${animal.name})` : ""}`;
         const sale = await tx.sale.create({
           data: {
+            tenantId,
             saleType: "ANIMAL",
             amount: data.amount!,
             quantity: 1,
@@ -217,7 +222,7 @@ export async function updateAnimalStatus(id: string, status: string, formData: a
 
 export async function updateAnimal(id: string, formData: any): Promise<ActionState> {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
     const validatedFields = updateAnimalSchema.safeParse(formData);
 
@@ -234,6 +239,14 @@ export async function updateAnimal(id: string, formData: any): Promise<ActionSta
 
     if (!dbSpecies) {
       return { success: false, message: `Invalid species: ${data.species}` };
+    }
+
+    const existing = await prisma.animal.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return { success: false, message: "Animal not found in your farm records." };
     }
 
     await prisma.animal.update({
@@ -261,7 +274,7 @@ export async function updateAnimal(id: string, formData: any): Promise<ActionSta
     if (error.code === "P2002") {
       return {
         success: false,
-        message: "An animal with this Tag Number already exists. Please check your records.",
+        message: "An animal with this Tag Number already exists in your farm.",
       };
     }
 
@@ -273,10 +286,10 @@ export async function updateAnimal(id: string, formData: any): Promise<ActionSta
 }
 
 export async function getAnimals() {
-  await requireAuth();
+  const { tenantId } = await requireTenantContext();
   
   const animals = await prisma.animal.findMany({
-    where: { isDeleted: false },
+    where: { tenantId, isDeleted: false },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -292,10 +305,10 @@ export async function getAnimals() {
 }
 
 export async function getAnimalProfile(id: string) {
-  await requireAuth();
+  const { tenantId } = await requireTenantContext();
 
-  const animal = await prisma.animal.findUnique({
-    where: { id, isDeleted: false },
+  const animal = await prisma.animal.findFirst({
+    where: { id, tenantId, isDeleted: false },
     include: {
       mother: { select: { id: true, tagNumber: true, name: true } },
       offspring: {

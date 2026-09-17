@@ -36,6 +36,7 @@ model User {
   inviteTokenExp DateTime?
 
   // Relations
+  memberships TenantUser[]
   expenses Expense[]
   milkLogs MilkLog[]
   inventoryTransactions InventoryTransaction[]
@@ -52,7 +53,6 @@ model PushSubscription {
   createdAt DateTime @default(now())
 }
 
-
 enum Role {
   ADMIN
   MANAGER
@@ -60,17 +60,82 @@ enum Role {
 }
 
 // =======================
+// Multi-Tenant Core
+// =======================
+model Tenant {
+  id             String           @id @default(cuid())
+  name           String
+  slug           String           @unique
+  location       String?          @default("Kenya")
+  phoneNumber    String?
+  email          String?
+  currencySymbol String           @default("KES")
+  status         TenantStatus     @default(ACTIVE)
+  plan           SubscriptionPlan @default(FREE_TRIAL)
+  trialEndsAt    DateTime?
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Tenant Relationships
+  memberships    TenantUser[]
+  animals        Animal[]
+  milkLogs       MilkLog[]
+  sales          Sale[]
+  breedingEvents BreedingEvent[]
+  healthRecords  HealthRecord[]
+  inventoryItems InventoryItem[]
+  expenses       Expense[]
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum SubscriptionPlan {
+  FREE_TRIAL
+  STANDARD
+  PRO_ENTERPRISE
+}
+
+model TenantUser {
+  id             String     @id @default(cuid())
+  tenantId       String
+  tenant         Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role           Role       @default(WORKER)
+
+  // Invitation Flow scoped to this tenant
+  inviteToken    String?    @unique
+  inviteTokenExp DateTime?
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+}
+
+// =======================
 // Animal Management
 // =======================
 model Animal {
   id          String       @id @default(cuid())
-  tagNumber   String       @unique
+  tagNumber   String
   name        String?
   species     Species
   breed       String?
   dateOfBirth DateTime?
   gender      Gender
   status      AnimalStatus @default(ACTIVE)
+
+  // Tenant Isolation
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Sale or Death details
   dateOfDeath  DateTime?
@@ -93,6 +158,9 @@ model Animal {
   milkLogs       MilkLog[]
   healthRecords  HealthRecord[]
   breedingEvents BreedingEvent[] @relation("MotherBreeding")
+
+  @@unique([tenantId, tagNumber])
+  @@index([tenantId])
 }
 
 enum Species {
@@ -125,6 +193,10 @@ model MilkLog {
   milkingTime  MilkingTime
   date         DateTime    @default(now()) // Can be backdated if needed
 
+  // Tenant Isolation
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   animalId String
   animal   Animal @relation(fields: [animalId], references: [id])
 
@@ -135,6 +207,8 @@ model MilkLog {
   updatedAt DateTime  @updatedAt
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
+
+  @@index([tenantId])
 }
 
 enum MilkingTime {
@@ -155,12 +229,18 @@ model Sale {
   buyerName String?
   notes     String?
 
+  // Tenant Isolation
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   // If saleType is ANIMAL, link to the specific animal sold
   animal Animal?
 
   createdAt DateTime  @default(now())
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
+
+  @@index([tenantId])
 }
 
 enum SaleType {
@@ -181,6 +261,10 @@ model BreedingEvent {
   actualDate   DateTime? // Actual birth date
   notes        String?
 
+  // Tenant Isolation
+  tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   animalId String
   animal   Animal @relation("MotherBreeding", fields: [animalId], references: [id])
 
@@ -188,6 +272,8 @@ model BreedingEvent {
   updatedAt DateTime  @updatedAt
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
+
+  @@index([tenantId])
 }
 
 enum BreedingEventType {
@@ -207,12 +293,18 @@ model HealthRecord {
   description String
   cost        Float? // Optional: Track individual treatment costs
 
+  // Tenant Isolation
+  tenantId    String
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   animalId String
   animal   Animal @relation(fields: [animalId], references: [id])
 
   createdAt DateTime  @default(now())
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
+
+  @@index([tenantId])
 }
 
 enum HealthRecordType {
@@ -232,12 +324,18 @@ model InventoryItem {
   unit         String // e.g., kg, bales, bottles
   minThreshold Float? // Alert if quantity drops below this
 
+  // Tenant Isolation
+  tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   transactions InventoryTransaction[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
+
+  @@index([tenantId])
 }
 
 enum InventoryCategory {
@@ -277,12 +375,18 @@ model Expense {
   date        DateTime        @default(now())
   description String?
 
+  // Tenant Isolation
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   recordedById String?
   recordedBy   User?   @relation(fields: [recordedById], references: [id])
 
   createdAt DateTime  @default(now())
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
+
+  @@index([tenantId])
 }
 
 enum ExpenseCategory {

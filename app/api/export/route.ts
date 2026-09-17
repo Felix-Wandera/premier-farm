@@ -14,16 +14,40 @@ function escapeCsv(val: any): string {
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session) {
+    if (!session || !session.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.role !== "ADMIN" && session.role !== "MANAGER") {
+    let tenantId = session.tenantId as string | undefined;
+    let userRole = (session.tenantRole || session.role) as string | undefined;
+
+    if (!tenantId) {
+      const membership = await prisma.tenantUser.findFirst({
+        where: { userId: session.id },
+        include: { tenant: true },
+      });
+      if (membership) {
+        tenantId = membership.tenantId;
+        userRole = membership.role;
+      } else {
+        const defaultTenant = await prisma.tenant.findFirst({ where: { slug: "premier-farm" } });
+        tenantId = defaultTenant?.id;
+      }
+    }
+
+    if (!tenantId) {
+      return NextResponse.json({ error: "No farm organization found." }, { status: 400 });
+    }
+
+    if (userRole !== "ADMIN" && userRole !== "MANAGER") {
       return NextResponse.json(
         { error: "Forbidden: Only administrators and managers can export farm data." },
         { status: 403 }
       );
     }
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const farmSlug = tenant?.slug || "farm";
 
     const type = req.nextUrl.searchParams.get("type")?.toLowerCase() || "all";
     const today = new Date().toISOString().split("T")[0];
@@ -31,7 +55,7 @@ export async function GET(req: NextRequest) {
     // 1. HERD EXPORT
     if (type === "herd") {
       const animals = await prisma.animal.findMany({
-        where: { isDeleted: false },
+        where: { tenantId, isDeleted: false },
         include: { mother: { select: { tagNumber: true } } },
         orderBy: { tagNumber: "asc" },
       });
@@ -55,7 +79,7 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="premier-farm-herd-${today}.csv"`,
+          "Content-Disposition": `attachment; filename="${farmSlug}-herd-${today}.csv"`,
         },
       });
     }
@@ -63,7 +87,7 @@ export async function GET(req: NextRequest) {
     // 2. MILK EXPORT
     if (type === "milk") {
       const milkLogs = await prisma.milkLog.findMany({
-        where: { isDeleted: false },
+        where: { tenantId, isDeleted: false },
         include: {
           animal: { select: { tagNumber: true, name: true } },
           recordedBy: { select: { firstName: true, lastName: true } },
@@ -87,7 +111,7 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="premier-farm-milk-${today}.csv"`,
+          "Content-Disposition": `attachment; filename="${farmSlug}-milk-${today}.csv"`,
         },
       });
     }
@@ -95,9 +119,9 @@ export async function GET(req: NextRequest) {
     // 3. FINANCES (SALES & EXPENSES)
     if (type === "finances" || type === "sales" || type === "expenses") {
       const [sales, expenses] = await Promise.all([
-        prisma.sale.findMany({ where: { isDeleted: false }, orderBy: { date: "desc" } }),
+        prisma.sale.findMany({ where: { tenantId, isDeleted: false }, orderBy: { date: "desc" } }),
         prisma.expense.findMany({
-          where: { isDeleted: false },
+          where: { tenantId, isDeleted: false },
           include: { recordedBy: { select: { firstName: true, lastName: true } } },
           orderBy: { date: "desc" },
         }),
@@ -161,7 +185,7 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="premier-farm-${type}-${today}.csv"`,
+          "Content-Disposition": `attachment; filename="${farmSlug}-${type}-${today}.csv"`,
         },
       });
     }
@@ -169,7 +193,7 @@ export async function GET(req: NextRequest) {
     // 4. INVENTORY EXPORT
     if (type === "inventory") {
       const items = await prisma.inventoryItem.findMany({
-        where: { isDeleted: false },
+        where: { tenantId, isDeleted: false },
         orderBy: { name: "asc" },
       });
 
@@ -190,23 +214,23 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="premier-farm-inventory-${today}.csv"`,
+          "Content-Disposition": `attachment; filename="${farmSlug}-inventory-${today}.csv"`,
         },
       });
     }
 
     // 5. DEFAULT / ALL CONSOLIDATED BACKUP
     const [animals, milkLogs, sales, expenses, inventory] = await Promise.all([
-      prisma.animal.findMany({ where: { isDeleted: false }, orderBy: { tagNumber: "asc" } }),
+      prisma.animal.findMany({ where: { tenantId, isDeleted: false }, orderBy: { tagNumber: "asc" } }),
       prisma.milkLog.findMany({
-        where: { isDeleted: false },
+        where: { tenantId, isDeleted: false },
         include: { animal: { select: { tagNumber: true } } },
         orderBy: { date: "desc" },
         take: 500,
       }),
-      prisma.sale.findMany({ where: { isDeleted: false }, orderBy: { date: "desc" } }),
-      prisma.expense.findMany({ where: { isDeleted: false }, orderBy: { date: "desc" } }),
-      prisma.inventoryItem.findMany({ where: { isDeleted: false }, orderBy: { name: "asc" } }),
+      prisma.sale.findMany({ where: { tenantId, isDeleted: false }, orderBy: { date: "desc" } }),
+      prisma.expense.findMany({ where: { tenantId, isDeleted: false }, orderBy: { date: "desc" } }),
+      prisma.inventoryItem.findMany({ where: { tenantId, isDeleted: false }, orderBy: { name: "asc" } }),
     ]);
 
     let csv = "=== HERD DIRECTORY ===\n";
@@ -243,7 +267,7 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="premier-farm-full-backup-${today}.csv"`,
+        "Content-Disposition": `attachment; filename="${farmSlug}-full-backup-${today}.csv"`,
       },
     });
   } catch (error) {

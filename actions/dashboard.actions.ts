@@ -1,10 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./utils";
+import { requireTenantContext } from "./utils";
 
 export async function getDashboardStats() {
-  const session = await requireAuth();
+  const { tenantId, session } = await requireTenantContext();
 
   // Get user's display name
   let userName: string | null = null;
@@ -31,14 +31,14 @@ export async function getDashboardStats() {
     upcomingEvents,
   ] = await Promise.all([
     // Total active herd
-    prisma.animal.count({ where: { status: "ACTIVE", isDeleted: false } }),
+    prisma.animal.count({ where: { tenantId, status: "ACTIVE", isDeleted: false } }),
     // Dairy count
-    prisma.animal.count({ where: { species: "DAIRY_COW", status: "ACTIVE", isDeleted: false } }),
+    prisma.animal.count({ where: { tenantId, species: "DAIRY_COW", status: "ACTIVE", isDeleted: false } }),
     // Indigenous count
-    prisma.animal.count({ where: { species: "INDIGENOUS_COW", status: "ACTIVE", isDeleted: false } }),
+    prisma.animal.count({ where: { tenantId, species: "INDIGENOUS_COW", status: "ACTIVE", isDeleted: false } }),
     // Today's milk yield
     prisma.milkLog.aggregate({
-      where: { date: { gte: today, lt: tomorrow }, isDeleted: false },
+      where: { tenantId, date: { gte: today, lt: tomorrow }, isDeleted: false },
       _sum: { amountLiters: true }
     }),
     // Yesterday's milk yield
@@ -46,17 +46,18 @@ export async function getDashboardStats() {
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
       return prisma.milkLog.aggregate({
-        where: { date: { gte: yesterday, lt: today }, isDeleted: false },
+        where: { tenantId, date: { gte: yesterday, lt: today }, isDeleted: false },
         _sum: { amountLiters: true }
       });
     })(),
     // Total sales revenue
-    prisma.sale.aggregate({ where: { isDeleted: false }, _sum: { amount: true } }),
+    prisma.sale.aggregate({ where: { tenantId, isDeleted: false }, _sum: { amount: true } }),
     // Total expenses
-    prisma.expense.aggregate({ where: { isDeleted: false }, _sum: { amount: true } }),
+    prisma.expense.aggregate({ where: { tenantId, isDeleted: false }, _sum: { amount: true } }),
     // Low stock items (below threshold)
     prisma.inventoryItem.findMany({
       where: {
+        tenantId,
         isDeleted: false,
         minThreshold: { not: null },
       },
@@ -64,6 +65,7 @@ export async function getDashboardStats() {
     // Upcoming breeding events (next 7 days)
     prisma.breedingEvent.findMany({
       where: {
+        tenantId,
         isDeleted: false,
         expectedDate: {
           gte: today,

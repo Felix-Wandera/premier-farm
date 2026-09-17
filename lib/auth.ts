@@ -29,11 +29,21 @@ function getJwtSecretKey() {
   return new TextEncoder().encode(secret);
 }
 
+export interface SessionPayload {
+  id: string;
+  email: string;
+  role: string;
+  tenantId?: string;
+  tenantSlug?: string;
+  tenantRole?: string;
+  [key: string]: any;
+}
+
 /**
  * Sign a new JWT token.
- * Contains user payload such as id, email, and role.
+ * Contains user payload such as id, email, role, and active tenant context.
  */
-export async function signToken(payload: { id: string; email: string; role: string }) {
+export async function signToken(payload: SessionPayload) {
   const iat = Math.floor(Date.now() / 1000);
   // Token expires in 24 hours
   const exp = iat + 60 * 60 * 24;

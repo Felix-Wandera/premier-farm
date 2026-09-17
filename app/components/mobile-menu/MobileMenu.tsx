@@ -6,6 +6,7 @@ import styles from "./MobileMenu.module.css";
 import { ThemeToggle } from "../theme-toggle/ThemeToggle";
 import { useToast } from "../ui/Toast";
 import { useAuth } from "../auth/AuthProvider";
+import TenantSwitcher from "../tenant/TenantSwitcher";
 
 const menuItems = [
   { icon: LineChart, label: "Sales & Finances", href: "/sales", allowedRoles: ["ADMIN", "MANAGER"] },
@@ -18,7 +19,7 @@ export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClo
   const pathname = usePathname();
   const router = useRouter();
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, tenantRole } = useAuth();
 
   const handleLogout = async () => {
     onClose();
@@ -44,12 +45,17 @@ export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClo
             <X size={24} />
           </button>
         </div>
+
+        <div style={{ padding: "0.25rem 0.5rem" }}>
+          <TenantSwitcher />
+        </div>
         
         <nav className={styles.navGrid}>
           {menuItems
             .filter((item) => {
               if (!item.allowedRoles) return true;
-              return user?.role && item.allowedRoles.includes(user.role);
+              const effectiveRole = tenantRole || user?.role;
+              return effectiveRole && item.allowedRoles.includes(effectiveRole);
             })
             .map((item) => {
             const isActive = pathname === item.href;

@@ -10,6 +10,8 @@ export async function GET() {
   }
 
   let fullUser = null;
+  let memberships: any[] = [];
+
   if (session.id) {
     fullUser = await prisma.user.findUnique({
       where: { id: session.id as string },
@@ -22,14 +24,42 @@ export async function GET() {
         phoneNumber: true,
       }
     });
+
+    memberships = await prisma.tenantUser.findMany({
+      where: { userId: session.id as string },
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            location: true,
+            currencySymbol: true,
+            status: true,
+          },
+        },
+      },
+    });
   }
 
   if (!fullUser) {
     return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
   }
 
+  const activeTenantId = (session.tenantId as string) || memberships[0]?.tenantId;
+  const activeMembership = memberships.find(m => m.tenantId === activeTenantId) || memberships[0];
+
   return NextResponse.json({
     authenticated: true,
     user: fullUser,
+    activeTenant: activeMembership?.tenant || null,
+    tenantRole: activeMembership?.role || fullUser.role,
+    memberships: memberships.map(m => ({
+      tenantId: m.tenant.id,
+      name: m.tenant.name,
+      slug: m.tenant.slug,
+      role: m.role,
+      status: m.tenant.status,
+    })),
   });
 }

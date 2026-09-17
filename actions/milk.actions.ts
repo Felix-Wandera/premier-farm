@@ -2,15 +2,16 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./utils";
+import { requireTenantContext } from "./utils";
 import { revalidatePath } from "next/cache";
 import { sendPushNotification } from "./push.actions";
 
 export async function getMilkingCows() {
-  await requireAuth();
+  const { tenantId } = await requireTenantContext();
 
   const cows = await prisma.animal.findMany({
     where: {
+      tenantId,
       isDeleted: false,
       status: "ACTIVE",
       gender: "FEMALE",
@@ -38,7 +39,7 @@ const batchSchema = z.object({
 
 export async function logBatchMilkSession(data: any) {
   try {
-    const sessionUser = await requireAuth();
+    const { userId, tenantId } = await requireTenantContext();
     
     const validatedFields = batchSchema.safeParse(data);
     
@@ -55,15 +56,15 @@ export async function logBatchMilkSession(data: any) {
       return { success: false, message: "No milk yields > 0 to record." };
     }
 
-    // Use a single exact timestamp so groupBy works perfectly later
     const exactNow = new Date();
 
     const insertData = validRecords.map(r => ({
+      tenantId,
       animalId: r.animalId,
       amountLiters: r.amount,
       milkingTime: session,
       date: exactNow,
-      recordedById: sessionUser.id as string,
+      recordedById: userId,
     }));
 
     await prisma.milkLog.createMany({
@@ -72,11 +73,14 @@ export async function logBatchMilkSession(data: any) {
 
     const totalLitres = validRecords.reduce((acc, curr) => acc + curr.amount, 0);
 
-    // Trigger Smart Alert for low production
+    // Trigger Smart Alert for low production to farm managers/admins
     if (totalLitres < 5) {
-      const admins = await prisma.user.findMany({ where: { role: "ADMIN", isDeleted: false }, select: { id: true } });
+      const admins = await prisma.tenantUser.findMany({
+        where: { tenantId, role: { in: ["ADMIN", "MANAGER"] } },
+        select: { userId: true },
+      });
       for (const admin of admins) {
-        await sendPushNotification(admin.id, {
+        await sendPushNotification(admin.userId, {
           title: "Production Drop Alert 🥛",
           body: `Low yield detected in ${session} session: only ${totalLitres}L across ${validRecords.length} cows.`,
           url: "/milk"
@@ -100,10 +104,11 @@ export async function logBatchMilkSession(data: any) {
 
 export async function deleteMilkLogSession(date: Date, session: string) {
   try {
-    await requireAuth();
+    const { tenantId } = await requireTenantContext();
 
     await prisma.milkLog.updateMany({
       where: {
+        tenantId,
         date: date,
         milkingTime: session as any,
         isDeleted: false,
@@ -123,13 +128,12 @@ export async function deleteMilkLogSession(date: Date, session: string) {
 }
 
 export async function getMilkHistory() {
-  await requireAuth();
+  const { tenantId } = await requireTenantContext();
 
-  // Group by exact date and session
-  // Only include logs that are not deleted
   const rawHistory = await prisma.milkLog.groupBy({
     by: ["date", "milkingTime"],
     where: {
+      tenantId,
       isDeleted: false,
     },
     _sum: {
@@ -141,7 +145,6 @@ export async function getMilkHistory() {
     take: 30
   });
 
-  // Map to friendly format
   return rawHistory.map(row => ({
     date: row.date,
     session: row.milkingTime === "MORNING" ? "Morning" : row.milkingTime === "EVENING" ? "Evening" : "Other",
@@ -151,13 +154,14 @@ export async function getMilkHistory() {
 
 export async function getSessionMilkLogs(dateStr: string, sessionName: string) {
   try {
-    await requireAuth();
+    const { tenantId } = await requireTenantContext();
 
     const targetDate = new Date(dateStr);
     const dbMilkingTime = sessionName.toUpperCase() as "MORNING" | "EVENING" | "OTHER";
 
     const logs = await prisma.milkLog.findMany({
       where: {
+        tenantId,
         date: targetDate,
         milkingTime: dbMilkingTime,
         isDeleted: false,
@@ -203,14 +207,14 @@ export async function getSessionMilkLogs(dateStr: string, sessionName: string) {
 
 export async function updateSingleMilkLog(logId: string, amountLiters: number) {
   try {
-    await requireAuth();
+    const { tenantId } = await requireTenantContext();
 
     if (typeof amountLiters !== "number" || amountLiters <= 0 || amountLiters > 100) {
       return { success: false, message: "Please provide a valid milk yield between 0.1 and 100 Liters." };
     }
 
-    const log = await prisma.milkLog.findUnique({
-      where: { id: logId },
+    const log = await prisma.milkLog.findFirst({
+      where: { id: logId, tenantId },
       include: { animal: { select: { id: true, tagNumber: true } } },
     });
 
@@ -239,10 +243,10 @@ export async function updateSingleMilkLog(logId: string, amountLiters: number) {
 
 export async function deleteSingleMilkLog(logId: string) {
   try {
-    await requireAuth();
+    const { tenantId } = await requireTenantContext();
 
-    const log = await prisma.milkLog.findUnique({
-      where: { id: logId },
+    const log = await prisma.milkLog.findFirst({
+      where: { id: logId, tenantId },
       include: { animal: { select: { id: true, tagNumber: true } } },
     });
 

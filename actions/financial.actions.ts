@@ -1,20 +1,20 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "./utils";
+import { requireTenantRole } from "./utils";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
 export async function getFinancialOverview() {
-  await requireRole(["ADMIN", "MANAGER"]);
+  const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
-  const [salesResult,  expensesResult] = await Promise.all([
+  const [salesResult, expensesResult] = await Promise.all([
     prisma.sale.aggregate({
-      where: { isDeleted: false },
+      where: { tenantId, isDeleted: false },
       _sum: { amount: true }
     }),
     prisma.expense.aggregate({
-      where: { isDeleted: false },
+      where: { tenantId, isDeleted: false },
       _sum: { amount: true }
     })
   ]);
@@ -26,9 +26,6 @@ export async function getFinancialOverview() {
   return { totalIncome, totalExpenses, net };
 }
 
-
-
-
 const txSchema = z.object({
   type: z.enum(["income", "expense"]),
   category: z.string(),   // e.g. "MILK" or "FEED"
@@ -38,7 +35,7 @@ const txSchema = z.object({
 
 export async function recordTransaction(data: any) {
   try {
-    const user = await requireRole(["ADMIN", "MANAGER"]);
+    const { userId, tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
     
     const val = txSchema.safeParse(data);
     if (!val.success) return { success: false, message: "Invalid data." };
@@ -48,6 +45,7 @@ export async function recordTransaction(data: any) {
     if (type === "income") {
       await prisma.sale.create({
         data: {
+          tenantId,
           saleType: category as any,
           amount,
           notes: description,
@@ -56,10 +54,11 @@ export async function recordTransaction(data: any) {
     } else {
       await prisma.expense.create({
         data: {
+          tenantId,
           category: category as any,
           amount,
           description,
-          recordedById: user.id as string
+          recordedById: userId
         }
       });
     }
@@ -72,17 +71,16 @@ export async function recordTransaction(data: any) {
 }
 
 export async function getTransactions() {
-  await requireRole(["ADMIN", "MANAGER"]);
+  const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
-  // Fetch both and merge in code since Prisma doesn't do polymorphic queries easily
   const [sales, expenses] = await Promise.all([
     prisma.sale.findMany({
-      where: { isDeleted: false },
+      where: { tenantId, isDeleted: false },
       orderBy: { date: 'desc' },
       take: 50
     }),
     prisma.expense.findMany({
-      where: { isDeleted: false },
+      where: { tenantId, isDeleted: false },
       orderBy: { date: 'desc' },
       take: 50
     })
@@ -107,14 +105,13 @@ export async function getTransactions() {
     }))
   ];
 
-  // Sort unified descending by date
   unified.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  return unified.slice(0, 50); // returning top 50
+  return unified.slice(0, 50);
 }
 
 export async function getWeeklyCashFlow() {
-  await requireRole(["ADMIN", "MANAGER"]);
+  const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
   const days: { day: string; income: number; expense: number }[] = [];
 
@@ -128,11 +125,11 @@ export async function getWeeklyCashFlow() {
 
     const [salesAgg, expAgg] = await Promise.all([
       prisma.sale.aggregate({
-        where: { isDeleted: false, date: { gte: dayStart, lt: dayEnd } },
+        where: { tenantId, isDeleted: false, date: { gte: dayStart, lt: dayEnd } },
         _sum: { amount: true },
       }),
       prisma.expense.aggregate({
-        where: { isDeleted: false, date: { gte: dayStart, lt: dayEnd } },
+        where: { tenantId, isDeleted: false, date: { gte: dayStart, lt: dayEnd } },
         _sum: { amount: true },
       }),
     ]);

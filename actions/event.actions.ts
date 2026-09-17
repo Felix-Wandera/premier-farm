@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole } from "./utils";
+import { requireTenantContext, requireTenantRole } from "./utils";
 import { revalidatePath } from "next/cache";
 
 // Gestation periods in days
@@ -15,9 +15,10 @@ const GESTATION_DAYS: Record<string, number> = {
 };
 
 export async function getBreedingAnimals() {
-  await requireAuth();
+  const { tenantId } = await requireTenantContext();
   return prisma.animal.findMany({
     where: {
+      tenantId,
       isDeleted: false,
       status: "ACTIVE",
       gender: "FEMALE",
@@ -34,9 +35,10 @@ export async function getBreedingAnimals() {
 }
 
 export async function getHealthAnimals() {
-  await requireAuth();
+  const { tenantId } = await requireTenantContext();
   return prisma.animal.findMany({
     where: {
+      tenantId,
       isDeleted: false,
       status: { notIn: ["DECEASED", "SOLD"] },
     },
@@ -63,7 +65,7 @@ const breedingEventSchema = z.object({
 
 export async function createBreedingEvent(data: any) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
     const val = breedingEventSchema.safeParse(data);
     if (!val.success) {
@@ -72,13 +74,13 @@ export async function createBreedingEvent(data: any) {
 
     const { animalId, eventType, date, sireDetails, expectedDate, notes } = val.data;
 
-    const animal = await prisma.animal.findUnique({
-      where: { id: animalId },
+    const animal = await prisma.animal.findFirst({
+      where: { id: animalId, tenantId },
       select: { species: true, tagNumber: true },
     });
 
     if (!animal) {
-      return { success: false, message: "Selected animal not found." };
+      return { success: false, message: "Selected animal not found in your farm." };
     }
 
     const eventDate = new Date(date);
@@ -94,6 +96,7 @@ export async function createBreedingEvent(data: any) {
 
     await prisma.breedingEvent.create({
       data: {
+        tenantId,
         animalId,
         eventType,
         date: eventDate,
@@ -120,15 +123,15 @@ export async function createBreedingEvent(data: any) {
 
 export async function completeBreedingEvent(eventId: string, actualDate?: string, notes?: string) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const { tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
-    const event = await prisma.breedingEvent.findUnique({
-      where: { id: eventId },
+    const event = await prisma.breedingEvent.findFirst({
+      where: { id: eventId, tenantId },
       include: { animal: { select: { id: true, tagNumber: true } } },
     });
 
     if (!event) {
-      return { success: false, message: "Event not found." };
+      return { success: false, message: "Event not found in your farm records." };
     }
 
     const completionDate = actualDate ? new Date(actualDate) : new Date();
@@ -165,7 +168,7 @@ const healthRecordSchema = z.object({
 
 export async function createHealthRecord(data: any) {
   try {
-    const session = await requireRole(["ADMIN", "MANAGER"]);
+    const { userId, tenantId } = await requireTenantRole(["ADMIN", "MANAGER"]);
 
     const val = healthRecordSchema.safeParse(data);
     if (!val.success) {
@@ -174,13 +177,13 @@ export async function createHealthRecord(data: any) {
 
     const { animalId, recordType, description, cost, date } = val.data;
 
-    const animal = await prisma.animal.findUnique({
-      where: { id: animalId },
+    const animal = await prisma.animal.findFirst({
+      where: { id: animalId, tenantId },
       select: { tagNumber: true },
     });
 
     if (!animal) {
-      return { success: false, message: "Selected animal not found." };
+      return { success: false, message: "Selected animal not found in your farm." };
     }
 
     const recordDate = new Date(date);
@@ -188,6 +191,7 @@ export async function createHealthRecord(data: any) {
     // Create the health record
     await prisma.healthRecord.create({
       data: {
+        tenantId,
         animalId,
         recordType,
         description: description.trim(),
@@ -196,15 +200,16 @@ export async function createHealthRecord(data: any) {
       },
     });
 
-    // If cost > 0, log an expense under VET_SERVICES
+    // If cost > 0, log an expense under VET_SERVICES scoped to this tenant
     if (cost && cost > 0) {
       await prisma.expense.create({
         data: {
+          tenantId,
           category: "VET_SERVICES",
           amount: cost,
           date: recordDate,
           description: `${recordType}: ${description.trim()} (${animal.tagNumber})`,
-          recordedById: session.id as string,
+          recordedById: userId,
         },
       });
       revalidatePath("/sales");
@@ -225,19 +230,20 @@ export async function createHealthRecord(data: any) {
 }
 
 export async function getUpcomingEvents() {
-  await requireAuth();
+  const { tenantId } = await requireTenantContext();
 
   const now = new Date();
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(now.getDate() + 30);
 
-  // Only events that haven't been completed yet (actualDate is null)
+  // Only events for the active tenant that haven't been completed yet
   const breedingEvents = await prisma.breedingEvent.findMany({
     where: {
+      tenantId,
       isDeleted: false,
       actualDate: null,
       expectedDate: {
-        gte: new Date(now.getTime() - 24 * 60 * 60 * 1000), // include today/overdue
+        gte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
         lte: thirtyDaysFromNow,
       },
     },
