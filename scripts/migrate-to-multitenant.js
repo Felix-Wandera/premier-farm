@@ -112,52 +112,19 @@ async function migrateData() {
       });
     }
 
-    // 4. Update all domain records with null tenantId to primaryTenant.id
+    // 4. Update all domain records with null tenantId to primaryTenant.id using raw SQL
+    // (Bypasses Prisma Client schema validation if schema already declares tenantId as non-null)
     const tenantId = primaryTenant.id;
 
-    const animals = await prisma.animal.updateMany({
-      where: { tenantId: null },
-      data: { tenantId },
-    });
-    console.log(`[MIGRATION] Updated ${animals.count} animal(s) with tenantId.`);
+    const tables = ["Animal", "MilkLog", "Sale", "BreedingEvent", "HealthRecord", "InventoryItem", "Expense"];
+    for (const table of tables) {
+      const updateRes = await pool.query(`UPDATE "${table}" SET "tenantId" = $1 WHERE "tenantId" IS NULL`, [tenantId]);
+      if (updateRes.rowCount > 0) {
+        console.log(`[MIGRATION] Backfilled ${updateRes.rowCount} record(s) in "${table}".`);
+      }
+    }
 
-    const milkLogs = await prisma.milkLog.updateMany({
-      where: { tenantId: null },
-      data: { tenantId },
-    });
-    console.log(`[MIGRATION] Updated ${milkLogs.count} milk log(s) with tenantId.`);
-
-    const sales = await prisma.sale.updateMany({
-      where: { tenantId: null },
-      data: { tenantId },
-    });
-    console.log(`[MIGRATION] Updated ${sales.count} sale(s) with tenantId.`);
-
-    const breeding = await prisma.breedingEvent.updateMany({
-      where: { tenantId: null },
-      data: { tenantId },
-    });
-    console.log(`[MIGRATION] Updated ${breeding.count} breeding event(s) with tenantId.`);
-
-    const health = await prisma.healthRecord.updateMany({
-      where: { tenantId: null },
-      data: { tenantId },
-    });
-    console.log(`[MIGRATION] Updated ${health.count} health record(s) with tenantId.`);
-
-    const inventory = await prisma.inventoryItem.updateMany({
-      where: { tenantId: null },
-      data: { tenantId },
-    });
-    console.log(`[MIGRATION] Updated ${inventory.count} inventory item(s) with tenantId.`);
-
-    const expenses = await prisma.expense.updateMany({
-      where: { tenantId: null },
-      data: { tenantId },
-    });
-    console.log(`[MIGRATION] Updated ${expenses.count} expense(s) with tenantId.`);
-
-    console.log("[MIGRATION COMPLETE] All existing data successfully migrated into the primary tenant!");
+    console.log("[MIGRATION COMPLETE] All domain records backfilled into the primary tenant!");
   } catch (error) {
     console.error("[MIGRATION ERROR] Failed to migrate data:", error);
     process.exit(1);

@@ -39,7 +39,7 @@ function createClient(databaseUrl, useSsl) {
   return { prisma, pool };
 }
 
-async function performSeed(prisma, adminEmail, adminPassword) {
+async function performSeed(prisma, adminEmail, adminPassword, pool) {
   const existing = await prisma.user.findUnique({
     where: { email: adminEmail },
   });
@@ -107,23 +107,33 @@ async function performSeed(prisma, adminEmail, adminPassword) {
       },
     });
 
-    const adminUser = await prisma.user.findUnique({ where: { email: adminEmail } });
-    if (adminUser) {
+    // Ensure all existing users are linked to the primary tenant
+    const allUsers = await prisma.user.findMany({ where: { isDeleted: false } });
+    for (const u of allUsers) {
       await prisma.tenantUser.upsert({
         where: {
           tenantId_userId: {
             tenantId: primaryTenant.id,
-            userId: adminUser.id,
+            userId: u.id,
           },
         },
-        update: { role: "ADMIN" },
+        update: {},
         create: {
           tenantId: primaryTenant.id,
-          userId: adminUser.id,
-          role: "ADMIN",
+          userId: u.id,
+          role: u.role,
         },
       });
-      console.log(`[SEED SUCCESS] Admin membership linked to primary tenant.`);
+    }
+    console.log(`[SEED SUCCESS] All ${allUsers.length} user account(s) linked to primary tenant.`);
+
+    // Backfill any remaining domain records missing tenantId
+    if (pool) {
+      const tables = ["Animal", "MilkLog", "Sale", "BreedingEvent", "HealthRecord", "InventoryItem", "Expense"];
+      for (const table of tables) {
+        await pool.query(`UPDATE "${table}" SET "tenantId" = $1 WHERE "tenantId" IS NULL`, [primaryTenant.id]).catch(() => {});
+      }
+      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS "Animal_tenantId_tagNumber_key" ON "Animal"("tenantId", "tagNumber")`).catch(() => {});
     }
   } catch (farmErr) {
     console.warn(`[SEED WARN] Could not seed farm settings/tenant:`, farmErr.message);
@@ -146,7 +156,7 @@ async function seedAdmin() {
   let client = createClient(databaseUrl, useSsl);
 
   try {
-    await performSeed(client.prisma, adminEmail, adminPassword);
+    await performSeed(client.prisma, adminEmail, adminPassword, client.pool);
   } catch (error) {
     const errMsg = String(error?.message || error);
     // If TLS error because server doesn't support SSL, retry without SSL
@@ -158,7 +168,7 @@ async function seedAdmin() {
       useSsl = false;
       client = createClient(databaseUrl, false);
       try {
-        await performSeed(client.prisma, adminEmail, adminPassword);
+        await performSeed(client.prisma, adminEmail, adminPassword, client.pool);
       } catch (retryError) {
         console.error("[SEED ERROR] Failed to seed admin user on retry:", retryError);
       }
@@ -170,7 +180,7 @@ async function seedAdmin() {
       useSsl = true;
       client = createClient(databaseUrl, true);
       try {
-        await performSeed(client.prisma, adminEmail, adminPassword);
+        await performSeed(client.prisma, adminEmail, adminPassword, client.pool);
       } catch (retryError) {
         console.error("[SEED ERROR] Failed to seed admin user on retry:", retryError);
       }

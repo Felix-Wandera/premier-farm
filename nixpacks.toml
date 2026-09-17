@@ -6,4 +6,4 @@ aptPkgs = ['openssl']
 cmds = ['npx prisma generate', 'npm run build']
 
 [start]
-cmd = 'npx prisma migrate deploy && node scripts/seed-admin.js && npm run start'
+cmd = 'npx prisma migrate deploy && node scripts/migrate-to-multitenant.js && node scripts/apply-tenant-constraints.js && node scripts/seed-admin.js && npm run start'
