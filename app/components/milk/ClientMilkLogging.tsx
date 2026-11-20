@@ -8,6 +8,7 @@ import EmptyState from "../ui/EmptyState";
 import { logBatchMilkSession, deleteMilkLogSession } from "@/actions/milk.actions";
 import { useRouter } from "next/navigation";
 import SessionDetailsModal from "./SessionDetailsModal";
+import ConfirmationModal from "../ui/ConfirmationModal";
 
 // Formatter helper
 function formatSpecies(s: string) {
@@ -35,6 +36,13 @@ export default function ClientMilkLogging({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSession, setSelectedSession] = useState<{ date: string; session: string } | null>(null);
+  const [savedSummary, setSavedSummary] = useState<{
+    session: "Morning" | "Mid-day" | "Evening";
+    date: string;
+    count: number;
+    totalLiters: number;
+  } | null>(null);
+  const [deletingSession, setDeletingSession] = useState<{ date: Date; sessionType: string } | null>(null);
   const toast = useToast();
   const router = useRouter();
 
@@ -80,14 +88,19 @@ export default function ClientMilkLogging({
 
   const totalYield = records.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
-  const handleDeleteSession = async (date: Date, sessionType: string) => {
-    if (isDeleting) return;
+  const handleDeleteSession = (date: Date, sessionType: string) => {
+    setDeletingSession({ date, sessionType });
+  };
+
+  const confirmDeleteSession = async () => {
+    if (!deletingSession || isDeleting) return;
     setIsDeleting(true);
 
     try {
-      const response = await deleteMilkLogSession(date, sessionType.toUpperCase());
+      const response = await deleteMilkLogSession(deletingSession.date, deletingSession.sessionType.toUpperCase());
       if (response.success) {
         toast(response.message, "success");
+        setDeletingSession(null);
         router.refresh();
       } else {
         toast(response.message, "error");
@@ -126,9 +139,14 @@ export default function ClientMilkLogging({
 
       if (response.success) {
         toast(response.message, "success");
-        // Reset amounts and switch to history
+        setSavedSummary({
+          session,
+          date: logDate,
+          count: payloadRecords.length,
+          totalLiters: totalYield,
+        });
+        // Reset amounts and stay on current logging view
         setRecords(prev => prev.map(r => ({ ...r, amount: "" })));
-        setActiveTab("history");
         router.refresh(); // Refresh Server Components to pull latest history
       } else {
         toast(response.message, "error");
@@ -144,35 +162,48 @@ export default function ClientMilkLogging({
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.pageTitle}>Milk Production</h1>
+          <h1 className={styles.pageTitle}>
+            {activeTab === "history" ? "Milk History" : "Milk Production"}
+          </h1>
           <p className={styles.subtitle}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab(prev => prev === 'log' ? 'history' : 'log')}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "0.55rem 0.95rem",
+            borderRadius: "12px",
+            border: "1px solid var(--color-border)",
+            backgroundColor: activeTab === "history" ? "var(--color-primary)" : "var(--color-surface)",
+            color: activeTab === "history" ? "white" : "var(--color-text-main)",
+            fontWeight: 600,
+            fontSize: "0.88rem",
+            cursor: "pointer",
+            boxShadow: "var(--shadow-sm)",
+            transition: "all 0.15s ease",
+          }}
+          title={activeTab === 'log' ? "View Milk History" : "Back to Record Yield"}
+        >
+          {activeTab === 'log' ? (
+            <>
+              <History size={17} />
+              <span>History</span>
+            </>
+          ) : (
+            <>
+              <span>← Record Yield</span>
+            </>
+          )}
+        </button>
       </header>
-
-      {/* View Tabs */}
-      <div className={styles.sessionToggle} role="tablist">
-         <button
-           className={`${styles.sessionBtn} ${activeTab === 'log' ? styles.activeSession : ''}`}
-           onClick={() => setActiveTab('log')}
-           role="tab"
-           aria-selected={activeTab === 'log'}
-         >
-           🪣 Record Yield
-         </button>
-         <button
-           className={`${styles.sessionBtn} ${activeTab === 'history' ? styles.activeSession : ''}`}
-           onClick={() => setActiveTab('history')}
-           role="tab"
-           aria-selected={activeTab === 'history'}
-         >
-           <History size={16} /> History
-         </button>
-      </div>
 
       {activeTab === 'log' && (
         <>
           {/* Mobile-Friendly Date Selector */}
-          <div style={{ backgroundColor: "var(--color-surface)", padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)", marginBottom: "1rem" }}>
+          <div style={{ backgroundColor: "var(--color-surface)", padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)", marginBottom: "0.75rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
               <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-sub)" }}>Milking Date</span>
               <div style={{ display: "flex", gap: "6px" }}>
@@ -233,20 +264,8 @@ export default function ClientMilkLogging({
             />
           </div>
 
-          {/* Search */}
-          <div className={styles.searchBox}>
-            <Search className={styles.searchIcon} size={20} />
-            <input 
-              type="text" 
-              placeholder="Search by Tag ID or Name..." 
-              className={styles.searchInput}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
           {/* Session Toggle (Morning, Mid-day, Evening) */}
-          <div className={styles.sessionToggle} role="tablist">
+          <div className={styles.sessionToggle} role="tablist" style={{ marginBottom: "0.75rem" }}>
             <button 
               className={`${styles.sessionBtn} ${session === 'Morning' ? styles.activeSession : ''}`}
               onClick={() => setSession('Morning')}
@@ -273,12 +292,16 @@ export default function ClientMilkLogging({
             </button>
           </div>
 
-          {/* Summary Card */}
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryContent}>
-              <span className={styles.summaryLabel}>Total {session} Yield ({logDate})</span>
-              <strong className={styles.summaryTotal}>{totalYield} <small>Liters</small></strong>
-            </div>
+          {/* Search Box Placed Directly Above Animals */}
+          <div className={styles.searchBox} style={{ marginBottom: "0.75rem" }}>
+            <Search className={styles.searchIcon} size={20} />
+            <input 
+              type="text" 
+              placeholder="Search by Tag ID or Name..." 
+              className={styles.searchInput}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
 
           {/* Batch Entry List */}
@@ -324,16 +347,49 @@ export default function ClientMilkLogging({
             />
           )}
 
-          {/* Save Button */}
+          {/* Sticky Footer Bar with Running Total and Save Action */}
           <div className={styles.stickyFooter}>
-            <button 
-              className={styles.submitBtn} 
-              onClick={handleSaveSession}
-              disabled={isSubmitting || totalYield === 0}
+            <div
+              style={{
+                pointerEvents: "auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "1rem",
+                backgroundColor: "var(--color-surface, #ffffff)",
+                padding: "0.55rem 0.85rem 0.55rem 1.25rem",
+                borderRadius: "20px",
+                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
+                border: "1px solid var(--color-border, #e2e8f0)",
+                width: "100%",
+                maxWidth: "540px",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+              }}
             >
-              <CheckCircle2 size={20} />
-              {isSubmitting ? "Saving..." : `Save ${session} Session`}
-            </button>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--color-text-sub)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {session} Total
+                </span>
+                <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", lineHeight: 1.15 }}>
+                  {totalYield} <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-sub)" }}>Liters</span>
+                </span>
+              </div>
+
+              <button 
+                className={styles.submitBtn} 
+                onClick={handleSaveSession}
+                disabled={isSubmitting || totalYield === 0}
+                style={{
+                  padding: "0.75rem 1.25rem",
+                  borderRadius: "14px",
+                  margin: 0,
+                }}
+              >
+                <CheckCircle2 size={18} />
+                <span>{isSubmitting ? "Saving..." : `Save ${session}`}</span>
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -440,6 +496,180 @@ export default function ClientMilkLogging({
           onClose={() => setSelectedSession(null)}
           onUpdated={() => router.refresh()}
         />
+      )}
+
+      {/* Confirmation Modal for Session Deletion */}
+      <ConfirmationModal
+        isOpen={!!deletingSession}
+        onClose={() => setDeletingSession(null)}
+        onConfirm={confirmDeleteSession}
+        title="Delete Entire Milking Session"
+        message={
+          <span>
+            Are you sure you want to delete all milk records for the{" "}
+            <strong>{deletingSession?.sessionType}</strong> session on{" "}
+            <strong>{deletingSession?.date ? new Date(deletingSession.date).toLocaleDateString() : ""}</strong>? This will permanently wipe all cow yields for this session.
+          </span>
+        }
+        confirmText="Delete Session"
+        isLoading={isDeleting}
+      />
+
+      {/* Post-Save Success Modal / Action Sheet */}
+      {savedSummary && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            padding: "1rem",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSavedSummary(null);
+            }
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              backgroundColor: "var(--color-surface, #ffffff)",
+              color: "var(--color-text-main, #0f172a)",
+              borderRadius: "20px",
+              padding: "1.75rem 1.5rem 1.5rem",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              border: "1px solid var(--color-border, #e2e8f0)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+              position: "relative",
+            }}
+          >
+            <button
+              onClick={() => setSavedSummary(null)}
+              aria-label="Close"
+              style={{
+                position: "absolute",
+                top: "14px",
+                right: "14px",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-text-muted, #94a3b8)",
+                padding: "6px",
+                borderRadius: "8px",
+                fontSize: "1rem",
+              }}
+            >
+              ✕
+            </button>
+
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: "1rem",
+                backgroundColor: "rgba(22, 163, 74, 0.12)",
+                color: "#16a34a",
+              }}
+            >
+              <CheckCircle2 size={32} />
+            </div>
+
+            <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.25rem", fontWeight: 700 }}>
+              {savedSummary.session} Session Logged!
+            </h3>
+
+            <p style={{ margin: "0 0 1.5rem", fontSize: "0.92rem", color: "var(--color-text-secondary, #64748b)", lineHeight: 1.55 }}>
+              Successfully recorded <strong>{savedSummary.count} {savedSummary.count === 1 ? "cow" : "cows"}</strong> for a total of{" "}
+              <strong style={{ color: "#16a34a" }}>{savedSummary.totalLiters} Liters</strong> on {new Date(savedSummary.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", width: "100%" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const nextSession = savedSummary.session === "Morning" ? "Mid-day" : savedSummary.session === "Mid-day" ? "Evening" : "Morning";
+                  setSession(nextSession);
+                  setSavedSummary(null);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "0.85rem 1rem",
+                  borderRadius: "12px",
+                  border: "none",
+                  backgroundColor: "var(--color-primary, #16a34a)",
+                  color: "white",
+                  fontWeight: 600,
+                  fontSize: "0.95rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
+                }}
+              >
+                Record Next Session ({savedSummary.session === "Morning" ? "☀️ Mid-day" : savedSummary.session === "Mid-day" ? "🌃 Evening" : "🌅 Morning"})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSavedSummary(null);
+                  setActiveTab("history");
+                }}
+                style={{
+                  width: "100%",
+                  padding: "0.8rem 1rem",
+                  borderRadius: "12px",
+                  border: "1px solid var(--color-border, #e2e8f0)",
+                  backgroundColor: "var(--color-bg, #f8fafc)",
+                  color: "var(--color-text-main, #334155)",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                }}
+              >
+                <History size={16} /> View Milk History
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSavedSummary(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: "0.5rem",
+                  fontSize: "0.85rem",
+                  color: "var(--color-text-sub, #64748b)",
+                  cursor: "pointer",
+                  fontWeight: 500,
+                }}
+              >
+                Stay on This Page
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

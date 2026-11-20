@@ -249,21 +249,19 @@
 /* Let clicks pass through empty space of sticky footer */
 .stickyFooter {
   position: fixed;
-  bottom: calc(var(--app-bar-height) + 1rem); 
-  left: 1rem;
-  right: 1rem;
+  bottom: calc(var(--app-bar-height, 60px) + 0.75rem); 
+  left: 0;
+  right: 0;
   z-index: 40;
   pointer-events: none; 
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
+  padding: 0 1rem;
 }
 
 @media (min-width: 768px) {
   .stickyFooter {
-    position: absolute;
-    bottom: 2rem;
-    left: auto;
-    right: 2rem;
+    bottom: 1.5rem;
   }
 }
 
