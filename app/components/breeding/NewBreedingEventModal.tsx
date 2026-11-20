@@ -188,7 +188,7 @@ export default function NewBreedingEventModal({
               <option value="">-- Select Animal --</option>
               {animals.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.tagNumber} {a.name ? `(${a.name})` : ""} — {a.species.replace("_", " ")}
+                  {a.name || a.tagNumber} {a.tagNumber && a.name ? `(#${a.tagNumber})` : ""} — {a.species.replace("_", " ")}
                 </option>
               ))}
             </select>

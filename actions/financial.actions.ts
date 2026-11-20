@@ -30,7 +30,9 @@ const txSchema = z.object({
   type: z.enum(["income", "expense"]),
   category: z.string(),   // e.g. "MILK" or "FEED"
   amount: z.number().positive(),
-  description: z.string().optional()
+  description: z.string().optional(),
+  date: z.string().optional(),
+  reason: z.string().optional(),
 });
 
 export async function recordTransaction(data: any) {
@@ -40,7 +42,11 @@ export async function recordTransaction(data: any) {
     const val = txSchema.safeParse(data);
     if (!val.success) return { success: false, message: "Invalid data." };
 
-    const { type, category, amount, description } = val.data;
+    const { type, category, amount, description, date: customDate, reason } = val.data;
+    const txDate = customDate ? new Date(customDate) : new Date();
+    const finalNotes = reason?.trim() 
+      ? (description?.trim() ? `[${reason.trim()}] ${description.trim()}` : reason.trim())
+      : description?.trim() || null;
 
     if (type === "income") {
       await prisma.sale.create({
@@ -48,7 +54,8 @@ export async function recordTransaction(data: any) {
           tenantId,
           saleType: category as any,
           amount,
-          notes: description,
+          date: txDate,
+          notes: finalNotes,
         }
       });
     } else {
@@ -57,13 +64,15 @@ export async function recordTransaction(data: any) {
           tenantId,
           category: category as any,
           amount,
-          description,
+          date: txDate,
+          description: finalNotes,
           recordedById: userId
         }
       });
     }
 
     revalidatePath("/sales");
+    revalidatePath("/");
     return { success: true, message: "Transaction recorded successfully." };
   } catch(e) {
     return { success: false, message: "Failed to record transaction." };

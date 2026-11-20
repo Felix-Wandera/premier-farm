@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { ensureDefaultTenantAndAdmin } from "@/lib/tenant-init";
 
 /**
  * Ensures the caller is authenticated. Throws an error otherwise.
@@ -45,16 +46,13 @@ export async function requireTenantContext() {
     });
 
     if (!membership) {
-      // Self-healing fallback to primary default tenant if exists
-      const defaultTenant = await prisma.tenant.findFirst({
-        where: { slug: "premier-farm" },
-      });
-      if (defaultTenant) {
-        tenantId = defaultTenant.id;
-        tenantRole = session.role as Role;
-      } else {
-        throw new Error("Unauthorized: No farm organization associated with this account.");
-      }
+      // Self-healing fallback: ensure default organization exists and auto-associate this account
+      const { tenant } = await ensureDefaultTenantAndAdmin(
+        session.id as string,
+        session.role as Role
+      );
+      tenantId = tenant.id;
+      tenantRole = (session.role as Role) || "ADMIN";
     } else {
       tenantId = membership.tenantId;
       tenantRole = membership.role;

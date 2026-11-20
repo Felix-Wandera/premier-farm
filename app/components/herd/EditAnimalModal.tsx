@@ -25,8 +25,8 @@ export default function EditAnimalModal({ isOpen, onClose, animal, onSave }: Edi
   if (!isOpen) return null;
 
   const handleSave = async () => {
-    if (!formData.tagNumber) {
-      toast("Tag Number is required.", "error");
+    if (!formData.name.trim()) {
+      toast("Animal name is required.", "error");
       return;
     }
 
@@ -53,13 +53,13 @@ export default function EditAnimalModal({ isOpen, onClose, animal, onSave }: Edi
 
         <div style={{ padding: "1.5rem", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           <div>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500, color: "var(--color-text-sub)" }}>Tag Number *</label>
-            <input type="text" style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)" }} value={formData.tagNumber} onChange={e => setFormData({...formData, tagNumber: e.target.value})} />
+             <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500, color: "var(--color-text-sub)" }}>Animal Name *</label>
+             <input type="text" style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)" }} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Maridadi" />
           </div>
 
           <div>
-             <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500, color: "var(--color-text-sub)" }}>Name</label>
-             <input type="text" style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)" }} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500, color: "var(--color-text-sub)" }}>Tag Number (Optional)</label>
+            <input type="text" style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)" }} value={formData.tagNumber} onChange={e => setFormData({...formData, tagNumber: e.target.value})} placeholder="Leave blank if untagged" />
           </div>
 
           <div>

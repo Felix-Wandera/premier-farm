@@ -9,8 +9,8 @@ import { Search, Plus, LayoutGrid, List as ListIcon, Info } from "lucide-react";
 
 type PrismaAnimal = {
   id: string;
-  tagNumber: string;
-  name: string | null;
+  tagNumber: string | null;
+  name: string;
   species: string;
   status: string;
   dateOfBirth: Date | null;
@@ -60,7 +60,8 @@ export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals
     const formattedStatus = formatStatus(animal.status);
 
     const matchName = animal.name ? animal.name.toLowerCase().includes(searchQuery.toLowerCase()) : false;
-    const matchesSearch = animal.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) || matchName;
+    const matchTag = animal.tagNumber ? animal.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) : false;
+    const matchesSearch = matchName || matchTag;
     
     if (!matchesSearch) return false;
     
@@ -145,7 +146,7 @@ export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals
 
                 <div className={styles.cardBody}>
                   <h3 className={styles.tagNumber} style={{display: "flex", alignItems: "center", gap: "6px"}}>
-                    {animal.tagNumber} {animal.name && <span className={styles.animalName}>({animal.name})</span>}
+                    {animal.name} {animal.tagNumber && <span className={styles.animalName}>#{animal.tagNumber}</span>}
                   </h3>
                   
                   <div className={styles.tags}>

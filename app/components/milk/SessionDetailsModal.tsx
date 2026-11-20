@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Save, Trash2, Clock, Check, Edit2, Loader2 } from "lucide-react";
 import { getSessionMilkLogs, updateSingleMilkLog, deleteSingleMilkLog } from "@/actions/milk.actions";
 import { useToast } from "../ui/Toast";
+import ConfirmationModal from "../ui/ConfirmationModal";
 
 interface SessionDetailsModalProps {
   isOpen: boolean;
@@ -17,8 +18,8 @@ interface MilkLogRow {
   id: string;
   amountLiters: number;
   animalId: string;
-  tagNumber: string;
-  name: string | null;
+  tagNumber: string | null;
+  name: string;
   species: string;
   recordedBy: string;
 }
@@ -36,6 +37,7 @@ export default function SessionDetailsModal({
   const [editValue, setEditValue] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [deletingLog, setDeletingLog] = useState<{ id: string; label: string } | null>(null);
 
   const toast = useToast();
 
@@ -92,14 +94,17 @@ export default function SessionDetailsModal({
     }
   };
 
-  const handleDeleteLog = async (logId: string, tagNumber: string) => {
-    if (!confirm(`Are you sure you want to delete the milk record for ${tagNumber}?`)) {
-      return;
-    }
+  const handleDeleteLog = (logId: string, animalLabel: string) => {
+    setDeletingLog({ id: logId, label: animalLabel });
+  };
 
+  const confirmDeleteLog = async () => {
+    if (!deletingLog) return;
+    const logId = deletingLog.id;
     setIsDeletingId(logId);
     const res = await deleteSingleMilkLog(logId);
     setIsDeletingId(null);
+    setDeletingLog(null);
 
     if (res.success) {
       toast(res.message, "success");
@@ -236,9 +241,9 @@ export default function SessionDetailsModal({
                 >
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>{log.tagNumber}</span>
-                      {log.name && (
-                        <span style={{ fontSize: "0.85rem", opacity: 0.75 }}>({log.name})</span>
+                      <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>{log.name || log.tagNumber}</span>
+                      {log.tagNumber && log.name && (
+                        <span style={{ fontSize: "0.85rem", opacity: 0.75 }}>#{log.tagNumber}</span>
                       )}
                     </div>
                     <div style={{ fontSize: "0.75rem", opacity: 0.6, marginTop: "2px" }}>
@@ -315,7 +320,7 @@ export default function SessionDetailsModal({
                           <Edit2 size={16} />
                         </button>
                         <button
-                          onClick={() => handleDeleteLog(log.id, log.tagNumber)}
+                          onClick={() => handleDeleteLog(log.id, log.name || log.tagNumber || "this animal")}
                           disabled={isDeleting}
                           style={{
                             background: "none",
@@ -364,6 +369,21 @@ export default function SessionDetailsModal({
           </button>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!deletingLog}
+        onClose={() => setDeletingLog(null)}
+        onConfirm={confirmDeleteLog}
+        title="Delete Milk Record"
+        message={
+          <span>
+            Are you sure you want to delete the milk record for{" "}
+            <strong>{deletingLog?.label}</strong>? This yield will be deducted from daily totals.
+          </span>
+        }
+        confirmText="Delete Record"
+        isLoading={!!isDeletingId}
+      />
     </div>
   );
 }

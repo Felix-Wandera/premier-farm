@@ -82,7 +82,7 @@ async function performSeed(prisma, adminEmail, adminPassword, pool) {
       update: {},
       create: {
         id: "default",
-        farmName: "Premier Farm",
+        farmName: "Premier Ranch",
         location: "Nakuru County, Kenya",
         phoneNumber: "+254 700 000 000",
         email: "info@premierfarm.com",
@@ -96,7 +96,7 @@ async function performSeed(prisma, adminEmail, adminPassword, pool) {
       update: {},
       create: {
         id: "tenant-premier-farm",
-        name: defaultFarm.farmName || "Premier Farm",
+        name: defaultFarm.farmName || "Premier Ranch",
         slug: "premier-farm",
         location: defaultFarm.location || "Nakuru County, Kenya",
         phoneNumber: defaultFarm.phoneNumber || "+254 700 000 000",

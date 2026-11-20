@@ -1,12 +1,15 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Edit, Activity, Droplet, HeartPulse, Info, DollarSign, Skull } from "lucide-react";
+import { ArrowLeft, Edit, Activity, Droplet, HeartPulse, Info, DollarSign, Skull, Trash2, Edit2, Check, X, Loader2 } from "lucide-react";
 import styles from "../../(dashboard)/herd/[id]/page.module.css";
 import AnimalIcon from "../ui/AnimalIcon";
 import EditAnimalModal from "./EditAnimalModal";
 import StatusUpdateModal from "./StatusUpdateModal";
 import { updateAnimal, updateAnimalStatus } from "@/actions/animal.actions";
+import { updateSingleMilkLog, deleteSingleMilkLog } from "@/actions/milk.actions";
+import { useToast } from "../ui/Toast";
+import ConfirmationModal from "../ui/ConfirmationModal";
 
 function calculateAge(dob: Date | null) {
   if (!dob) return "Unknown";
@@ -33,6 +36,58 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
   const [activeTab, setActiveTab] = useState<"info" | "milk" | "health" | "breeding">("info");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [milkLogs, setMilkLogs] = useState<any[]>(initialData?.milkLogs || []);
+  const [editingMilkLogId, setEditingMilkLogId] = useState<string | null>(null);
+  const [editMilkYield, setEditMilkYield] = useState<string>("");
+  const [isMilkActionLoading, setIsMilkActionLoading] = useState(false);
+  const [deletingMilkLog, setDeletingMilkLog] = useState<{ id: string; session: string; date: string; amount: number } | null>(null);
+  const toast = useToast();
+
+  const handleStartMilkEdit = (log: any) => {
+    setEditingMilkLogId(log.id);
+    setEditMilkYield(String(log.amountLiters));
+  };
+
+  const handleSaveMilkEdit = async (logId: string) => {
+    const val = parseFloat(editMilkYield);
+    if (isNaN(val) || val <= 0 || val > 100) {
+      toast("Please enter a valid yield between 0.1 and 100 Liters.", "error");
+      return;
+    }
+    setIsMilkActionLoading(true);
+    const res = await updateSingleMilkLog(logId, val);
+    setIsMilkActionLoading(false);
+    if (res.success) {
+      toast(res.message, "success");
+      setMilkLogs(prev => prev.map(item => item.id === logId ? { ...item, amountLiters: val } : item));
+      setEditingMilkLogId(null);
+    } else {
+      toast(res.message, "error");
+    }
+  };
+
+  const handleDeleteMilkLog = (log: any) => {
+    setDeletingMilkLog({
+      id: log.id,
+      session: log.milkingTime,
+      date: new Date(log.recordDate || log.date).toLocaleDateString(),
+      amount: log.amountLiters,
+    });
+  };
+
+  const confirmDeleteMilkLog = async () => {
+    if (!deletingMilkLog) return;
+    setIsMilkActionLoading(true);
+    const res = await deleteSingleMilkLog(deletingMilkLog.id);
+    setIsMilkActionLoading(false);
+    if (res.success) {
+      toast(res.message, "success");
+      setMilkLogs(prev => prev.filter(item => item.id !== deletingMilkLog.id));
+      setDeletingMilkLog(null);
+    } else {
+      toast(res.message, "error");
+    }
+  };
 
   if (!initialData) {
     return <div style={{padding: '2rem', textAlign: 'center'}}>Animal not found.</div>;
@@ -90,7 +145,7 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
         </div>
         <h1 className={styles.tagTitle} style={{display: "flex", alignItems: "center", gap: "12px", justifyContent: "center"}}>
           <AnimalIcon species={prettySpecies} size={38} />
-          {initialData.tagNumber} {initialData.name && <span style={{fontSize: "0.6em", opacity: 0.8, fontWeight: 600}}>({initialData.name})</span>}
+          {initialData.name || initialData.tagNumber} {initialData.tagNumber && initialData.name && <span style={{fontSize: "0.6em", opacity: 0.8, fontWeight: 600}}>#{initialData.tagNumber}</span>}
         </h1>
         <p className={styles.subtitle}>{prettySpecies}</p>
         
@@ -278,7 +333,7 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
 
         {activeTab === 'milk' && (
            <div className={styles.panel}>
-             {(!initialData.milkLogs || initialData.milkLogs.length === 0) ? (
+             {(!milkLogs || milkLogs.length === 0) ? (
                <div className={styles.emptyState}>
                  <Droplet size={48} className={styles.emptyIcon} />
                  <p>No recent milk records.</p>
@@ -286,16 +341,131 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
                </div>
              ) : (
                <div className={styles.timeline}>
-                 {initialData.milkLogs.map((log: any) => (
-                   <div key={log.id} className={styles.timelineItem}>
-                      <div className={styles.timelineDot} style={{background: '#3b82f6'}}></div>
-                      <div className={styles.timelineContent}>
-                        <h4>{log.amountLiters} Liters</h4>
-                        <p>{log.milkingTime} Session</p>
-                        <span className={styles.date}>{new Date(log.date).toLocaleDateString()}</span>
-                      </div>
-                   </div>
-                 ))}
+                 {milkLogs.map((log: any) => {
+                   const isEditing = editingMilkLogId === log.id;
+                   const sessionDisplay = log.milkingTime === "MORNING" ? "Morning" : log.milkingTime === "MIDDAY" ? "Mid-day" : log.milkingTime === "EVENING" ? "Evening" : "Other";
+
+                   return (
+                     <div key={log.id} className={styles.timelineItem} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                          <div className={styles.timelineDot} style={{background: '#3b82f6', marginTop: "4px"}}></div>
+                          <div className={styles.timelineContent}>
+                            {isEditing ? (
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", margin: "4px 0" }}>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  min="0.1"
+                                  max="100"
+                                  value={editMilkYield}
+                                  onChange={(e) => setEditMilkYield(e.target.value)}
+                                  style={{
+                                    width: "80px",
+                                    padding: "4px 8px",
+                                    borderRadius: "6px",
+                                    border: "1px solid var(--color-border)",
+                                    background: "var(--color-bg)",
+                                    color: "var(--color-text-main)",
+                                    fontSize: "0.95rem",
+                                    fontWeight: 700,
+                                  }}
+                                  autoFocus
+                                />
+                                <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Liters</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveMilkEdit(log.id)}
+                                  disabled={isMilkActionLoading}
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    backgroundColor: "#22c55e",
+                                    color: "white",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
+                                  title="Save"
+                                >
+                                  <Check size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingMilkLogId(null)}
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRadius: "6px",
+                                    border: "1px solid var(--color-border)",
+                                    backgroundColor: "transparent",
+                                    color: "var(--color-text-sub)",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
+                                  title="Cancel"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <h4>{log.amountLiters} Liters</h4>
+                            )}
+                            <p style={{ margin: "2px 0", fontSize: "0.85rem" }}>{sessionDisplay} Session</p>
+                            <span className={styles.date}>{new Date(log.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          </div>
+                        </div>
+
+                        {!isEditing && (
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleStartMilkEdit(log)}
+                              style={{
+                                background: "none",
+                                border: "1px solid var(--color-border)",
+                                borderRadius: "8px",
+                                padding: "6px 8px",
+                                cursor: "pointer",
+                                color: "var(--color-text-sub)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                              }}
+                              title="Edit Yield"
+                            >
+                              <Edit2 size={13} />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMilkLog(log)}
+                              disabled={isMilkActionLoading}
+                              style={{
+                                background: "none",
+                                border: "1px solid rgba(239, 68, 68, 0.3)",
+                                borderRadius: "8px",
+                                padding: "6px 8px",
+                                cursor: "pointer",
+                                color: "#ef4444",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                              }}
+                              title="Delete Record"
+                            >
+                              <Trash2 size={13} />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                     </div>
+                   );
+                 })}
                </div>
              )}
            </div>
@@ -343,6 +513,22 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
            </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!deletingMilkLog}
+        onClose={() => setDeletingMilkLog(null)}
+        onConfirm={confirmDeleteMilkLog}
+        title="Delete Milk Record"
+        message={
+          <span>
+            Are you sure you want to delete the <strong>{deletingMilkLog?.session.toLowerCase()}</strong> milk record of{" "}
+            <strong>{deletingMilkLog?.amount} L</strong> recorded on {deletingMilkLog?.date} for{" "}
+            <strong>{initialData.name || initialData.tagNumber}</strong>?
+          </span>
+        }
+        confirmText="Delete Record"
+        isLoading={isMilkActionLoading}
+      />
     </div>
   );
 }

@@ -4,16 +4,21 @@ import { X, Save, Trash2 } from "lucide-react";
 import { useToast } from "../ui/Toast";
 import styles from "../../(dashboard)/inventory/page.module.css";
 import { updateInventoryItem, deleteInventoryItem } from "@/actions/inventory.actions";
+import ConfirmationModal from "../ui/ConfirmationModal";
 
 export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boolean, onClose: () => void, item: any }) {
   const [formData, setFormData] = useState({
     name: "",
     category: "FEED",
     unit: "",
-    minThreshold: "0"
+    minThreshold: "0",
+    linkToFinance: false,
+    unitCost: "",
+    unitRevenue: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -22,7 +27,10 @@ export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boole
         name: item.name,
         category: item.category,
         unit: item.unit,
-        minThreshold: item.minThreshold?.toString() || "0"
+        minThreshold: item.minThreshold?.toString() || "0",
+        linkToFinance: Boolean(item.linkToFinance),
+        unitCost: item.unitCost != null ? String(item.unitCost) : "",
+        unitRevenue: item.unitRevenue != null ? String(item.unitRevenue) : "",
       });
     }
   }, [item]);
@@ -38,7 +46,10 @@ export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boole
     setIsSubmitting(true);
     const res = await updateInventoryItem(item.id, {
       ...formData,
-      minThreshold: parseFloat(formData.minThreshold) || 0
+      minThreshold: parseFloat(formData.minThreshold) || 0,
+      linkToFinance: formData.linkToFinance,
+      unitCost: formData.unitCost ? parseFloat(formData.unitCost) : null,
+      unitRevenue: formData.unitRevenue ? parseFloat(formData.unitRevenue) : null,
     });
     setIsSubmitting(false);
 
@@ -50,11 +61,15 @@ export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boole
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${item.name}?`)) return;
+  const handleDelete = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
     setIsDeleting(true);
     const res = await deleteInventoryItem(item.id);
     setIsDeleting(false);
+    setShowDeleteConfirm(false);
 
     if (res.success) {
       toast(res.message, "success");
@@ -103,6 +118,56 @@ export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boole
              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500, color: "var(--color-text-sub)" }}>Restock Alert Threshold</label>
              <input type="number" style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)" }} value={formData.minThreshold} onChange={e => setFormData({...formData, minThreshold: e.target.value})} />
           </div>
+
+          {/* Financial Linkage Card */}
+          <div style={{ backgroundColor: "var(--color-bg)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: 600, color: "var(--color-text-main)" }}>
+              <input
+                type="checkbox"
+                checked={formData.linkToFinance}
+                onChange={e => setFormData({ ...formData, linkToFinance: e.target.checked })}
+                style={{ width: "18px", height: "18px", accentColor: "var(--color-primary)" }}
+              />
+              <span>Link to Sales & Finances</span>
+            </label>
+            <small style={{ color: "var(--color-text-sub)", display: "block", marginTop: "4px", fontSize: "0.8rem" }}>
+              Automatically log Expense or Sale when this item is restocked or dispatched.
+            </small>
+
+            {formData.linkToFinance && (
+              <div style={{ marginTop: "0.85rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500, color: "var(--color-text-sub)" }}>
+                    Restock Cost (KES per {formData.unit || "unit"})
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 2500"
+                    style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: "6px", border: "1px solid var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-main)" }}
+                    value={formData.unitCost}
+                    onChange={e => setFormData({ ...formData, unitCost: e.target.value })}
+                  />
+                  <small style={{ color: "var(--color-text-sub)", fontSize: "0.75rem" }}>Logs Expense on Stock In (leave empty for none).</small>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500, color: "var(--color-text-sub)" }}>
+                    Selling Price (KES per {formData.unit || "unit"})
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 3000"
+                    style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: "6px", border: "1px solid var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-main)" }}
+                    value={formData.unitRevenue}
+                    onChange={e => setFormData({ ...formData, unitRevenue: e.target.value })}
+                  />
+                  <small style={{ color: "var(--color-text-sub)", fontSize: "0.75rem" }}>Logs Sale on Stock Out (leave empty if internal farm use only).</small>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ padding: "1.5rem", borderTop: "1px solid var(--color-border)" }}>
@@ -116,6 +181,20 @@ export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boole
           </button>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Inventory Item"
+        message={
+          <span>
+            Are you sure you want to delete <strong>{item?.name}</strong>? Its past transaction history will be preserved, but it will be removed from active inventory.
+          </span>
+        }
+        confirmText="Delete Item"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

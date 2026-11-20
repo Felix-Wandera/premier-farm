@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, signToken, hashPassword } from "@/lib/auth";
+import { ensureDefaultTenantAndAdmin } from "@/lib/tenant-init";
 
 export async function POST(req: NextRequest) {
   try {
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find user's active tenant memberships
-    const memberships = await prisma.tenantUser.findMany({
+    let memberships = await prisma.tenantUser.findMany({
       where: { userId: user.id },
       include: {
         tenant: {
@@ -89,6 +90,20 @@ export async function POST(req: NextRequest) {
       },
       orderBy: { createdAt: "asc" },
     });
+
+    // If user has no organization associated, auto-associate with default/first organization
+    if (memberships.length === 0) {
+      await ensureDefaultTenantAndAdmin(user.id, user.role);
+      memberships = await prisma.tenantUser.findMany({
+        where: { userId: user.id },
+        include: {
+          tenant: {
+            select: { id: true, name: true, slug: true, status: true },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    }
 
     const activeMembership = memberships.find(m => m.tenant.status === "ACTIVE") || memberships[0];
 

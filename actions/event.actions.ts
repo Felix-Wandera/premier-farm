@@ -76,7 +76,7 @@ export async function createBreedingEvent(data: any) {
 
     const animal = await prisma.animal.findFirst({
       where: { id: animalId, tenantId },
-      select: { species: true, tagNumber: true },
+      select: { species: true, tagNumber: true, name: true },
     });
 
     if (!animal) {
@@ -113,7 +113,7 @@ export async function createBreedingEvent(data: any) {
 
     return {
       success: true,
-      message: `Successfully recorded ${eventType.replace("_", " ")} for ${animal.tagNumber}!`,
+      message: `Successfully recorded ${eventType.replace("_", " ")} for ${animal.name || animal.tagNumber || "animal"}!`,
     };
   } catch (error: any) {
     console.error("Failed to create breeding event:", error);
@@ -127,7 +127,7 @@ export async function completeBreedingEvent(eventId: string, actualDate?: string
 
     const event = await prisma.breedingEvent.findFirst({
       where: { id: eventId, tenantId },
-      include: { animal: { select: { id: true, tagNumber: true } } },
+      include: { animal: { select: { id: true, tagNumber: true, name: true } } },
     });
 
     if (!event) {
@@ -150,7 +150,7 @@ export async function completeBreedingEvent(eventId: string, actualDate?: string
 
     return {
       success: true,
-      message: `Marked event complete for ${event.animal.tagNumber}!`,
+      message: `Marked event complete for ${event.animal.name || event.animal.tagNumber || "animal"}!`,
     };
   } catch (error: any) {
     console.error("Failed to complete breeding event:", error);
@@ -179,7 +179,7 @@ export async function createHealthRecord(data: any) {
 
     const animal = await prisma.animal.findFirst({
       where: { id: animalId, tenantId },
-      select: { tagNumber: true },
+      select: { tagNumber: true, name: true },
     });
 
     if (!animal) {
@@ -208,7 +208,7 @@ export async function createHealthRecord(data: any) {
           category: "VET_SERVICES",
           amount: cost,
           date: recordDate,
-          description: `${recordType}: ${description.trim()} (${animal.tagNumber})`,
+          description: `${recordType}: ${description.trim()} (${animal.name || animal.tagNumber || "Animal"})`,
           recordedById: userId,
         },
       });
@@ -221,7 +221,7 @@ export async function createHealthRecord(data: any) {
 
     return {
       success: true,
-      message: `Successfully recorded ${recordType.toLowerCase()} for ${animal.tagNumber}!`,
+      message: `Successfully recorded ${recordType.toLowerCase()} for ${animal.name || animal.tagNumber || "animal"}!`,
     };
   } catch (error: any) {
     console.error("Failed to create health record:", error);

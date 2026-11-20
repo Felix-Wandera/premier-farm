@@ -62,9 +62,9 @@ export default function ClientBreedingHub({
   };
 
   const filteredEvents = initialEvents.filter((event) =>
-    event.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (event.animalName && event.animalName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    event.title.toLowerCase().includes(searchQuery.toLowerCase())
+    (event.tagNumber ? event.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
+    (event.animalName ? event.animalName.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
+    (event.title ? event.title.toLowerCase().includes(searchQuery.toLowerCase()) : false)
   );
 
   const upcomingSoon = filteredEvents.filter((e) => e.timeframe === "Next 7 Days");
@@ -168,8 +168,8 @@ export default function ClientBreedingHub({
                         <div className={styles.cardHeader}>
                           <span className={styles.dateBadge}>{event.date}</span>
                           <span className={styles.cowTag} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <AnimalIcon species={formatSpecies(event.species)} size={14} /> {event.tagNumber}{" "}
-                            {event.animalName && `(${event.animalName})`}
+                            <AnimalIcon species={formatSpecies(event.species)} size={14} /> {event.animalName || event.tagNumber}{" "}
+                            {event.tagNumber && event.animalName && `(#${event.tagNumber})`}
                           </span>
                         </div>
                         <h4 className={styles.eventTitle}>{event.title}</h4>
@@ -206,8 +206,8 @@ export default function ClientBreedingHub({
                         <div className={styles.cardHeader}>
                           <span className={styles.dateBadge}>{event.date}</span>
                           <span className={styles.cowTag} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <AnimalIcon species={formatSpecies(event.species)} size={14} /> {event.tagNumber}{" "}
-                            {event.animalName && `(${event.animalName})`}
+                            <AnimalIcon species={formatSpecies(event.species)} size={14} /> {event.animalName || event.tagNumber}{" "}
+                            {event.tagNumber && event.animalName && `(#${event.tagNumber})`}
                           </span>
                         </div>
                         <h4 className={styles.eventTitle}>{event.title}</h4>

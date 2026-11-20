@@ -20,8 +20,8 @@ const SPECIES_MAP: Record<string, any> = {
 const animalSchema = z.object({
   species: z.string().min(1, "Species is required"),
   gender: z.enum(["MALE", "FEMALE"]),
-  tagNumber: z.string().min(1, "Official Tag Number is required"),
-  name: z.string().optional(),
+  name: z.string().trim().min(1, "Animal name is required"),
+  tagNumber: z.string().trim().optional().or(z.literal("")),
   dateOfBirth: z.string().optional(),
   status: z.enum(["ACTIVE", "SICK", "SOLD", "DECEASED"]),
   motherTag: z.string().optional(),
@@ -80,8 +80,8 @@ export async function createAnimal(formData: any): Promise<ActionState> {
     const newAnimal = await prisma.animal.create({
       data: {
         tenantId,
-        tagNumber: data.tagNumber.trim(),
-        name: data.name?.trim() || null,
+        name: data.name.trim(),
+        tagNumber: data.tagNumber?.trim() ? data.tagNumber.trim() : null,
         species: dbSpecies,
         gender: data.gender,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
@@ -95,7 +95,7 @@ export async function createAnimal(formData: any): Promise<ActionState> {
 
     return {
       success: true,
-      message: `Successfully registered ${newAnimal.tagNumber}!`,
+      message: `Successfully registered ${newAnimal.name}${newAnimal.tagNumber ? ` (${newAnimal.tagNumber})` : ""}!`,
     };
 
   } catch (error: any) {
@@ -121,8 +121,8 @@ export async function createAnimal(formData: any): Promise<ActionState> {
 const updateAnimalSchema = z.object({
   species: z.string().min(1, "Species is required"),
   gender: z.enum(["MALE", "FEMALE"]),
-  tagNumber: z.string().min(1, "Official Tag Number is required"),
-  name: z.string().optional(),
+  name: z.string().trim().min(1, "Animal name is required"),
+  tagNumber: z.string().trim().optional().or(z.literal("")),
   dateOfBirth: z.string().optional(),
 });
 
@@ -252,8 +252,8 @@ export async function updateAnimal(id: string, formData: any): Promise<ActionSta
     await prisma.animal.update({
       where: { id },
       data: {
-        tagNumber: data.tagNumber.trim(),
-        name: data.name?.trim() || null,
+        name: data.name.trim(),
+        tagNumber: data.tagNumber?.trim() ? data.tagNumber.trim() : null,
         species: dbSpecies,
         gender: data.gender,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,

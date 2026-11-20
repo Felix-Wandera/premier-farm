@@ -27,7 +27,9 @@ export default function ClientMilkLogging({
   initialCows: any[], 
   historyData: any[] 
 }) {
-  const [session, setSession] = useState<"Morning" | "Evening">("Morning");
+  const [session, setSession] = useState<"Morning" | "Mid-day" | "Evening">("Morning");
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [logDate, setLogDate] = useState<string>(todayStr);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<"log" | "history">("log");
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,8 +50,8 @@ export default function ClientMilkLogging({
   );
 
   const filteredRecords = records.filter(rec => 
-    rec.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (rec.name && rec.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    (rec.tagNumber ? rec.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
+    (rec.name ? rec.name.toLowerCase().includes(searchQuery.toLowerCase()) : false)
   );
   
   const handleAmountChange = (id: string, val: string) => {
@@ -115,8 +117,10 @@ export default function ClientMilkLogging({
 
     setIsSubmitting(true);
     try {
+      const dbSession = session === "Mid-day" ? "MIDDAY" : session.toUpperCase();
       const response = await logBatchMilkSession({
-        session: session.toUpperCase(),
+        session: dbSession,
+        date: logDate,
         records: payloadRecords
       });
 
@@ -153,7 +157,7 @@ export default function ClientMilkLogging({
            role="tab"
            aria-selected={activeTab === 'log'}
          >
-           🪣 Log Today
+           🪣 Record Yield
          </button>
          <button
            className={`${styles.sessionBtn} ${activeTab === 'history' ? styles.activeSession : ''}`}
@@ -167,6 +171,68 @@ export default function ClientMilkLogging({
 
       {activeTab === 'log' && (
         <>
+          {/* Mobile-Friendly Date Selector */}
+          <div style={{ backgroundColor: "var(--color-surface)", padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-sub)" }}>Milking Date</span>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <button
+                  type="button"
+                  onClick={() => setLogDate(todayStr)}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: "99px",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: logDate === todayStr ? "var(--color-primary)" : "var(--color-bg)",
+                    color: logDate === todayStr ? "white" : "var(--color-text-main)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const y = new Date();
+                    y.setDate(y.getDate() - 1);
+                    setLogDate(y.toISOString().split('T')[0]);
+                  }}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: "99px",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: logDate !== todayStr ? "var(--color-primary)" : "var(--color-bg)",
+                    color: logDate !== todayStr ? "white" : "var(--color-text-main)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Yesterday
+                </button>
+              </div>
+            </div>
+            <input
+              type="date"
+              max={todayStr}
+              value={logDate}
+              onChange={(e) => setLogDate(e.target.value)}
+              style={{
+                width: "100%",
+                minHeight: "44px",
+                padding: "0.6rem 0.75rem",
+                borderRadius: "8px",
+                border: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-bg)",
+                color: "var(--color-text-main)",
+                fontSize: "0.95rem",
+                fontWeight: 600,
+              }}
+            />
+          </div>
+
           {/* Search */}
           <div className={styles.searchBox}>
             <Search className={styles.searchIcon} size={20} />
@@ -179,7 +245,7 @@ export default function ClientMilkLogging({
             />
           </div>
 
-          {/* Session Toggle */}
+          {/* Session Toggle (Morning, Mid-day, Evening) */}
           <div className={styles.sessionToggle} role="tablist">
             <button 
               className={`${styles.sessionBtn} ${session === 'Morning' ? styles.activeSession : ''}`}
@@ -188,6 +254,14 @@ export default function ClientMilkLogging({
               aria-selected={session === 'Morning'}
             >
               🌅 Morning
+            </button>
+            <button 
+              className={`${styles.sessionBtn} ${session === 'Mid-day' ? styles.activeSession : ''}`}
+              onClick={() => setSession('Mid-day')}
+              role="tab"
+              aria-selected={session === 'Mid-day'}
+            >
+              ☀️ Mid-day
             </button>
             <button 
               className={`${styles.sessionBtn} ${session === 'Evening' ? styles.activeSession : ''}`}
@@ -202,7 +276,7 @@ export default function ClientMilkLogging({
           {/* Summary Card */}
           <div className={styles.summaryCard}>
             <div className={styles.summaryContent}>
-              <span className={styles.summaryLabel}>Total Session Yield</span>
+              <span className={styles.summaryLabel}>Total {session} Yield ({logDate})</span>
               <strong className={styles.summaryTotal}>{totalYield} <small>Liters</small></strong>
             </div>
           </div>
@@ -211,7 +285,7 @@ export default function ClientMilkLogging({
           {filteredRecords.length > 0 ? (
             <div className={styles.batchList}>
               <div className={styles.listHeader}>
-                <span>Tag ID</span>
+                <span>Animal</span>
                 <span>Amount (L)</span>
               </div>
 
@@ -220,7 +294,7 @@ export default function ClientMilkLogging({
                   <div className={styles.cowTag}>
                      <span className={styles.badge} style={{display: "flex", alignItems: "center", gap: "6px"}}>
                       <AnimalIcon species={record.species} size={16} />
-                      {record.tagNumber} {record.name && <span style={{fontWeight: 500, opacity: 0.8}}>({record.name})</span>}
+                      {record.name || record.tagNumber} {record.tagNumber && record.name && <span style={{fontWeight: 500, opacity: 0.8}}>#{record.tagNumber}</span>}
                     </span>
                   </div>
                   
@@ -233,7 +307,7 @@ export default function ClientMilkLogging({
                       value={record.amount} 
                       onChange={(e) => handleAmountChange(record.id, e.target.value)}
                       placeholder="0"
-                      aria-label={`Amount for ${record.tagNumber}`}
+                      aria-label={`Amount for ${record.name || record.tagNumber || "animal"}`}
                     />
                     <button className={styles.qtyBtn} onClick={() => increment(record.id)} aria-label="Increase amount">+</button>
                   </div>

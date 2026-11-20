@@ -61,20 +61,20 @@ export default function Login() {
     <div className={styles.loginContainer}>
       <div className={styles.imageSection}>
         <div className={styles.imageOverlay}>
-          <h2>Premier Farm</h2>
-          <p>Next-generation herd and farm management, brought to the palm of your hand.</p>
+          <h2>Premier Ranch</h2>
+          <p>Next-generation herd and ranch management, brought to the palm of your hand.</p>
         </div>
       </div>
 
       <div className={styles.formSection}>
         <div className={styles.formWrapper}>
           <div className={styles.mobileLogo}>
-            <Image src={logoPic} alt="Premier Farm Logo" width={32} height={32} className={styles.logoMark} />
-            <h2>Premier Farm</h2>
+            <Image src={logoPic} alt="Premier Ranch Logo" width={32} height={32} className={styles.logoMark} />
+            <h2>Premier Ranch</h2>
           </div>
 
           <div className={styles.header}>
-            <h1 className={styles.desktopTitle}>Login to Premier Farm</h1>
+            <h1 className={styles.desktopTitle}>Login to Premier Ranch</h1>
             <p>Please enter your details to sign in.</p>
           </div>
 

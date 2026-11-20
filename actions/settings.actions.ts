@@ -215,7 +215,7 @@ export async function getFarmSettings() {
       setting = await prisma.farmSetting.create({
         data: {
           id: "default",
-          farmName: "Premier Farm",
+          farmName: "Premier Ranch",
           location: "Nakuru County, Kenya",
           phoneNumber: "+254 700 000 000",
           email: "info@premierfarm.com",
@@ -241,7 +241,7 @@ export async function getFarmSettings() {
       success: false,
       data: {
         id: "default",
-        farmName: "Premier Farm",
+        farmName: "Premier Ranch",
         location: "Nakuru County, Kenya",
         phoneNumber: "+254 700 000 000",
         email: "info@premierfarm.com",
@@ -302,6 +302,46 @@ export async function updateFarmSettings(data: any) {
   } catch (e: any) {
     console.error("updateFarmSettings error:", e);
     return { success: false, message: e.message || "Failed to update farm settings." };
+  }
+}
+
+export async function updateFarmName(newName: string) {
+  try {
+    const session = await requireAuth();
+    let tenantId = session.tenantId as string | undefined;
+
+    if (!tenantId) {
+      const membership = await prisma.tenantUser.findFirst({
+        where: { userId: session.id as string },
+        select: { tenantId: true },
+      });
+      tenantId = membership?.tenantId;
+    }
+
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      return { success: false, message: "Farm name cannot be empty." };
+    }
+
+    if (tenantId) {
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { name: trimmed },
+      });
+    }
+
+    await prisma.farmSetting.upsert({
+      where: { id: "default" },
+      update: { farmName: trimmed },
+      create: { id: "default", farmName: trimmed },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/settings");
+    return { success: true, message: `Ranch name updated to "${trimmed}"!` };
+  } catch (e: any) {
+    console.error("updateFarmName error:", e);
+    return { success: false, message: e.message || "Failed to update ranch name." };
   }
 }
 

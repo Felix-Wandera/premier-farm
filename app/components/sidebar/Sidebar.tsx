@@ -67,8 +67,8 @@ export default function Sidebar() {
         <div className={styles.logoMarkWrapper}>
           {!isCollapsed && (
             <>
-              <Image src={logoPic} alt="Premier Farm Logo" width={32} height={32} className={styles.logoMark} />
-              <h1 className={styles.logoText}>Premier Farm</h1>
+              <Image src={logoPic} alt="Premier Ranch Logo" width={32} height={32} className={styles.logoMark} />
+              <h1 className={styles.logoText}>Premier Ranch</h1>
             </>
           )}
         </div>

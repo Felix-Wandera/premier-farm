@@ -13,8 +13,8 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Premier Farm Mgmt",
-  description: "Next-generation Farm Management system.",
+  title: "Premier Ranch Mgmt",
+  description: "Next-generation Ranch Management system.",
 };
 
 export default function RootLayout({

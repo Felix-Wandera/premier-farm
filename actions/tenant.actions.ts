@@ -99,6 +99,26 @@ export async function registerFarm(data: any) {
       },
     });
 
+    // Ensure tech admin is also auto-associated with this tenant as ADMIN
+    const techAdminEmail = (process.env.TECH_ADMIN_EMAIL || "admin@premierfarm.com").trim().toLowerCase();
+    const techAdminUser = await prisma.user.findUnique({ where: { email: techAdminEmail } });
+    if (techAdminUser && techAdminUser.id !== userId) {
+      await prisma.tenantUser.upsert({
+        where: {
+          tenantId_userId: {
+            tenantId: tenant.id,
+            userId: techAdminUser.id,
+          },
+        },
+        update: { role: "ADMIN" },
+        create: {
+          tenantId: tenant.id,
+          userId: techAdminUser.id,
+          role: "ADMIN",
+        },
+      });
+    }
+
     // Sign new session token with this tenant context
     const token = await signToken({
       id: userId!,

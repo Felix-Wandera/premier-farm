@@ -110,29 +110,30 @@ export default function NewAnimalWizard() {
 
         {step === 2 && (
           <div className={styles.stepPanel}>
-            <h2 className={styles.stepTitle}>Identification</h2>
-            <p className={styles.stepSubtitle}>Provide official tag credentials.</p>
+            <h2 className={styles.stepTitle}>Identification & Naming</h2>
+            <p className={styles.stepSubtitle}>Provide the animal's name and optional tag number.</p>
 
             <div className={styles.formSection}>
               <div className={styles.inputGroup}>
-                <label>Official Tag Number *</label>
+                <label>Animal Name *</label>
                 <input
                   type="text"
-                  placeholder="e.g. DC-024"
+                  placeholder="e.g. Maridadi, Bella"
                   className={styles.textInput}
-                  value={formData.tagNumber}
-                  onChange={(e) => setFormData({ ...formData, tagNumber: e.target.value })}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  autoFocus
                 />
               </div>
 
               <div className={styles.inputGroup}>
-                <label>Common Name (Optional)</label>
+                <label>Official Tag Number (Optional)</label>
                 <input
                   type="text"
-                  placeholder="e.g. Bella"
+                  placeholder="e.g. DC-024 (leave blank if untagged)"
                   className={styles.textInput}
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={formData.tagNumber}
+                  onChange={(e) => setFormData({ ...formData, tagNumber: e.target.value })}
                 />
               </div>
 
@@ -201,7 +202,7 @@ export default function NewAnimalWizard() {
         ) : <div></div>}
 
         {step < 3 ? (
-          <button className={styles.primaryBtn} onClick={nextStep} disabled={step === 2 && !formData.tagNumber}>
+          <button className={styles.primaryBtn} onClick={nextStep} disabled={step === 2 && !formData.name.trim()}>
             Next <ChevronRight size={20} />
           </button>
         ) : (

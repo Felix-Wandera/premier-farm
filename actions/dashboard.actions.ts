@@ -6,12 +6,18 @@ import { requireTenantContext } from "./utils";
 export async function getDashboardStats() {
   const { tenantId, session } = await requireTenantContext();
 
-  // Get user's display name
+  // Get user's display name and tenant farm name
   let userName: string | null = null;
   if (session.id) {
     const user = await prisma.user.findUnique({ where: { id: session.id as string }, select: { firstName: true } });
     userName = user?.firstName || null;
   }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true },
+  });
+  const farmName = tenant?.name || "Premier Ranch";
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -103,12 +109,13 @@ export async function getDashboardStats() {
     alerts.push({
       type: "info",
       title: `Upcoming ${event.eventType.replace("_", " ")}`,
-      description: `${event.animal.tagNumber}${event.animal.name ? ` (${event.animal.name})` : ''} — ${event.expectedDate?.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`
+      description: `${event.animal.name || event.animal.tagNumber || 'Animal'}${event.animal.tagNumber && event.animal.name ? ` (#${event.animal.tagNumber})` : ''} — ${event.expectedDate?.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`
     });
   }
 
   return {
     userName,
+    farmName,
     herd: { total: totalActive, dairy: dairyCowCount, indigenous: indigenousCount },
     milk: { todayYield, yieldDiff },
     finance: { income, expenses },

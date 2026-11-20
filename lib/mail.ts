@@ -59,7 +59,7 @@ async function renderTemplate(name: string, data: Record<string, string>) {
 /**
  * Sends an email using the centralized SMTP configuration and templates.
  */
-export async function sendEmail({ to, subject, template, data, fromName = "Premier Farm" }: MailOptions) {
+export async function sendEmail({ to, subject, template, data, fromName = "Premier Ranch" }: MailOptions) {
     const transporter = getTransporter();
     
     // Render the HTML using the template engine
