@@ -68,6 +68,10 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
             <span style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.01em", color: "var(--color-primary)" }}>{farmName}</span>
+            {/* 
+            
+            There is no need to have an edit button on the home page. It's not a routinely used feature.
+            
             <button
               type="button"
               onClick={() => { setIsEditingFarmName(true); setEditFarmNameInput(farmName); }}
@@ -88,7 +92,7 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
             >
               <Edit2 size={12} />
               <span>Edit</span>
-            </button>
+            </button> */}
           </div>
           <h1 className={styles.greeting}>{getGreeting()}{stats.userName ? `, ${stats.userName}` : ''}</h1>
           <p className={styles.date}>{today}</p>
