@@ -324,8 +324,6 @@
     font-size: 1.5rem;
   }
 }
-  transition: all 0.1s;
-}
 
 .actionBtn:active {
   background: var(--color-border);
