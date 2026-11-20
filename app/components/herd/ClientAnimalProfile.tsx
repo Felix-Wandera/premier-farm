@@ -351,62 +351,76 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
                           <div className={styles.timelineDot} style={{background: '#3b82f6', marginTop: "4px"}}></div>
                           <div className={styles.timelineContent}>
                             {isEditing ? (
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", margin: "4px 0" }}>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  min="0.1"
-                                  max="100"
-                                  value={editMilkYield}
-                                  onChange={(e) => setEditMilkYield(e.target.value)}
-                                  style={{
-                                    width: "80px",
-                                    padding: "4px 8px",
-                                    borderRadius: "6px",
-                                    border: "1px solid var(--color-border)",
-                                    background: "var(--color-bg)",
-                                    color: "var(--color-text-main)",
-                                    fontSize: "0.95rem",
-                                    fontWeight: 700,
-                                  }}
-                                  autoFocus
-                                />
-                                <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Liters</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveMilkEdit(log.id)}
-                                  disabled={isMilkActionLoading}
-                                  style={{
-                                    padding: "4px 8px",
-                                    borderRadius: "6px",
-                                    border: "none",
-                                    backgroundColor: "#22c55e",
-                                    color: "white",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                  }}
-                                  title="Save"
-                                >
-                                  <Check size={14} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingMilkLogId(null)}
-                                  style={{
-                                    padding: "4px 8px",
-                                    borderRadius: "6px",
-                                    border: "1px solid var(--color-border)",
-                                    backgroundColor: "transparent",
-                                    color: "var(--color-text-sub)",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                  }}
-                                  title="Cancel"
-                                >
-                                  <X size={14} />
-                                </button>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "6px 0", flexWrap: "wrap" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    min="0.1"
+                                    max="100"
+                                    value={editMilkYield}
+                                    onChange={(e) => setEditMilkYield(e.target.value)}
+                                    style={{
+                                      width: "90px",
+                                      minHeight: "38px",
+                                      padding: "4px 8px",
+                                      borderRadius: "8px",
+                                      border: "1px solid var(--color-border)",
+                                      background: "var(--color-bg)",
+                                      color: "var(--color-text-main)",
+                                      fontSize: "1rem",
+                                      fontWeight: 700,
+                                    }}
+                                    autoFocus
+                                  />
+                                  <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Liters</span>
+                                </div>
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveMilkEdit(log.id)}
+                                    disabled={isMilkActionLoading}
+                                    style={{
+                                      minWidth: "38px",
+                                      minHeight: "38px",
+                                      padding: "6px 12px",
+                                      borderRadius: "8px",
+                                      border: "none",
+                                      backgroundColor: "#22c55e",
+                                      color: "white",
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: "4px",
+                                      fontWeight: 600,
+                                      fontSize: "0.85rem",
+                                    }}
+                                    title="Save"
+                                  >
+                                    <Check size={16} /> Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingMilkLogId(null)}
+                                    style={{
+                                      minWidth: "38px",
+                                      minHeight: "38px",
+                                      padding: "6px 10px",
+                                      borderRadius: "8px",
+                                      border: "1px solid var(--color-border)",
+                                      backgroundColor: "transparent",
+                                      color: "var(--color-text-sub)",
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
+                                    title="Cancel"
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                </div>
                               </div>
                             ) : (
                               <h4>{log.amountLiters} Liters</h4>

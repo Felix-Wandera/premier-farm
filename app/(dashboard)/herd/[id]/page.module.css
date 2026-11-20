@@ -66,14 +66,22 @@
 .cover {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 24px;
-  padding: 2rem;
+  border-radius: 20px;
+  padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 640px) {
+  .cover {
+    border-radius: 24px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
 }
 
 .profileBadge {
@@ -87,7 +95,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -106,28 +114,44 @@
 }
 
 .tagTitle {
-  font-size: 3rem;
+  font-size: 1.85rem;
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   color: var(--color-text-main);
   margin-bottom: 0.25rem;
-  line-height: 1;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+@media (min-width: 640px) {
+  .tagTitle {
+    font-size: 2.75rem;
+    line-height: 1;
+  }
 }
 
 .subtitle {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--color-text-sub);
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   font-weight: 500;
 }
 
 .quickStats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   width: 100%;
-  gap: 1rem;
+  gap: 0.75rem;
   border-top: 1px solid var(--color-border);
-  padding-top: 1.5rem;
+  padding-top: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .quickStats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding-top: 1.5rem;
+  }
 }
 
 .statBox {
@@ -199,8 +223,15 @@
 
 .genealogyTree {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .genealogyTree {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
 }
 
 .parent {
