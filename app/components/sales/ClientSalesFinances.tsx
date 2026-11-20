@@ -122,23 +122,12 @@ export default function ClientSalesFinances({
             href="/api/export?type=finances"
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "0.5rem 0.85rem",
-              borderRadius: "99px",
-              backgroundColor: "var(--color-surface, #ffffff)",
-              border: "1px solid var(--color-border, #cbd5e1)",
-              color: "inherit",
-              textDecoration: "none",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              boxShadow: "var(--shadow-sm)",
-            }}
+            className={styles.exportBtn}
+            aria-label="Export CSV"
+            title="Export Finances CSV"
           >
-            <Download size={15} />
-            <span>Export CSV</span>
+            <Download size={16} />
+            <span className={styles.exportBtnText}>Export CSV</span>
           </a>
 
           <button
@@ -322,16 +311,24 @@ export default function ClientSalesFinances({
       {/* Hero Stats */}
       <div className={styles.heroStats}>
          <div className={`${styles.statCard} ${styles.incomeCard}`}>
-            <div className={styles.iconWrapper}><TrendingUp size={24} /></div>
+            <div className={styles.statCardLeft}>
+              <div className={styles.iconWrapper}><TrendingUp size={22} /></div>
+              <div className={styles.statInfo}>
+                 <span>{isFiltered ? "Filtered Income" : "Total Income"}</span>
+              </div>
+            </div>
             <div className={styles.statInfo}>
-               <span>{isFiltered ? "Filtered Income" : "Total Income"}</span>
                <strong>{formatCurrency(displayIncome)}</strong>
             </div>
          </div>
          <div className={`${styles.statCard} ${styles.expenseCard}`}>
-            <div className={styles.iconWrapper}><TrendingDown size={24} /></div>
+            <div className={styles.statCardLeft}>
+              <div className={styles.iconWrapper}><TrendingDown size={22} /></div>
+              <div className={styles.statInfo}>
+                 <span>{isFiltered ? "Filtered Expenses" : "Total Expenses"}</span>
+              </div>
+            </div>
             <div className={styles.statInfo}>
-               <span>{isFiltered ? "Filtered Expenses" : "Total Expenses"}</span>
                <strong>{formatCurrency(displayExpenses)}</strong>
             </div>
          </div>
@@ -340,7 +337,13 @@ export default function ClientSalesFinances({
       {/* Cash Flow Chart */}
       <div className={styles.chartSection}>
          <div className={styles.chartHeader}>
-           <h3>Cash Flow</h3>
+           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+             <h3>Cash Flow</h3>
+             <div className={styles.chartLegend}>
+               <span><span className={styles.legendDotGreen} /> Income</span>
+               <span><span className={styles.legendDotRed} /> Expense</span>
+             </div>
+           </div>
            <span className={displayNet >= 0 ? styles.netPositive : styles.amountNeg}>
              Net: {displayNet > 0 ? "+" : ""}{formatCurrency(displayNet)}
            </span>
@@ -351,9 +354,13 @@ export default function ClientSalesFinances({
               const maxVal = Math.max(...cashFlow.map(d => Math.max(d.income, d.expense)), 1);
               return cashFlow.map((d, i) => (
                 <div key={i} className={styles.barColumn}>
-                   <div className={styles.barWrapper}>
-                      <div className={styles.barIncome} style={{ height: `${(d.income / maxVal) * 100}%` }}></div>
-                      <div className={styles.barExpense} style={{ height: `${(d.expense / maxVal) * 100}%` }}></div>
+                   <div className={styles.barPair}>
+                      <div className={styles.trackIncome} title={`Income: ${formatCurrency(d.income)}`}>
+                        <div className={styles.barIncome} style={{ height: `${(d.income / maxVal) * 100}%` }}></div>
+                      </div>
+                      <div className={styles.trackExpense} title={`Expense: ${formatCurrency(d.expense)}`}>
+                        <div className={styles.barExpense} style={{ height: `${(d.expense / maxVal) * 100}%` }}></div>
+                      </div>
                    </div>
                    <span className={styles.dayLabel}>{d.day}</span>
                 </div>

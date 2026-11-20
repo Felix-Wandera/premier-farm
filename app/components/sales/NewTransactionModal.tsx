@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { X, Save } from "lucide-react";
 import { recordTransaction } from "@/actions/financial.actions";
 import { useToast } from "../ui/Toast";
+import styles from "./NewTransactionModal.module.css";
 
 const INCOME_REASONS = [
   "Cooperative Milk Delivery",
@@ -93,16 +94,18 @@ export default function NewTransactionModal({ isOpen, onClose }: { isOpen: boole
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", backgroundColor: "rgba(0,0,0,0.4)" }}>
-      {/* Sidebar style modal on right side */}
-      <div style={{ marginLeft: "auto", width: "100%", maxWidth: "420px", backgroundColor: "#fff", height: "100%", display: "flex", flexDirection: "column", boxShadow: "-4px 0 15px rgba(0,0,0,0.1)" }}>
+    <div className={styles.backdrop} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={styles.modalSheet}>
+        <div className={styles.dragHandle} />
         
-        <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 600 }}>New Transaction</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={24} color="#64748b" /></button>
+        <div className={styles.header}>
+          <h2 className={styles.title}>New Transaction</h2>
+          <button onClick={onClose} className={styles.closeBtn} aria-label="Close modal">
+            <X size={20} />
+          </button>
         </div>
 
-        <div style={{ padding: "1.25rem 1.5rem", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div className={styles.body}>
           
           <div style={{ display: "flex", gap: "1rem" }}>
              <button 
@@ -227,14 +230,14 @@ export default function NewTransactionModal({ isOpen, onClose }: { isOpen: boole
           </div>
         </div>
 
-        <div style={{ padding: "1.25rem 1.5rem", borderTop: "1px solid #e2e8f0" }}>
+        <div className={styles.footer}>
           <button 
              onClick={handleSave}
              disabled={isSubmitting}
-             style={{ width: "100%", padding: "0.875rem", backgroundColor: "#1e293b", color: "#fff", borderRadius: "8px", border: "none", fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.7 : 1 }}
+             className={styles.submitBtn}
           >
-             <Save size={20} />
-             {isSubmitting ? "Saving..." : "Record Transaction"}
+             <Save size={18} />
+             <span>{isSubmitting ? "Saving..." : "Record Transaction"}</span>
           </button>
         </div>
       </div>
