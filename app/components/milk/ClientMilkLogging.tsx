@@ -389,9 +389,8 @@ export default function ClientMilkLogging({
           ) : (
             <>
               <div className={styles.listHeader}>
-                <span>Date</span>
                 <span>Session</span>
-                <span>Total</span>
+                <span>Date</span>
                 <span style={{ textAlign: "right" }}>Actions</span>
               </div>
               {historyData.map((entry, i) => {
@@ -405,45 +404,43 @@ export default function ClientMilkLogging({
                 if (entryDate.toDateString() === today.toDateString()) dateStr = "Today";
                 else if (entryDate.toDateString() === yesterday.toDateString()) dateStr = "Yesterday";
 
+                const sessionEmoji = entry.session === 'Morning' ? '🌅' : entry.session === 'Evening' ? '🌃' : '☀️';
+
                 return (
-                  <div key={i} className={styles.recordRow}>
-                    <div className={styles.cowTag}>
-                      <span className={styles.badge}><Clock size={14} /> {dateStr}</span>
+                  <div key={i} className={styles.historyCard}>
+                    <div className={styles.historyCardTop}>
+                      <div className={styles.historySessionBadge}>
+                        <span style={{ fontSize: "1.15rem", lineHeight: 1 }}>{sessionEmoji}</span>
+                        <span>{entry.session} Session</span>
+                      </div>
+                      <div className={styles.historyYield}>
+                        <strong>{entry.total}</strong> <small>Liters</small>
+                      </div>
                     </div>
-                    <div className={styles.cowTag}>
-                      <span className={styles.badge}>{entry.session === 'Morning' ? '🌅' : entry.session === 'Evening' ? '🌃' : ''} {entry.session}</span>
+
+                    <div className={styles.historyCardMeta}>
+                      <span className={styles.historyDateBadge}>
+                        <Clock size={13} /> {dateStr}
+                      </span>
                     </div>
-                    <div className={styles.cowTag}>
-                      <strong>{entry.total} L</strong>
-                    </div>
-                    <div className={styles.cowTag} style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+
+                    <div className={styles.historyCardActions}>
                       <button
                         onClick={() => setSelectedSession({ date: new Date(entry.date).toISOString(), session: entry.session })}
-                        style={{
-                          background: "none",
-                          border: "1px solid var(--color-border, #cbd5e1)",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          color: "var(--color-primary, #16a34a)",
-                          padding: "4px 8px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                        }}
-                        title="View and Edit Individual Cows"
+                        className={styles.historyEditBtn}
+                        title="View and Edit Breakdown"
                       >
-                        <ExternalLink size={13} />
-                        <span>Edit</span>
+                        <ExternalLink size={14} />
+                        <span>View Breakdown</span>
                       </button>
                       <button
                         onClick={() => handleDeleteSession(entry.date, entry.session)}
                         disabled={isDeleting}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-sub)", padding: "4px" }}
+                        className={styles.historyDeleteBtn}
                         title="Delete Entire Session"
+                        aria-label="Delete Entire Session"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>

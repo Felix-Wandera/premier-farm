@@ -5,7 +5,7 @@ import Link from "next/link";
 import AnimalIcon from "../ui/AnimalIcon";
 import QuickAddMenu from "../quick-add/QuickAddMenu";
 import EmptyState from "../ui/EmptyState";
-import { Search, Plus, LayoutGrid, List as ListIcon, Info } from "lucide-react";
+import { Search, Plus, LayoutGrid, List as ListIcon, Info, ChevronRight } from "lucide-react";
 
 type PrismaAnimal = {
   id: string;
@@ -136,23 +136,31 @@ export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals
               <Link key={animal.id} href={`/herd/${animal.id}`} className={`${styles.animalCard} ${viewMode === 'list' ? styles.listCard : ''}`} style={{textDecoration: 'none'}}>
                 <div className={styles.cardHeader}>
                   <div className={styles.avatar}>
-                    <AnimalIcon species={formattedSpecies} size={28} />
-                  </div>
-                  <div className={`${styles.statusBadge} ${formattedStatus === 'Sick' ? styles.badgeSick : styles.badgeActive}`}>
-                    <span className={`${styles.statusDot} ${formattedStatus === 'Sick' ? styles.dotSick : styles.dotActive}`}></span>
-                    {formattedStatus}
+                    <AnimalIcon species={formattedSpecies} size={26} />
                   </div>
                 </div>
 
                 <div className={styles.cardBody}>
-                  <h3 className={styles.tagNumber} style={{display: "flex", alignItems: "center", gap: "6px"}}>
-                    {animal.name} {animal.tagNumber && <span className={styles.animalName}>#{animal.tagNumber}</span>}
-                  </h3>
+                  <div className={styles.nameRow}>
+                    <h3 className={styles.tagNumber}>
+                      {animal.name}
+                    </h3>
+                    {animal.tagNumber && <span className={styles.tagBadge}>#{animal.tagNumber}</span>}
+                  </div>
                   
                   <div className={styles.tags}>
                     <span className={styles.infoTag}>{formattedSpecies}</span>
+                    <span className={styles.infoDot}>•</span>
                     <span className={styles.infoTag}>{age}</span>
                   </div>
+                </div>
+
+                <div className={styles.cardRight}>
+                  <div className={`${styles.statusBadge} ${formattedStatus === 'Sick' ? styles.badgeSick : styles.badgeActive}`}>
+                    <span className={`${styles.statusDot} ${formattedStatus === 'Sick' ? styles.dotSick : styles.dotActive}`}></span>
+                    <span className={styles.statusText}>{formattedStatus}</span>
+                  </div>
+                  <ChevronRight size={18} className={styles.chevron} />
                 </div>
               </Link>
             )
