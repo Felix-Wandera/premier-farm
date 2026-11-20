@@ -338,12 +338,12 @@ export default function ClientMilkLogging({
           {/* Sticky Footer Bar with Running Total and Save Action */}
           <div className={styles.stickyFooter}>
             <div className={styles.stickyBar}>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--color-text-sub)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <div className={styles.footerYieldInfo}>
+                <span className={styles.footerYieldLabel}>
                   {session} Total
                 </span>
-                <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", lineHeight: 1.15 }}>
-                  {totalYield} <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-sub)" }}>Liters</span>
+                <span className={styles.footerYieldValue}>
+                  {totalYield} <span className={styles.footerYieldUnit}>Liters</span>
                 </span>
               </div>
 
@@ -351,13 +351,8 @@ export default function ClientMilkLogging({
                 className={styles.submitBtn} 
                 onClick={handleSaveSession}
                 disabled={isSubmitting || totalYield === 0}
-                style={{
-                  padding: "0.75rem 1.25rem",
-                  borderRadius: "14px",
-                  margin: 0,
-                }}
               >
-                <CheckCircle2 size={18} />
+                <CheckCircle2 size={16} />
                 <span>{isSubmitting ? "Saving..." : `Save ${session}`}</span>
               </button>
             </div>
