@@ -170,31 +170,19 @@ export default function ClientMilkLogging({
         <button
           type="button"
           onClick={() => setActiveTab(prev => prev === 'log' ? 'history' : 'log')}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "0.55rem 0.95rem",
-            borderRadius: "12px",
-            border: "1px solid var(--color-border)",
-            backgroundColor: activeTab === "history" ? "var(--color-primary)" : "var(--color-surface)",
-            color: activeTab === "history" ? "white" : "var(--color-text-main)",
-            fontWeight: 600,
-            fontSize: "0.88rem",
-            cursor: "pointer",
-            boxShadow: "var(--shadow-sm)",
-            transition: "all 0.15s ease",
-          }}
+          className={styles.historyBtn}
           title={activeTab === 'log' ? "View Milk History" : "Back to Record Yield"}
+          aria-label={activeTab === 'log' ? "View Milk History" : "Back to Record Yield"}
         >
           {activeTab === 'log' ? (
             <>
-              <History size={17} />
-              <span>History</span>
+              <History size={18} />
+              <span className={styles.historyBtnText}>History</span>
             </>
           ) : (
             <>
-              <span>← Record Yield</span>
+              <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>←</span>
+              <span className={styles.historyBtnText}>Record Yield</span>
             </>
           )}
         </button>
@@ -349,24 +337,7 @@ export default function ClientMilkLogging({
 
           {/* Sticky Footer Bar with Running Total and Save Action */}
           <div className={styles.stickyFooter}>
-            <div
-              style={{
-                pointerEvents: "auto",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "1rem",
-                backgroundColor: "var(--color-surface, #ffffff)",
-                padding: "0.55rem 0.85rem 0.55rem 1.25rem",
-                borderRadius: "20px",
-                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
-                border: "1px solid var(--color-border, #e2e8f0)",
-                width: "100%",
-                maxWidth: "540px",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-              }}
-            >
+            <div className={styles.stickyBar}>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--color-text-sub)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {session} Total
