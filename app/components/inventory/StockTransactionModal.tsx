@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { X, Save, DollarSign } from "lucide-react";
 import { useToast } from "../ui/Toast";
 import styles from "../../(dashboard)/inventory/page.module.css";
+import bsStyles from "../ui/BottomSheetModal.module.css";
 import { transactInventoryExact } from "@/actions/inventory.actions";
 
 const RESTOCK_REASONS = [
@@ -102,17 +103,18 @@ export default function StockTransactionModal({ isOpen, onClose, item, type }: {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
-      <div style={{ width: "100%", maxWidth: "450px", maxHeight: "90vh", overflowY: "auto", backgroundColor: "var(--color-surface)", borderRadius: "16px", display: "flex", flexDirection: "column", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)", border: "1px solid var(--color-border)", margin: "1rem" }}>
+    <div className={bsStyles.backdrop} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={bsStyles.sheet}>
+        <div className={bsStyles.dragHandle} />
 
-        <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid var(--color-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className={bsStyles.header}>
           <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--color-text-main)" }}>
             {type === "STOCK_IN" ? "Restock Item (Stock In)" : "Remove Item (Stock Out)"}
           </h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-sub)" }}><X size={24} /></button>
+          <button onClick={onClose} className={bsStyles.closeBtn} aria-label="Close modal"><X size={20} /></button>
         </div>
 
-        <div style={{ padding: "1.25rem 1.5rem", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div className={bsStyles.body}>
           <div style={{ backgroundColor: "var(--color-bg)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid var(--color-border)" }}>
             <div style={{ fontWeight: 700, fontSize: "1rem", color: "var(--color-text-main)" }}>{item.name}</div>
             <div style={{ fontSize: "0.85rem", color: "var(--color-text-sub)", marginTop: "2px" }}>
@@ -249,14 +251,15 @@ export default function StockTransactionModal({ isOpen, onClose, item, type }: {
           )}
         </div>
 
-        <div style={{ padding: "1.25rem 1.5rem", borderTop: "1px solid var(--color-border)" }}>
+        <div className={bsStyles.stickyFooter}>
           <button
              onClick={handleSave}
              disabled={isSubmitting}
-             style={{ width: "100%", padding: "0.875rem", backgroundColor: type === "STOCK_IN" ? "#22c55e" : "#ef4444", color: "white", borderRadius: "8px", border: "none", fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.7 : 1 }}
+             className={bsStyles.primarySubmitBtn}
+             style={{ backgroundColor: type === "STOCK_IN" ? "var(--color-primary, #16a34a)" : "#ef4444" }}
           >
-             <Save size={20} />
-             {isSubmitting ? "Processing..." : (type === "STOCK_IN" ? "Confirm Restock" : "Confirm Removal")}
+             <Save size={18} />
+             <span>{isSubmitting ? "Processing..." : (type === "STOCK_IN" ? "Confirm Restock" : "Confirm Removal")}</span>
           </button>
         </div>
       </div>

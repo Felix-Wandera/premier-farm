@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { X, Save, ShieldPlus, Stethoscope, Syringe, DollarSign, Calendar } from "lucide-react";
 import { createHealthRecord } from "@/actions/event.actions";
 import { useToast } from "../ui/Toast";
+import bsStyles from "../ui/BottomSheetModal.module.css";
 
 interface Animal {
   id: string;
@@ -87,56 +88,24 @@ export default function NewHealthRecordModal({
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 100,
-        display: "flex",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        backdropFilter: "blur(4px)",
-      }}
-    >
-      <div
-        style={{
-          marginLeft: "auto",
-          width: "100%",
-          maxWidth: "460px",
-          backgroundColor: "var(--color-surface, #ffffff)",
-          color: "var(--color-text, #0f172a)",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "-4px 0 20px rgba(0, 0, 0, 0.15)",
-        }}
-      >
+    <div className={bsStyles.backdrop} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={bsStyles.sheet}>
+        <div className={bsStyles.dragHandle} />
+
         {/* Header */}
-        <div
-          style={{
-            padding: "1.5rem",
-            borderBottom: "1px solid var(--color-border, #e2e8f0)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div className={bsStyles.header}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>Log Health Record</h2>
-            <p style={{ margin: "4px 0 0", fontSize: "0.85rem", opacity: 0.7 }}>
+            <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>Log Health Record</h2>
+            <p style={{ margin: "4px 0 0", fontSize: "0.82rem", opacity: 0.7 }}>
               Record treatments, vaccinations & vet visits
             </p>
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              color: "inherit",
-            }}
+            className={bsStyles.closeBtn}
+            aria-label="Close modal"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
@@ -313,30 +282,14 @@ export default function NewHealthRecordModal({
           </div>
 
           {/* Submit Button */}
-          <div style={{ marginTop: "auto", paddingTop: "1rem" }}>
+          <div className={bsStyles.stickyFooter}>
             <button
               type="submit"
               disabled={isSubmitting}
-              style={{
-                width: "100%",
-                padding: "0.85rem",
-                borderRadius: "8px",
-                backgroundColor: "var(--color-primary, #16a34a)",
-                color: "#ffffff",
-                border: "none",
-                fontWeight: 600,
-                fontSize: "1rem",
-                cursor: isSubmitting ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.5rem",
-                boxShadow: "0 2px 8px rgba(22, 163, 74, 0.25)",
-                opacity: isSubmitting ? 0.7 : 1,
-              }}
+              className={bsStyles.primarySubmitBtn}
             >
               <Save size={18} />
-              {isSubmitting ? "Recording..." : "Save Health Record"}
+              <span>{isSubmitting ? "Recording..." : "Save Health Record"}</span>
             </button>
           </div>
         </form>

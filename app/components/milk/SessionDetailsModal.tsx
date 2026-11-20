@@ -5,6 +5,7 @@ import { X, Save, Trash2, Clock, Check, Edit2, Loader2 } from "lucide-react";
 import { getSessionMilkLogs, updateSingleMilkLog, deleteSingleMilkLog } from "@/actions/milk.actions";
 import { useToast } from "../ui/Toast";
 import ConfirmationModal from "../ui/ConfirmationModal";
+import bsStyles from "../ui/BottomSheetModal.module.css";
 
 interface SessionDetailsModalProps {
   isOpen: boolean;
@@ -116,46 +117,15 @@ export default function SessionDetailsModal({
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 150,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        backdropFilter: "blur(4px)",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "520px",
-          maxHeight: "85vh",
-          backgroundColor: "var(--color-surface, #ffffff)",
-          color: "var(--color-text-main, #0f172a)",
-          borderRadius: "16px",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)",
-          border: "1px solid var(--color-border, #e2e8f0)",
-          margin: "1rem",
-        }}
-      >
+    <div className={bsStyles.backdrop} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={bsStyles.sheet}>
+        <div className={bsStyles.dragHandle} />
+
         {/* Header */}
-        <div
-          style={{
-            padding: "1.25rem 1.5rem",
-            borderBottom: "1px solid var(--color-border, #e2e8f0)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div className={bsStyles.header}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>
+              <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
                 {sessionName} Milking Session
               </h2>
               <span
@@ -171,7 +141,7 @@ export default function SessionDetailsModal({
                 {logs.length} cows
               </span>
             </div>
-            <p style={{ margin: "4px 0 0", fontSize: "0.85rem", opacity: 0.7, display: "flex", alignItems: "center", gap: "4px" }}>
+            <p style={{ margin: "4px 0 0", fontSize: "0.82rem", opacity: 0.7, display: "flex", alignItems: "center", gap: "4px" }}>
               <Clock size={13} />
               {sessionDate ? new Date(sessionDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : ""}
             </p>
@@ -179,15 +149,10 @@ export default function SessionDetailsModal({
 
           <button
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              color: "inherit",
-            }}
+            className={bsStyles.closeBtn}
+            aria-label="Close modal"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
 

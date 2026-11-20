@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Save, Calendar, Sparkles } from "lucide-react";
 import { createBreedingEvent } from "@/actions/event.actions";
 import { useToast } from "../ui/Toast";
+import bsStyles from "../ui/BottomSheetModal.module.css";
 
 interface Animal {
   id: string;
@@ -101,56 +102,24 @@ export default function NewBreedingEventModal({
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 100,
-        display: "flex",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        backdropFilter: "blur(4px)",
-      }}
-    >
-      <div
-        style={{
-          marginLeft: "auto",
-          width: "100%",
-          maxWidth: "460px",
-          backgroundColor: "var(--color-surface, #ffffff)",
-          color: "var(--color-text, #0f172a)",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "-4px 0 20px rgba(0, 0, 0, 0.15)",
-        }}
-      >
+    <div className={bsStyles.backdrop} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={bsStyles.sheet}>
+        <div className={bsStyles.dragHandle} />
+
         {/* Header */}
-        <div
-          style={{
-            padding: "1.5rem",
-            borderBottom: "1px solid var(--color-border, #e2e8f0)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div className={bsStyles.header}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>Record Breeding Event</h2>
-            <p style={{ margin: "4px 0 0", fontSize: "0.85rem", opacity: 0.7 }}>
+            <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>Record Breeding Event</h2>
+            <p style={{ margin: "4px 0 0", fontSize: "0.82rem", opacity: 0.7 }}>
               Track inseminations, pregnancy checks & calvings
             </p>
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              color: "inherit",
-            }}
+            className={bsStyles.closeBtn}
+            aria-label="Close modal"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
@@ -355,29 +324,14 @@ export default function NewBreedingEventModal({
           </div>
 
           {/* Submit Button */}
-          <div style={{ marginTop: "auto", paddingTop: "1rem" }}>
+          <div className={bsStyles.stickyFooter}>
             <button
               type="submit"
               disabled={isSubmitting}
-              style={{
-                width: "100%",
-                padding: "0.9rem",
-                borderRadius: "8px",
-                border: "none",
-                backgroundColor: "var(--color-primary, #16a34a)",
-                color: "#ffffff",
-                fontSize: "1rem",
-                fontWeight: 600,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                cursor: isSubmitting ? "not-allowed" : "pointer",
-                opacity: isSubmitting ? 0.7 : 1,
-              }}
+              className={bsStyles.primarySubmitBtn}
             >
               <Save size={18} />
-              {isSubmitting ? "Saving..." : "Save Breeding Event"}
+              <span>{isSubmitting ? "Saving..." : "Save Breeding Event"}</span>
             </button>
           </div>
         </form>
