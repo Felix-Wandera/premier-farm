@@ -6,8 +6,10 @@ import logoPic from "@/public/logo.png";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "./page.module.css";
-import { Lock, Mail, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, ArrowRight, Loader2 } from "lucide-react";
 import { useToast } from "../components/ui/Toast";
+import PasswordInput from "../components/ui/PasswordInput";
+import { APP_BRAND_NAME } from "@/lib/branding";
 
 export default function Login() {
   const router = useRouter();
@@ -21,7 +23,6 @@ export default function Login() {
     e.preventDefault();
     setError(null);
 
-    // Basic validation
     if (!email || !password) {
       setError("Please fill in all fields.");
       return;
@@ -61,7 +62,7 @@ export default function Login() {
     <div className={styles.loginContainer}>
       <div className={styles.imageSection}>
         <div className={styles.imageOverlay}>
-          <h2>Premier Ranch</h2>
+          <h2>{APP_BRAND_NAME}</h2>
           <p>Next-generation herd and ranch management, brought to the palm of your hand.</p>
         </div>
       </div>
@@ -69,12 +70,12 @@ export default function Login() {
       <div className={styles.formSection}>
         <div className={styles.formWrapper}>
           <div className={styles.mobileLogo}>
-            <Image src={logoPic} alt="Premier Ranch Logo" width={32} height={32} className={styles.logoMark} />
-            <h2>Premier Ranch</h2>
+            <Image src={logoPic} alt={`${APP_BRAND_NAME} Logo`} width={32} height={32} className={styles.logoMark} />
+            <h2>{APP_BRAND_NAME}</h2>
           </div>
 
           <div className={styles.header}>
-            <h1 className={styles.desktopTitle}>Login to Premier Ranch</h1>
+            <h1 className={styles.desktopTitle}>Login to {APP_BRAND_NAME}</h1>
             <p>Please enter your details to sign in.</p>
           </div>
 
@@ -88,6 +89,7 @@ export default function Login() {
                 <input
                   id="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="your-email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -99,18 +101,16 @@ export default function Login() {
 
             <div className={styles.inputGroup}>
               <label htmlFor="password">Password</label>
-              <div className={styles.inputWrapper}>
-                <Lock className={styles.inputIcon} size={20} />
-                <input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-              </div>
+              <PasswordInput
+                id="password"
+                iconSize={20}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                isSubmitting={isSubmitting}
+                required
+              />
             </div>
 
             <div className={styles.formOptions}>
@@ -140,9 +140,11 @@ export default function Login() {
             </button>
           </form>
 
+          {/* 
+          No need to include this on the home page
           <p className={styles.footerText}>
             Want to register a new farm? <Link href="/register-farm" style={{ color: "#10b981", fontWeight: 600 }}>Create organization</Link>
-          </p>
+          </p> */}
         </div>
       </div>
     </div>

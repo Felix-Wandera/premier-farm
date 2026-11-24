@@ -14,9 +14,16 @@ import DataExportModal from "../../components/settings/DataExportModal";
 import { subscribeUser, unsubscribeUser } from "../../components/notifications/NotificationManager";
 import { sendTestNotification } from "@/actions/push.actions";
 import { getFarmSettings } from "@/actions/settings.actions";
+import {
+  APP_BRAND_NAME,
+  DEFAULT_CURRENCY,
+  DEFAULT_FARM_EMAIL,
+  DEFAULT_FARM_LOCATION,
+  DEFAULT_FARM_PHONE,
+} from "@/lib/branding";
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, hasPermission, refreshSession } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -28,24 +35,23 @@ export default function SettingsPage() {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [farmSettings, setFarmSettings] = useState({
     id: "default",
-    farmName: "Premier Farm",
-    location: "Nakuru County, Kenya",
-    phoneNumber: "+254 700 000 000",
-    email: "info@premierfarm.com",
-    currencySymbol: "KES",
+    farmName: APP_BRAND_NAME,
+    location: DEFAULT_FARM_LOCATION,
+    phoneNumber: DEFAULT_FARM_PHONE,
+    email: DEFAULT_FARM_EMAIL,
+    currencySymbol: DEFAULT_CURRENCY,
   });
 
-  // Sync push status & fetch farm settings on mount
   useEffect(() => {
     if ("serviceWorker" in navigator && "PushManager" in window) {
-      navigator.serviceWorker.ready.then(reg => {
-        reg.pushManager.getSubscription().then(sub => {
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.pushManager.getSubscription().then((sub) => {
           setIsPushEnabled(!!sub);
         });
       });
     }
 
-    getFarmSettings().then(res => {
+    getFarmSettings().then((res) => {
       if (res.success && res.data) {
         setFarmSettings(res.data);
       }
@@ -89,30 +95,41 @@ export default function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Personal Profile</h2>
         <div className={styles.card}>
-          <div className={styles.settingRow} style={{ borderBottom: '1px solid var(--color-border)', cursor: 'default' }}>
+          <div className={styles.settingRow} style={{ borderBottom: "1px solid var(--color-border)", cursor: "default" }}>
             <div className={styles.rowLeft}>
               <User size={20} className={styles.rowIcon} />
               <span>Full Name</span>
             </div>
-            <span className={styles.valueLabel}>{user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Not set' : '...'}</span>
+            <span className={styles.valueLabel}>
+              {user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Not set" : "..."}
+            </span>
           </div>
-          <div className={styles.settingRow} style={{ borderBottom: '1px solid var(--color-border)', cursor: 'default' }}>
+          <div className={styles.settingRow} style={{ borderBottom: "1px solid var(--color-border)", cursor: "default" }}>
             <div className={styles.rowLeft}>
               <Mail size={20} className={styles.rowIcon} />
               <span>Email</span>
             </div>
-            <span className={styles.valueLabel}>{user?.email || '...'}</span>
+            <span className={styles.valueLabel}>{user?.email || "..."}</span>
           </div>
-          <div className={styles.settingRow} style={{ cursor: 'default' }}>
+          <div className={styles.settingRow} style={{ cursor: "default" }}>
             <div className={styles.rowLeft}>
               <Phone size={20} className={styles.rowIcon} />
               <span>Phone</span>
             </div>
-            <span className={styles.valueLabel}>{user?.phoneNumber || 'Not linked'}</span>
+            <span className={styles.valueLabel}>{user?.phoneNumber || "Not linked"}</span>
           </div>
           <button
             onClick={() => setIsProfileModalOpen(true)}
-            style={{ width: '100%', padding: '0.85rem', color: 'var(--color-primary)', fontWeight: 600, border: 'none', background: 'var(--color-bg)', borderTop: '1px solid var(--color-border)', cursor: 'pointer' }}
+            style={{
+              width: "100%",
+              padding: "0.85rem",
+              color: "var(--color-primary)",
+              fontWeight: 600,
+              border: "none",
+              background: "var(--color-bg)",
+              borderTop: "1px solid var(--color-border)",
+              cursor: "pointer",
+            }}
           >
             Edit Profile Details
           </button>
@@ -132,7 +149,7 @@ export default function SettingsPage() {
                     .slice(0, 2)
                     .join("")
                     .toUpperCase()
-                : "PF"}
+                : "PR"}
             </div>
             <div style={{ flex: 1 }}>
               <h3 className={styles.farmName}>{farmSettings.farmName}</h3>
@@ -143,7 +160,7 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-          {user?.role === "ADMIN" && (
+          {hasPermission("settings:manage") && (
             <button
               onClick={() => setIsFarmModalOpen(true)}
               style={{
@@ -202,15 +219,15 @@ export default function SettingsPage() {
               <button
                 onClick={handlePushToggle}
                 style={{
-                  padding: '0.4rem 1rem',
-                  borderRadius: '20px',
-                  fontSize: '0.85rem',
+                  padding: "0.4rem 1rem",
+                  borderRadius: "20px",
+                  fontSize: "0.85rem",
                   fontWeight: 600,
-                  transition: 'all 0.2s',
-                  backgroundColor: isPushEnabled ? 'var(--color-primary-light)' : 'var(--color-bg)',
-                  color: isPushEnabled ? 'var(--color-primary-dark)' : 'var(--color-text-sub)',
-                  border: '1px solid var(--color-border)',
-                  cursor: 'pointer'
+                  transition: "all 0.2s",
+                  backgroundColor: isPushEnabled ? "var(--color-primary-light)" : "var(--color-bg)",
+                  color: isPushEnabled ? "var(--color-primary-dark)" : "var(--color-text-sub)",
+                  border: "1px solid var(--color-border)",
+                  cursor: "pointer",
                 }}
               >
                 {isPushEnabled ? "Enabled" : "Enable"}
@@ -240,18 +257,21 @@ export default function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Data & Privacy</h2>
         <div className={styles.card}>
-          <button
-            className={styles.settingRow}
-            onClick={() => setIsExportModalOpen(true)}
-          >
-            <div className={styles.rowLeft}>
-              <Download size={20} className={styles.rowIcon} />
-              <span>Export Farm Data (CSV)</span>
-            </div>
-            <ChevronRight size={18} className={styles.chevron} />
-          </button>
-
-          <div className={styles.divider}></div>
+          {hasPermission("exports:download") && (
+            <>
+              <button
+                className={styles.settingRow}
+                onClick={() => setIsExportModalOpen(true)}
+              >
+                <div className={styles.rowLeft}>
+                  <Download size={20} className={styles.rowIcon} />
+                  <span>Export Farm Data (CSV)</span>
+                </div>
+                <ChevronRight size={18} className={styles.chevron} />
+              </button>
+              <div className={styles.divider}></div>
+            </>
+          )}
 
           <button
             className={styles.settingRow}
@@ -300,7 +320,7 @@ export default function SettingsPage() {
         </button>
       </section>
 
-      <p className={styles.version}>{farmSettings.farmName} Operations Portal</p>
+      <p className={styles.version}>{APP_BRAND_NAME} Operations Portal</p>
 
       <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
       <EditProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
@@ -308,7 +328,10 @@ export default function SettingsPage() {
         isOpen={isFarmModalOpen}
         onClose={() => setIsFarmModalOpen(false)}
         initialData={farmSettings}
-        onSuccess={(updated) => setFarmSettings(updated)}
+        onSuccess={(updated) => {
+          setFarmSettings(updated);
+          refreshSession();
+        }}
       />
       <HelpGuideModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
       <DataExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />

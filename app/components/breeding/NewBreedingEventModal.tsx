@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Save, Calendar, Sparkles } from "lucide-react";
 import { createBreedingEvent } from "@/actions/event.actions";
 import { useToast } from "../ui/Toast";
+import OutlierWarningModal from "../ui/OutlierWarningModal";
 import bsStyles from "../ui/BottomSheetModal.module.css";
 
 interface Animal {
@@ -44,6 +45,7 @@ export default function NewBreedingEventModal({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [outlierState, setOutlierState] = useState<{ warnings: string[]; canOverride: boolean } | null>(null);
 
   // Auto-calculate expected date whenever animal, eventType, or date changes
   useEffect(() => {
@@ -69,9 +71,7 @@ export default function NewBreedingEventModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const submitEvent = async (overrideWarnings = false) => {
     if (!formData.animalId) {
       toast("Please select a female animal.", "error");
       return;
@@ -82,8 +82,18 @@ export default function NewBreedingEventModal({
     }
 
     setIsSubmitting(true);
-    const res = await createBreedingEvent(formData);
+    const res: any = await createBreedingEvent({ ...formData, overrideWarnings });
     setIsSubmitting(false);
+
+    if (res.code === "OUTLIER_WARNING" && res.warnings) {
+      setOutlierState({
+        warnings: res.warnings,
+        canOverride: Boolean(res.canOverride),
+      });
+      return;
+    }
+
+    setOutlierState(null);
 
     if (res.success) {
       toast(res.message, "success");
@@ -99,6 +109,11 @@ export default function NewBreedingEventModal({
     } else {
       toast(res.message, "error");
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitEvent(false);
   };
 
   return (
@@ -336,6 +351,15 @@ export default function NewBreedingEventModal({
           </div>
         </form>
       </div>
+
+      <OutlierWarningModal
+        isOpen={!!outlierState}
+        warnings={outlierState?.warnings || []}
+        canOverride={outlierState?.canOverride || false}
+        isSubmitting={isSubmitting}
+        onCancel={() => setOutlierState(null)}
+        onOverride={() => submitEvent(true)}
+      />
     </div>
   );
 }

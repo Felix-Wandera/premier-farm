@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { X, Save } from "lucide-react";
 import { recordTransaction } from "@/actions/financial.actions";
 import { useToast } from "../ui/Toast";
+import OutlierWarningModal from "../ui/OutlierWarningModal";
 import styles from "./NewTransactionModal.module.css";
 
 const INCOME_REASONS = [
@@ -39,6 +40,7 @@ export default function NewTransactionModal({ isOpen, onClose }: { isOpen: boole
     description: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [outlierState, setOutlierState] = useState<{ warnings: string[]; canOverride: boolean } | null>(null);
   const toast = useToast();
 
   if (!isOpen) return null;
@@ -49,13 +51,13 @@ export default function NewTransactionModal({ isOpen, onClose }: { isOpen: boole
     setFormData({
       ...formData,
       type: newType,
-      category: newType === "income" ? "MILK" : "INVENTORY_PURCHASE",
+      category: newType === "income" ? "MILK" : "FEED",
       reason: newType === "income" ? INCOME_REASONS[0] : EXPENSE_REASONS[0],
       customReason: "",
     });
   };
 
-  const handleSave = async () => {
+  const handleSave = async (overrideWarnings = false) => {
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
       toast("Please enter a valid amount", "error");
       return;
@@ -66,21 +68,32 @@ export default function NewTransactionModal({ isOpen, onClose }: { isOpen: boole
       : formData.reason;
 
     setIsSubmitting(true);
-    const res = await recordTransaction({
+    const res: any = await recordTransaction({
       type: formData.type,
       category: formData.category,
       amount: parseFloat(formData.amount) || 0,
       date: formData.date,
       reason: finalReason,
       description: formData.description,
+      overrideWarnings,
     });
     setIsSubmitting(false);
+
+    if (res.code === "OUTLIER_WARNING" && res.warnings) {
+      setOutlierState({
+        warnings: res.warnings,
+        canOverride: Boolean(res.canOverride),
+      });
+      return;
+    }
+
+    setOutlierState(null);
 
     if (res.success) {
       toast(res.message, "success");
       setFormData({
         type: "income",
-        category: "OTHER",
+        category: "MILK",
         amount: "",
         date: todayStr,
         reason: INCOME_REASONS[0],
@@ -185,9 +198,10 @@ export default function NewTransactionModal({ isOpen, onClose }: { isOpen: boole
                 </>
               ) : (
                 <>
-                  <option value="INVENTORY_PURCHASE">Feed / Inventory Purchase</option>
+                  <option value="FEED">Feed &amp; Silage</option>
+                  <option value="INVENTORY_PURCHASE">Inventory / Supplies Purchase</option>
                   <option value="VET_SERVICES">Veterinary / Medical</option>
-                  <option value="LABOR">Labor & Wages</option>
+                  <option value="LABOR">Labor &amp; Wages</option>
                   <option value="MAINTENANCE">Maintenance</option>
                   <option value="OTHER">Other Expense</option>
                 </>
@@ -232,7 +246,7 @@ export default function NewTransactionModal({ isOpen, onClose }: { isOpen: boole
 
         <div className={styles.footer}>
           <button 
-             onClick={handleSave}
+             onClick={() => handleSave(false)}
              disabled={isSubmitting}
              className={styles.submitBtn}
           >
@@ -241,6 +255,15 @@ export default function NewTransactionModal({ isOpen, onClose }: { isOpen: boole
           </button>
         </div>
       </div>
+
+      <OutlierWarningModal
+        isOpen={!!outlierState}
+        warnings={outlierState?.warnings || []}
+        canOverride={outlierState?.canOverride || false}
+        isSubmitting={isSubmitting}
+        onCancel={() => setOutlierState(null)}
+        onOverride={() => handleSave(true)}
+      />
     </div>
   );
 }

@@ -92,8 +92,8 @@ export async function sendTestNotification() {
   const userId = sessionUser.id as string;
 
   return sendPushNotification(userId, {
-    title: "Test Alert 🐮",
-    body: "This is a test push notification from Premier Farm. Everything is working!",
+    title: "Premier Ranch Kitale — Test Alert 🐮",
+    body: "This is a test push notification from Premier Ranch Kitale. Everything is working!",
     url: "/settings",
   });
 }

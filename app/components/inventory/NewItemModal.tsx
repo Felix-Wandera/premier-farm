@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { X, Save } from "lucide-react";
 import { addInventoryItem } from "@/actions/inventory.actions";
 import { useToast } from "../ui/Toast";
+import { useAuth } from "../auth/AuthProvider";
 import styles from "../../(dashboard)/inventory/page.module.css"; 
 
 export default function NewItemModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
@@ -17,6 +18,8 @@ export default function NewItemModal({ isOpen, onClose }: { isOpen: boolean, onC
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
+  const { hasPermission } = useAuth();
+  const canViewFinances = hasPermission("finances:view");
 
   if (!isOpen) return null;
 
@@ -83,7 +86,8 @@ export default function NewItemModal({ isOpen, onClose }: { isOpen: boolean, onC
           </div>
 
           {/* Financial Linkage Card */}
-          <div style={{ backgroundColor: "#f8fafc", padding: "1rem", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+          {canViewFinances && (
+          <div style={{ backgroundColor: "var(--color-bg, #f8fafc)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--color-border, #e2e8f0)" }}>
             <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: 600 }}>
               <input
                 type="checkbox"
@@ -131,6 +135,7 @@ export default function NewItemModal({ isOpen, onClose }: { isOpen: boolean, onC
               </div>
             )}
           </div>
+          )}
         </div>
 
         <div style={{ padding: "1.5rem", borderTop: "1px solid #e2e8f0" }}>

@@ -82,8 +82,8 @@ async function performSeed(prisma, adminEmail, adminPassword, pool) {
       update: {},
       create: {
         id: "default",
-        farmName: "Premier Ranch",
-        location: "Nakuru County, Kenya",
+        farmName: "Premier Ranch Kitale",
+        location: "Kitale, Trans-Nzoia County, Kenya",
         phoneNumber: "+254 700 000 000",
         email: "info@premierfarm.com",
         currencySymbol: "KES",
@@ -91,14 +91,23 @@ async function performSeed(prisma, adminEmail, adminPassword, pool) {
     });
     console.log(`[SEED SUCCESS] Farm settings initialized: ${defaultFarm.farmName} (${defaultFarm.currencySymbol})`);
 
+    const resolvedName =
+      !defaultFarm.farmName || defaultFarm.farmName === "Premier Farm" || defaultFarm.farmName === "Premier Ranch"
+        ? "Premier Ranch Kitale"
+        : defaultFarm.farmName;
+    const resolvedLocation =
+      !defaultFarm.location || defaultFarm.location === "Nakuru County, Kenya" || defaultFarm.location === "Kenya"
+        ? "Kitale, Trans-Nzoia County, Kenya"
+        : defaultFarm.location;
+
     const primaryTenant = await prisma.tenant.upsert({
       where: { slug: "premier-farm" },
       update: {},
       create: {
         id: "tenant-premier-farm",
-        name: defaultFarm.farmName || "Premier Ranch",
+        name: resolvedName,
         slug: "premier-farm",
-        location: defaultFarm.location || "Nakuru County, Kenya",
+        location: resolvedLocation,
         phoneNumber: defaultFarm.phoneNumber || "+254 700 000 000",
         email: defaultFarm.email || "info@premierfarm.com",
         currencySymbol: defaultFarm.currencySymbol || "KES",
@@ -133,7 +142,10 @@ async function performSeed(prisma, adminEmail, adminPassword, pool) {
       for (const table of tables) {
         await pool.query(`UPDATE "${table}" SET "tenantId" = $1 WHERE "tenantId" IS NULL`, [primaryTenant.id]).catch(() => {});
       }
-      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS "Animal_tenantId_tagNumber_key" ON "Animal"("tenantId", "tagNumber")`).catch(() => {});
+      await pool.query(`DROP INDEX IF EXISTS "Animal_tenantId_tagNumber_key"`).catch(() => {});
+      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS "Animal_tenantId_normalized_name_key" ON "Animal" ("tenantId", LOWER(BTRIM("name"))) WHERE "isDeleted" = false`).catch(() => {});
+      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS "Animal_tenantId_normalized_tag_key" ON "Animal" ("tenantId", UPPER(BTRIM("tagNumber"))) WHERE "isDeleted" = false AND "tagNumber" IS NOT NULL`).catch(() => {});
+      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS "InventoryItem_tenantId_normalized_name_key" ON "InventoryItem" ("tenantId", LOWER(BTRIM("name"))) WHERE "isDeleted" = false`).catch(() => {});
     }
   } catch (farmErr) {
     console.warn(`[SEED WARN] Could not seed farm settings/tenant:`, farmErr.message);

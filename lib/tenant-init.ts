@@ -1,6 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { Role } from "@prisma/client";
+import {
+  APP_BRAND_NAME,
+  DEFAULT_CURRENCY,
+  DEFAULT_FARM_EMAIL,
+  DEFAULT_FARM_LOCATION,
+  DEFAULT_FARM_PHONE,
+  DEFAULT_TENANT_ID,
+  DEFAULT_TENANT_SLUG,
+} from "@/lib/branding";
 
 /**
  * Ensures a default / primary organization (Tenant) and FarmSetting exist,
@@ -15,8 +24,9 @@ export async function ensureDefaultTenantAndAdmin(
   let tenant = await prisma.tenant.findFirst({
     where: {
       OR: [
-        { slug: "premier-farm" },
+        { slug: DEFAULT_TENANT_SLUG },
         { slug: "premier-ranch" },
+        { slug: "premier-farm" },
         { status: "ACTIVE" },
       ],
     },
@@ -27,30 +37,41 @@ export async function ensureDefaultTenantAndAdmin(
   if (!tenant) {
     tenant = await prisma.tenant.create({
       data: {
-        id: "tenant-premier-ranch",
-        name: "Premier Ranch",
-        slug: "premier-ranch",
-        location: "Nakuru County, Kenya",
-        phoneNumber: "+254 700 000 000",
-        email: "info@premierfarm.com",
-        currencySymbol: "KES",
+        id: DEFAULT_TENANT_ID,
+        name: APP_BRAND_NAME,
+        slug: DEFAULT_TENANT_SLUG,
+        location: DEFAULT_FARM_LOCATION,
+        phoneNumber: DEFAULT_FARM_PHONE,
+        email: DEFAULT_FARM_EMAIL,
+        currencySymbol: DEFAULT_CURRENCY,
         status: "ACTIVE",
         plan: "PRO_ENTERPRISE",
       },
     });
+  } else if (tenant.name === "Premier Ranch" || tenant.name === "Premier Farm") {
+    tenant = await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: {
+        name: APP_BRAND_NAME,
+        location:
+          !tenant.location || tenant.location === "Nakuru County, Kenya" || tenant.location === "Kenya"
+            ? DEFAULT_FARM_LOCATION
+            : tenant.location,
+      },
+    });
   }
 
-  // Ensure default FarmSetting exists
+  // Ensure default FarmSetting exists and mirrors primary tenant
   await prisma.farmSetting.upsert({
     where: { id: "default" },
     update: {},
     create: {
       id: "default",
-      farmName: tenant.name || "Premier Ranch",
-      location: tenant.location || "Nakuru County, Kenya",
-      phoneNumber: tenant.phoneNumber || "+254 700 000 000",
-      email: tenant.email || "info@premierfarm.com",
-      currencySymbol: tenant.currencySymbol || "KES",
+      farmName: tenant.name || APP_BRAND_NAME,
+      location: tenant.location || DEFAULT_FARM_LOCATION,
+      phoneNumber: tenant.phoneNumber || DEFAULT_FARM_PHONE,
+      email: tenant.email || DEFAULT_FARM_EMAIL,
+      currencySymbol: tenant.currencySymbol || DEFAULT_CURRENCY,
     },
   });
 

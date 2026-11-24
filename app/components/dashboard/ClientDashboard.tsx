@@ -3,12 +3,22 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "../../(dashboard)/page.module.css";
-import { Bell, ChevronRight, Activity, TrendingUp, AlertTriangle, Droplet, DollarSign, HeartPulse, Edit2 } from "lucide-react";
-import { ThemeToggle } from "../theme-toggle/ThemeToggle";
-import AnimalIcon from "../ui/AnimalIcon";
+import {
+  Bell,
+  ChevronRight,
+  Activity,
+  AlertTriangle,
+  Droplet,
+  DollarSign,
+  HeartPulse,
+  BarChart3,
+  Package,
+} from "lucide-react";
 import NotificationPopover from "./NotificationPopover";
 import { updateFarmName } from "@/actions/settings.actions";
 import { useToast } from "../ui/Toast";
+import { useAuth } from "../auth/AuthProvider";
+import { APP_BRAND_NAME } from "@/lib/branding";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -17,32 +27,44 @@ function getGreeting() {
   return "Good evening";
 }
 
-function formatCurrency(c: number) {
-  return new Intl.NumberFormat('en-KE', {
-    style: 'currency',
-    currency: 'KES',
-    maximumFractionDigits: 0
-  }).format(c);
+function formatCurrency(c: number, currency = "KES") {
+  try {
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(c);
+  } catch {
+    return `${currency} ${Math.round(c).toLocaleString()}`;
+  }
 }
 
 type DashboardStats = {
   userName: string | null;
   farmName?: string;
-  herd: { total: number; dairy: number; indigenous: number };
+  currencySymbol?: string;
+  herd: { total: number; dairy: number; indigenous: number; sick?: number };
   milk: { todayYield: number; yieldDiff: number };
-  finance: { income: number; expenses: number };
+  finance: { income: number; expenses: number } | null;
+  operations?: { pendingEvents: number; lowStockCount: number };
   alerts: { type: "warning" | "info"; title: string; description: string }[];
 };
 
 export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [farmName, setFarmName] = useState(stats.farmName || "Premier Ranch");
+  const [farmName, setFarmName] = useState(stats.farmName || APP_BRAND_NAME);
   const [isEditingFarmName, setIsEditingFarmName] = useState(false);
-  const [editFarmNameInput, setEditFarmNameInput] = useState(stats.farmName || "Premier Ranch");
+  const [editFarmNameInput, setEditFarmNameInput] = useState(stats.farmName || APP_BRAND_NAME);
   const [isSavingFarmName, setIsSavingFarmName] = useState(false);
   const toast = useToast();
   const router = useRouter();
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const { hasPermission } = useAuth();
+  const currency = stats.currencySymbol || "KES";
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 
   const handleSaveFarmName = async () => {
     if (!editFarmNameInput.trim()) {
@@ -67,41 +89,36 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
       <header className={styles.header}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-            <span style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.01em", color: "var(--color-primary)" }}>{farmName}</span>
-            {/* 
-            
-            There is no need to have an edit button on the home page. It's not a routinely used feature.
-            
-            <button
-              type="button"
-              onClick={() => { setIsEditingFarmName(true); setEditFarmNameInput(farmName); }}
+            <span
               style={{
-                background: "rgba(0,0,0,0.04)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "6px",
-                cursor: "pointer",
-                color: "var(--color-text-sub)",
-                padding: "3px 6px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                fontSize: "0.75rem",
-                fontWeight: 600
+                fontSize: "1.1rem",
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+                color: "var(--color-primary)",
               }}
-              title="Edit Farm Name"
             >
-              <Edit2 size={12} />
-              <span>Edit</span>
-            </button> */}
+              {farmName}
+            </span>
           </div>
-          <h1 className={styles.greeting}>{getGreeting()}{stats.userName ? `, ${stats.userName}` : ''}</h1>
+          <h1 className={styles.greeting}>
+            {getGreeting()}
+            {stats.userName ? `, ${stats.userName}` : ""}
+          </h1>
           <p className={styles.date}>{today}</p>
         </div>
         <div className={styles.headerActions}>
-          {/* <div className={styles.mobileOnlyToggle}>
-            <ThemeToggle className={styles.iconBtn} showLabel={false} />
-          </div> */}
-          <div style={{ position: 'relative' }}>
+          {hasPermission("analytics:view") && (
+            <Link
+              href="/analytics"
+              className={styles.iconBtn}
+              title="Analytics & Reports"
+              aria-label="Analytics & Reports"
+              style={{ textDecoration: "none", color: "inherit", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <BarChart3 size={20} />
+            </Link>
+          )}
+          <div style={{ position: "relative" }}>
             <button
               className={styles.iconBtn}
               aria-label="Notifications"
@@ -120,7 +137,6 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
         </div>
       </header>
 
-      {/* Edit Farm Name Modal */}
       {isEditingFarmName && (
         <div style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
           <div style={{ width: "100%", maxWidth: "400px", backgroundColor: "var(--color-surface)", padding: "1.5rem", borderRadius: "16px", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)", border: "1px solid var(--color-border)", margin: "1rem" }}>
@@ -130,7 +146,7 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
               type="text"
               value={editFarmNameInput}
               onChange={(e) => setEditFarmNameInput(e.target.value)}
-              placeholder="e.g. Premier Ranch"
+              placeholder={`e.g. ${APP_BRAND_NAME}`}
               style={{ width: "100%", minHeight: "44px", padding: "0.6rem 0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)", fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem" }}
               autoFocus
             />
@@ -155,25 +171,45 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
         </div>
       )}
 
-      {/* Mobile Priority: Quick Actions */}
+      {/* Mobile Priority: Quick Actions (Permission-Gated) */}
       <section className={styles.quickActions}>
-        <Link href="/milk" className={styles.actionCard}>
-          <div className={styles.actionIcon}><Droplet size={24} /></div>
-          <span>Record Milk</span>
-        </Link>
-        <Link href="/sales" className={styles.actionCard}>
-          <div className={styles.actionIcon}><DollarSign size={24} /></div>
-          <span>Add Sale</span>
-        </Link>
-        <Link href="/breeding" className={styles.actionCard}>
-          <div className={styles.actionIcon}><HeartPulse size={24} /></div>
-          <span>Log Health</span>
-        </Link>
+        {hasPermission("milk:log") && (
+          <Link href="/milk" className={styles.actionCard}>
+            <div className={styles.actionIcon}><Droplet size={24} /></div>
+            <span>Record Milk</span>
+          </Link>
+        )}
+        {hasPermission("finances:manage") ? (
+          <Link href="/sales" className={styles.actionCard}>
+            <div className={styles.actionIcon}><DollarSign size={24} /></div>
+            <span>Add Sale</span>
+          </Link>
+        ) : (
+          hasPermission("inventory:transact") && (
+            <Link href="/inventory" className={styles.actionCard}>
+              <div className={styles.actionIcon}><Package size={24} /></div>
+              <span>Update Stock</span>
+            </Link>
+          )
+        )}
+        {hasPermission("health:manage") ? (
+          <Link href="/breeding?action=health" className={styles.actionCard}>
+            <div className={styles.actionIcon}><HeartPulse size={24} /></div>
+            <span>Log Health</span>
+          </Link>
+        ) : (
+          hasPermission("analytics:view") && (
+            <Link href="/analytics" className={styles.actionCard}>
+              <div className={styles.actionIcon}><BarChart3 size={24} /></div>
+              <span>Analytics</span>
+            </Link>
+          )
+        )}
       </section>
 
       {/* At a Glance Stats */}
       <section className={styles.statsGrid}>
-        <Link href="/herd" className={styles.statCard} style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link href="/herd" className={styles.statCard} style={{ textDecoration: "none", color: "inherit" }}>
           <div className={styles.statHeader}>
             <h3>Active Herd</h3>
             <ChevronRight size={18} className={styles.statIcon} />
@@ -181,30 +217,49 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
           <p className={styles.statValue}>{stats.herd.total}</p>
           <div className={styles.statFooter}>
             <span>{stats.herd.dairy} Dairy</span> • <span>{stats.herd.indigenous} Indigenous</span>
+            {stats.herd.sick ? ` • ${stats.herd.sick} Sick` : ""}
           </div>
         </Link>
 
-        <Link href="/milk" className={styles.statCard} style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link href="/milk" className={styles.statCard} style={{ textDecoration: "none", color: "inherit" }}>
           <div className={styles.statHeader}>
-            <h3>Today's Yield</h3>
+            <h3>Today&apos;s Yield</h3>
             <ChevronRight size={18} className={styles.statIcon} />
           </div>
-          <p className={styles.statValue}>{stats.milk.todayYield} <span className={styles.unit}>Liters</span></p>
+          <p className={styles.statValue}>
+            {stats.milk.todayYield} <span className={styles.unit}>Liters</span>
+          </p>
           <div className={styles.statFooter}>
-            <span className={stats.milk.yieldDiff >= 0 ? styles.positive : ''}>{stats.milk.yieldDiff > 0 ? '↑' : '↓'} {Math.abs(stats.milk.yieldDiff)}L</span> from yesterday
+            <span className={stats.milk.yieldDiff >= 0 ? styles.positive : ""}>
+              {stats.milk.yieldDiff >= 0 ? "↑" : "↓"} {Math.abs(stats.milk.yieldDiff)}L
+            </span>{" "}
+            from yesterday
           </div>
         </Link>
 
-        <Link href="/sales" className={styles.statCard} style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className={styles.statHeader}>
-            <h3>Revenue</h3>
-            <ChevronRight size={18} className={styles.statIcon} />
-          </div>
-          <p className={styles.statValue}>{formatCurrency(stats.finance.income)}</p>
-          <div className={styles.statFooter}>
-            Expenses: {formatCurrency(stats.finance.expenses)}
-          </div>
-        </Link>
+        {stats.finance !== null ? (
+          <Link href="/sales" className={styles.statCard} style={{ textDecoration: "none", color: "inherit" }}>
+            <div className={styles.statHeader}>
+              <h3>This Month Revenue</h3>
+              <ChevronRight size={18} className={styles.statIcon} />
+            </div>
+            <p className={styles.statValue}>{formatCurrency(stats.finance.income, currency)}</p>
+            <div className={styles.statFooter}>
+              Expenses: {formatCurrency(stats.finance.expenses, currency)}
+            </div>
+          </Link>
+        ) : (
+          <Link href="/breeding" className={styles.statCard} style={{ textDecoration: "none", color: "inherit" }}>
+            <div className={styles.statHeader}>
+              <h3>Upcoming Schedule</h3>
+              <ChevronRight size={18} className={styles.statIcon} />
+            </div>
+            <p className={styles.statValue}>{stats.operations?.pendingEvents ?? 0}</p>
+            <div className={styles.statFooter}>
+              <span>30-day events</span> • <span>{stats.operations?.lowStockCount ?? 0} low stock</span>
+            </div>
+          </Link>
+        )}
       </section>
 
       {/* Smart Alerts */}
@@ -213,8 +268,12 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
         <div className={styles.alertsList}>
           {stats.alerts.length > 0 ? (
             stats.alerts.map((alert, i) => (
-              <div key={i} className={`${styles.alertItem} ${alert.type === 'warning' ? styles.alertWarning : styles.alertInfo}`}>
-                {alert.type === 'warning' ? <AlertTriangle size={20} className={styles.alertIcon} /> : <Activity size={20} className={styles.alertIcon} />}
+              <div key={i} className={`${styles.alertItem} ${alert.type === "warning" ? styles.alertWarning : styles.alertInfo}`}>
+                {alert.type === "warning" ? (
+                  <AlertTriangle size={20} className={styles.alertIcon} />
+                ) : (
+                  <Activity size={20} className={styles.alertIcon} />
+                )}
                 <div className={styles.alertContent}>
                   <h4>{alert.title}</h4>
                   <p>{alert.description}</p>
@@ -222,7 +281,9 @@ export default function ClientDashboard({ stats }: { stats: DashboardStats }) {
               </div>
             ))
           ) : (
-            <div style={{ padding: '1rem', opacity: 0.6, textAlign: 'center' }}>No alerts — everything looks good!</div>
+            <div style={{ padding: "1rem", opacity: 0.6, textAlign: "center" }}>
+              No alerts — everything looks good!
+            </div>
           )}
         </div>
       </section>

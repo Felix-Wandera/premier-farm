@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import { PermissionKey, resolveEffectivePermissions } from "@/lib/permissions";
 
 export type User = {
   id: string;
@@ -26,12 +27,15 @@ export type TenantMembership = {
   slug: string;
   role: string;
   status: string;
+  permissions?: PermissionKey[];
 };
 
 export type AuthContextType = {
   user: User | null;
   activeTenant: TenantInfo | null;
   tenantRole: string | null;
+  permissions: PermissionKey[];
+  hasPermission: (key: PermissionKey) => boolean;
   memberships: TenantMembership[];
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -43,6 +47,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   activeTenant: null,
   tenantRole: null,
+  permissions: [],
+  hasPermission: () => false,
   memberships: [],
   isLoading: true,
   isAuthenticated: false,
@@ -54,36 +60,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [activeTenant, setActiveTenant] = useState<TenantInfo | null>(null);
   const [tenantRole, setTenantRole] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<PermissionKey[]>([]);
   const [memberships, setMemberships] = useState<TenantMembership[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/me");
+      const res = await fetch("/api/auth/me", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
+        const role = data.tenantRole || data.user?.role || null;
         setUser(data.user);
         setActiveTenant(data.activeTenant || null);
-        setTenantRole(data.tenantRole || data.user?.role || null);
+        setTenantRole(role);
+        setPermissions(
+          Array.isArray(data.permissions)
+            ? data.permissions
+            : resolveEffectivePermissions(role, null)
+        );
         setMemberships(data.memberships || []);
       } else {
         setUser(null);
         setActiveTenant(null);
         setTenantRole(null);
+        setPermissions([]);
         setMemberships([]);
       }
-    } catch (error) {
+    } catch {
       setUser(null);
       setActiveTenant(null);
       setTenantRole(null);
+      setPermissions([]);
       setMemberships([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const switchTenant = async (tenantId: string): Promise<boolean> => {
+  const switchTenant = useCallback(async (tenantId: string): Promise<boolean> => {
     try {
       const res = await fetch("/api/auth/switch-tenant", {
         method: "POST",
@@ -100,11 +115,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("switchTenant error:", error);
       return false;
     }
-  };
+  }, [refreshSession]);
 
   useEffect(() => {
     refreshSession();
-  }, []);
+  }, [refreshSession]);
+
+  const permissionSet = useMemo(() => new Set<PermissionKey>(permissions), [permissions]);
+  const hasPermission = useCallback(
+    (key: PermissionKey) => permissionSet.has(key),
+    [permissionSet]
+  );
 
   return (
     <AuthContext.Provider
@@ -112,6 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         activeTenant,
         tenantRole,
+        permissions,
+        hasPermission,
         memberships,
         isLoading,
         isAuthenticated: !!user,

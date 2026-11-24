@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { X, Save, ShieldPlus, Stethoscope, Syringe, DollarSign, Calendar } from "lucide-react";
 import { createHealthRecord } from "@/actions/event.actions";
 import { useToast } from "../ui/Toast";
+import OutlierWarningModal from "../ui/OutlierWarningModal";
 import bsStyles from "../ui/BottomSheetModal.module.css";
 
 interface Animal {
@@ -36,12 +37,11 @@ export default function NewHealthRecordModal({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [outlierState, setOutlierState] = useState<{ warnings: string[]; canOverride: boolean } | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const submitHealthRecord = async (overrideWarnings = false) => {
     if (!formData.animalId) {
       toast("Please select an animal.", "error");
       return;
@@ -57,14 +57,25 @@ export default function NewHealthRecordModal({
 
     setIsSubmitting(true);
     const parsedCost = formData.cost ? parseFloat(formData.cost) : undefined;
-    const res = await createHealthRecord({
+    const res: any = await createHealthRecord({
       animalId: formData.animalId,
       recordType: formData.recordType,
       description: formData.description,
       cost: parsedCost,
       date: formData.date,
+      overrideWarnings,
     });
     setIsSubmitting(false);
+
+    if (res.code === "OUTLIER_WARNING" && res.warnings) {
+      setOutlierState({
+        warnings: res.warnings,
+        canOverride: Boolean(res.canOverride),
+      });
+      return;
+    }
+
+    setOutlierState(null);
 
     if (res.success) {
       toast(res.message, "success");
@@ -79,6 +90,11 @@ export default function NewHealthRecordModal({
     } else {
       toast(res.message, "error");
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitHealthRecord(false);
   };
 
   const recordTypeIcons = {
@@ -294,6 +310,15 @@ export default function NewHealthRecordModal({
           </div>
         </form>
       </div>
+
+      <OutlierWarningModal
+        isOpen={!!outlierState}
+        warnings={outlierState?.warnings || []}
+        canOverride={outlierState?.canOverride || false}
+        isSubmitting={isSubmitting}
+        onCancel={() => setOutlierState(null)}
+        onOverride={() => submitHealthRecord(true)}
+      />
     </div>
   );
 }

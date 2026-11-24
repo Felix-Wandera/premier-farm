@@ -50,7 +50,10 @@ async function applyConstraints() {
       ALTER TABLE "InventoryItem" ALTER COLUMN "tenantId" SET NOT NULL;
       ALTER TABLE "Expense" ALTER COLUMN "tenantId" SET NOT NULL;
 
-      CREATE UNIQUE INDEX IF NOT EXISTS "Animal_tenantId_tagNumber_key" ON "Animal"("tenantId", "tagNumber");
+      DROP INDEX IF EXISTS "Animal_tenantId_tagNumber_key";
+      CREATE UNIQUE INDEX IF NOT EXISTS "Animal_tenantId_normalized_name_key" ON "Animal" ("tenantId", LOWER(BTRIM("name"))) WHERE "isDeleted" = false;
+      CREATE UNIQUE INDEX IF NOT EXISTS "Animal_tenantId_normalized_tag_key" ON "Animal" ("tenantId", UPPER(BTRIM("tagNumber"))) WHERE "isDeleted" = false AND "tagNumber" IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS "InventoryItem_tenantId_normalized_name_key" ON "InventoryItem" ("tenantId", LOWER(BTRIM("name"))) WHERE "isDeleted" = false;
     `);
 
     console.log("[CONSTRAINTS] Successfully enforced NOT NULL and compound unique indexes!");

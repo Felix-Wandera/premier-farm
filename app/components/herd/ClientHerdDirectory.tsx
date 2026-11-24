@@ -5,6 +5,7 @@ import Link from "next/link";
 import AnimalIcon from "../ui/AnimalIcon";
 import QuickAddMenu from "../quick-add/QuickAddMenu";
 import EmptyState from "../ui/EmptyState";
+import { useAuth } from "../auth/AuthProvider";
 import { Search, Plus, LayoutGrid, List as ListIcon, Info, ChevronRight } from "lucide-react";
 
 type PrismaAnimal = {
@@ -16,7 +17,6 @@ type PrismaAnimal = {
   dateOfBirth: Date | null;
 };
 
-// Helpers
 function formatSpecies(s: string) {
   if (s === "DAIRY_COW") return "Dairy Cow";
   if (s === "INDIGENOUS_COW") return "Indigenous";
@@ -38,10 +38,10 @@ function formatStatus(s: string) {
 function calculateAge(dob: Date | null) {
   if (!dob) return "Unknown age";
   const diff = Date.now() - new Date(dob).getTime();
-  const ageDate = new Date(diff); 
+  const ageDate = new Date(diff);
   const years = Math.abs(ageDate.getUTCFullYear() - 1970);
   const months = ageDate.getUTCMonth();
-  
+
   if (years > 0) return `${years} yrs`;
   if (months > 0) return `${months} mos`;
   return "Newborn";
@@ -50,6 +50,8 @@ function calculateAge(dob: Date | null) {
 const FILTERS = ["All", "Dairy Cow", "Indigenous", "Bull", "Heifer", "Sheep", "Goat", "Sick", "Sold", "Deceased"];
 
 export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals: PrismaAnimal[] }) {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("herd:create");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -62,9 +64,9 @@ export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals
     const matchName = animal.name ? animal.name.toLowerCase().includes(searchQuery.toLowerCase()) : false;
     const matchTag = animal.tagNumber ? animal.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) : false;
     const matchesSearch = matchName || matchTag;
-    
+
     if (!matchesSearch) return false;
-    
+
     if (activeFilter === "All") return true;
     if (activeFilter === "Sick") return formattedStatus === "Sick";
     if (activeFilter === "Sold") return formattedStatus === "Sold";
@@ -74,35 +76,55 @@ export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals
 
   return (
     <div className={styles.container}>
-      {/* Header */}
       <div className={styles.header}>
         <h1 className={styles.pageTitle}>Herd Directory</h1>
-        
-        <div className={styles.viewToggle}>
-          <button 
-            className={`${styles.toggleBtn} ${viewMode === 'list' ? '' : styles.inactive}`} 
-            onClick={() => setViewMode('list')}
-            aria-label="List View"
-          >
-            <ListIcon size={18} />
-          </button>
-          <button 
-            className={`${styles.toggleBtn} ${viewMode === 'grid' ? '' : styles.inactive}`} 
-            onClick={() => setViewMode('grid')}
-            aria-label="Grid View"
-          >
-            <LayoutGrid size={18} />
-          </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          {canCreate && (
+            <Link
+              href="/herd/new"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "0.55rem 0.95rem",
+                borderRadius: "99px",
+                backgroundColor: "var(--color-primary, #047857)",
+                color: "#ffffff",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                textDecoration: "none",
+              }}
+            >
+              <Plus size={16} /> Add Animal
+            </Link>
+          )}
+
+          <div className={styles.viewToggle}>
+            <button
+              className={`${styles.toggleBtn} ${viewMode === "list" ? "" : styles.inactive}`}
+              onClick={() => setViewMode("list")}
+              aria-label="List View"
+            >
+              <ListIcon size={18} />
+            </button>
+            <button
+              className={`${styles.toggleBtn} ${viewMode === "grid" ? "" : styles.inactive}`}
+              onClick={() => setViewMode("grid")}
+              aria-label="Grid View"
+            >
+              <LayoutGrid size={18} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
       <div className={styles.controls}>
         <div className={styles.searchBox}>
           <Search className={styles.searchIcon} size={20} />
-          <input 
-            type="text" 
-            placeholder="Search by Tag ID or Name..." 
+          <input
+            type="text"
+            placeholder="Search by Tag ID or Name..."
             className={styles.searchInput}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -110,10 +132,10 @@ export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals
         </div>
 
         <div className={styles.filtersScroll}>
-          {FILTERS.map(filter => (
-            <button 
-              key={filter} 
-              className={`${styles.filterPill} ${activeFilter === filter ? styles.activeFilter : ''}`}
+          {FILTERS.map((filter) => (
+            <button
+              key={filter}
+              className={`${styles.filterPill} ${activeFilter === filter ? styles.activeFilter : ""}`}
               onClick={() => setActiveFilter(filter)}
               aria-selected={activeFilter === filter}
               aria-pressed={activeFilter === filter}
@@ -124,16 +146,20 @@ export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals
         </div>
       </div>
 
-      {/* Animal Grid / List */}
       {filteredAnimals.length > 0 ? (
-        <div className={viewMode === 'grid' ? styles.grid : styles.list}>
+        <div className={viewMode === "grid" ? styles.grid : styles.list}>
           {filteredAnimals.map((animal) => {
             const formattedSpecies = formatSpecies(animal.species);
             const formattedStatus = formatStatus(animal.status);
             const age = calculateAge(animal.dateOfBirth);
 
             return (
-              <Link key={animal.id} href={`/herd/${animal.id}`} className={`${styles.animalCard} ${viewMode === 'list' ? styles.listCard : ''}`} style={{textDecoration: 'none'}}>
+              <Link
+                key={animal.id}
+                href={`/herd/${animal.id}`}
+                className={`${styles.animalCard} ${viewMode === "list" ? styles.listCard : ""}`}
+                style={{ textDecoration: "none" }}
+              >
                 <div className={styles.cardHeader}>
                   <div className={styles.avatar}>
                     <AnimalIcon species={formattedSpecies} size={26} />
@@ -142,12 +168,10 @@ export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals
 
                 <div className={styles.cardBody}>
                   <div className={styles.nameRow}>
-                    <h3 className={styles.tagNumber}>
-                      {animal.name}
-                    </h3>
+                    <h3 className={styles.tagNumber}>{animal.name}</h3>
                     {animal.tagNumber && <span className={styles.tagBadge}>#{animal.tagNumber}</span>}
                   </div>
-                  
+
                   <div className={styles.tags}>
                     <span className={styles.infoTag}>{formattedSpecies}</span>
                     <span className={styles.infoDot}>•</span>
@@ -156,32 +180,38 @@ export default function ClientHerdDirectory({ initialAnimals }: { initialAnimals
                 </div>
 
                 <div className={styles.cardRight}>
-                  <div className={`${styles.statusBadge} ${formattedStatus === 'Sick' ? styles.badgeSick : styles.badgeActive}`}>
-                    <span className={`${styles.statusDot} ${formattedStatus === 'Sick' ? styles.dotSick : styles.dotActive}`}></span>
+                  <div className={`${styles.statusBadge} ${formattedStatus === "Sick" || formattedStatus === "Deceased" ? styles.badgeSick : styles.badgeActive}`}>
+                    <span className={`${styles.statusDot} ${formattedStatus === "Sick" || formattedStatus === "Deceased" ? styles.dotSick : styles.dotActive}`}></span>
                     <span className={styles.statusText}>{formattedStatus}</span>
                   </div>
                   <ChevronRight size={18} className={styles.chevron} />
                 </div>
               </Link>
-            )
+            );
           })}
         </div>
       ) : (
-        <EmptyState 
+        <EmptyState
           icon={<Info size={36} />}
           title="No animals found"
-          description={searchQuery ? `We couldn't find any animals matching "${searchQuery}"` : "Try adjusting your filters or add a new animal."}
-          actionLabel="Add New Animal"
-          onAction={() => setIsQuickAddOpen(true)}
+          description={
+            searchQuery
+              ? `We couldn't find any animals matching "${searchQuery}"`
+              : "Try adjusting your filters or register a new animal."
+          }
+          actionLabel={canCreate ? "Add New Animal" : undefined}
+          onAction={canCreate ? () => setIsQuickAddOpen(true) : undefined}
         />
       )}
 
-      {/* Floating Action Button purely for this page */}
-      <button className={styles.fabMain} aria-label="Add New Animal" onClick={() => setIsQuickAddOpen(true)}>
-         <Plus size={28} color="white" strokeWidth={2.5} />
-      </button>
-
-      <QuickAddMenu isOpen={isQuickAddOpen} onClose={() => setIsQuickAddOpen(false)} />
+      {canCreate && (
+        <>
+          <button className={styles.fabMain} aria-label="Add New Animal" onClick={() => setIsQuickAddOpen(true)}>
+            <Plus size={28} color="white" strokeWidth={2.5} />
+          </button>
+          <QuickAddMenu isOpen={isQuickAddOpen} onClose={() => setIsQuickAddOpen(false)} />
+        </>
+      )}
     </div>
   );
 }

@@ -114,7 +114,7 @@ export default function EditFarmProfileModal({
                   type="text"
                   required
                   style={inputStyle}
-                  placeholder="e.g. Premier Farm"
+                  placeholder="e.g. Premier Ranch Kitale"
                   value={form.farmName}
                   onChange={(e) => setForm({ ...form, farmName: e.target.value })}
                 />
@@ -129,7 +129,7 @@ export default function EditFarmProfileModal({
                   type="text"
                   required
                   style={inputStyle}
-                  placeholder="e.g. Nakuru County, Kenya"
+                  placeholder="e.g. Kitale, Trans-Nzoia County, Kenya"
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
                 />

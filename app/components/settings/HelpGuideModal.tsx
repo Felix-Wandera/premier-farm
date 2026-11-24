@@ -133,7 +133,7 @@ export default function HelpGuideModal({ isOpen, onClose }: HelpGuideModalProps)
 
         <div className={styles.modalBody} style={{ maxHeight: "70vh", overflowY: "auto", padding: "1.25rem" }}>
           <p style={{ margin: "0 0 1rem 0", fontSize: "0.9rem", color: "var(--color-text-sub)" }}>
-            Welcome to the Premier Farm Operations Manual. Click any topic below to learn how each module operates:
+            Welcome to the Premier Ranch Kitale Operations Manual. Click any topic below to learn how each module operates:
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -206,7 +206,7 @@ export default function HelpGuideModal({ isOpen, onClose }: HelpGuideModalProps)
         </div>
 
         <div className={styles.modalFooter} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "0.8rem", color: "var(--color-text-sub)" }}>Premier Farm Operations Manual v1.0</span>
+          <span style={{ fontSize: "0.8rem", color: "var(--color-text-sub)" }}>Premier Ranch Kitale Operations Manual v2.0</span>
           <button
             onClick={onClose}
             style={{

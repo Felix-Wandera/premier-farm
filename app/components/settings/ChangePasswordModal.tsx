@@ -1,14 +1,13 @@
 "use client";
 import React, { useState } from "react";
-import { X, Save, Eye, EyeOff } from "lucide-react";
+import { X, Save } from "lucide-react";
 import { changePassword } from "@/actions/settings.actions";
 import { useToast } from "../ui/Toast";
+import PasswordInput from "../ui/PasswordInput";
 import styles from "./SettingsModal.module.css";
 
 export default function ChangePasswordModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
 
@@ -41,9 +40,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: { isOpen: boole
     }
   };
 
-  const inputStyle: React.CSSProperties = { width: "100%", padding: "0.75rem", paddingRight: "2.5rem", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.95rem" };
-  const labelStyle: React.CSSProperties = { display: "block", marginBottom: "0.5rem", fontWeight: 500, fontSize: "0.9rem" };
-  const toggleStyle: React.CSSProperties = { position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8" };
+  const labelStyle: React.CSSProperties = { display: "block", marginBottom: "0.5rem", fontWeight: 600, fontSize: "0.88rem", color: "var(--color-text-main)" };
 
   return (
     <div className={styles.modalOverlay}>
@@ -51,29 +48,43 @@ export default function ChangePasswordModal({ isOpen, onClose }: { isOpen: boole
         <div className={styles.dragHandle} />
         <div className={styles.modalHeader}>
           <h2>Change Password</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={24} color="#64748b" /></button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={24} color="var(--color-text-sub)" /></button>
         </div>
 
         <div className={styles.modalBody}>
           <div>
             <label style={labelStyle}>Current Password</label>
-            <div style={{ position: "relative" }}>
-              <input type={showCurrent ? "text" : "password"} style={inputStyle} value={form.currentPassword} onChange={e => setForm({ ...form, currentPassword: e.target.value })} placeholder="Enter current password" />
-              <button style={toggleStyle} onClick={() => setShowCurrent(!showCurrent)} type="button">{showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}</button>
-            </div>
+            <PasswordInput
+              autoComplete="current-password"
+              value={form.currentPassword}
+              onChange={e => setForm({ ...form, currentPassword: e.target.value })}
+              placeholder="Enter current password"
+              isSubmitting={isSubmitting}
+            />
           </div>
 
           <div>
             <label style={labelStyle}>New Password</label>
-            <div style={{ position: "relative" }}>
-              <input type={showNew ? "text" : "password"} style={inputStyle} value={form.newPassword} onChange={e => setForm({ ...form, newPassword: e.target.value })} placeholder="Min. 6 characters" />
-              <button style={toggleStyle} onClick={() => setShowNew(!showNew)} type="button">{showNew ? <EyeOff size={18} /> : <Eye size={18} />}</button>
-            </div>
+            <PasswordInput
+              autoComplete="new-password"
+              value={form.newPassword}
+              onChange={e => setForm({ ...form, newPassword: e.target.value })}
+              placeholder="Min. 6 characters"
+              isSubmitting={isSubmitting}
+            />
           </div>
 
           <div>
             <label style={labelStyle}>Confirm New Password</label>
-            <input type="password" style={inputStyle} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Re-enter new password" />
+            <PasswordInput
+              autoComplete="new-password"
+              value={form.confirmPassword}
+              onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+              placeholder="Re-enter new password"
+              isSubmitting={isSubmitting}
+              matchWithValue={form.newPassword}
+              showMatchStatus
+            />
           </div>
         </div>
 
@@ -81,7 +92,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: { isOpen: boole
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            style={{ width: "100%", padding: "0.875rem", backgroundColor: "#1e293b", color: "#fff", borderRadius: "8px", border: "none", fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.7 : 1 }}
+            style={{ width: "100%", padding: "0.875rem", backgroundColor: "var(--color-primary)", color: "#fff", borderRadius: "8px", border: "none", fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.7 : 1 }}
           >
             <Save size={18} />
             {isSubmitting ? "Updating..." : "Update Password"}

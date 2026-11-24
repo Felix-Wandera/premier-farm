@@ -5,6 +5,7 @@ import { useToast } from "../ui/Toast";
 import styles from "../../(dashboard)/inventory/page.module.css";
 import { updateInventoryItem, deleteInventoryItem } from "@/actions/inventory.actions";
 import ConfirmationModal from "../ui/ConfirmationModal";
+import { useAuth } from "../auth/AuthProvider";
 
 export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boolean, onClose: () => void, item: any }) {
   const [formData, setFormData] = useState({
@@ -20,6 +21,8 @@ export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boole
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const toast = useToast();
+  const { hasPermission } = useAuth();
+  const canViewFinances = hasPermission("finances:view");
 
   useEffect(() => {
     if (item) {
@@ -120,6 +123,7 @@ export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boole
           </div>
 
           {/* Financial Linkage Card */}
+          {canViewFinances && (
           <div style={{ backgroundColor: "var(--color-bg)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
             <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: 600, color: "var(--color-text-main)" }}>
               <input
@@ -168,6 +172,7 @@ export default function EditItemModal({ isOpen, onClose, item }: { isOpen: boole
               </div>
             )}
           </div>
+          )}
         </div>
 
         <div style={{ padding: "1.5rem", borderTop: "1px solid var(--color-border)" }}>

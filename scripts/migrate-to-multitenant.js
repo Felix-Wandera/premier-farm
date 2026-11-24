@@ -56,8 +56,16 @@ async function migrateData() {
       where: { id: "default" },
     }).catch(() => null);
 
-    const farmName = farmSetting?.farmName || "Premier Farm";
-    const location = farmSetting?.location || "Nakuru County, Kenya";
+    const rawFarmName = farmSetting?.farmName;
+    const farmName =
+      !rawFarmName || rawFarmName === "Premier Farm" || rawFarmName === "Premier Ranch"
+        ? "Premier Ranch Kitale"
+        : rawFarmName;
+    const rawLocation = farmSetting?.location;
+    const location =
+      !rawLocation || rawLocation === "Nakuru County, Kenya" || rawLocation === "Kenya"
+        ? "Kitale, Trans-Nzoia County, Kenya"
+        : rawLocation;
     const phoneNumber = farmSetting?.phoneNumber || "+254 700 000 000";
     const email = farmSetting?.email || "info@premierfarm.com";
     const currencySymbol = farmSetting?.currencySymbol || "KES";

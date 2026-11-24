@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Building2,
@@ -9,7 +8,6 @@ import {
   Coins,
   User,
   Mail,
-  Lock,
   Phone,
   ArrowRight,
   Loader2,
@@ -18,12 +16,13 @@ import {
 import { registerFarm } from "@/actions/tenant.actions";
 import { useAuth } from "@/app/components/auth/AuthProvider";
 import { useToast } from "@/app/components/ui/Toast";
+import PasswordInput from "@/app/components/ui/PasswordInput";
+import { APP_BRAND_NAME } from "@/lib/branding";
 import styles from "./page.module.css";
 
 export default function RegisterFarmPage() {
-  const router = useRouter();
   const toast = useToast();
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -76,7 +75,6 @@ export default function RegisterFarmPage() {
 
       if (res.success) {
         toast(res.message, "success");
-        // Redirect to dashboard with new organization active
         window.location.href = "/";
       } else {
         toast(res.message || "Failed to register farm.", "error");
@@ -94,9 +92,9 @@ export default function RegisterFarmPage() {
         <div className={styles.header}>
           <div className={styles.badge}>
             <Sparkles size={14} />
-            <span>Multi-Farm Cloud</span>
+            <span>{APP_BRAND_NAME} Cloud</span>
           </div>
-          <h1>{isAuthenticated ? "Launch a New Farm" : "Get Started with Premier Farm"}</h1>
+          <h1>{isAuthenticated ? "Launch a New Farm" : `Get Started with ${APP_BRAND_NAME}`}</h1>
           <p>
             {isAuthenticated
               ? `You are logged in as ${user?.email}. Set up an additional farm organization.`
@@ -115,7 +113,7 @@ export default function RegisterFarmPage() {
                 id="farmName"
                 name="farmName"
                 type="text"
-                placeholder="e.g. Green Pastures Dairy"
+                placeholder="e.g. Premier Ranch Kitale"
                 value={form.farmName}
                 onChange={handleChange}
                 required
@@ -133,7 +131,7 @@ export default function RegisterFarmPage() {
                   id="location"
                   name="location"
                   type="text"
-                  placeholder="e.g. Nakuru, Kenya"
+                  placeholder="e.g. Kitale, Trans-Nzoia County"
                   value={form.location}
                   onChange={handleChange}
                   disabled={isSubmitting}
@@ -178,6 +176,7 @@ export default function RegisterFarmPage() {
                       id="firstName"
                       name="firstName"
                       type="text"
+                      autoComplete="given-name"
                       placeholder="e.g. Jane"
                       value={form.firstName}
                       onChange={handleChange}
@@ -194,6 +193,7 @@ export default function RegisterFarmPage() {
                       id="lastName"
                       name="lastName"
                       type="text"
+                      autoComplete="family-name"
                       placeholder="e.g. Wanjiku"
                       value={form.lastName}
                       onChange={handleChange}
@@ -212,7 +212,8 @@ export default function RegisterFarmPage() {
                       id="email"
                       name="email"
                       type="email"
-                      placeholder="jane@greenpastures.com"
+                      autoComplete="email"
+                      placeholder="jane@premierranch.co.ke"
                       value={form.email}
                       onChange={handleChange}
                       required
@@ -229,6 +230,7 @@ export default function RegisterFarmPage() {
                       id="phoneNumber"
                       name="phoneNumber"
                       type="tel"
+                      autoComplete="tel"
                       placeholder="+254 700 000 000"
                       value={form.phoneNumber}
                       onChange={handleChange}
@@ -241,38 +243,34 @@ export default function RegisterFarmPage() {
               <div className={styles.row}>
                 <div className={styles.inputGroup}>
                   <label htmlFor="password">Password *</label>
-                  <div className={styles.inputWrapper}>
-                    <Lock size={18} className={styles.inputIcon} />
-                    <input
-                      id="password"
-                      name="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={form.password}
-                      onChange={handleChange}
-                      required
-                      minLength={6}
-                      disabled={isSubmitting}
-                    />
-                  </div>
+                  <PasswordInput
+                    id="password"
+                    name="password"
+                    autoComplete="new-password"
+                    placeholder="Min. 6 characters"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                    minLength={6}
+                    isSubmitting={isSubmitting}
+                  />
                 </div>
 
                 <div className={styles.inputGroup}>
                   <label htmlFor="confirmPassword">Confirm Password *</label>
-                  <div className={styles.inputWrapper}>
-                    <Lock size={18} className={styles.inputIcon} />
-                    <input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={form.confirmPassword}
-                      onChange={handleChange}
-                      required
-                      minLength={6}
-                      disabled={isSubmitting}
-                    />
-                  </div>
+                  <PasswordInput
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    autoComplete="new-password"
+                    placeholder="Repeat password"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    minLength={6}
+                    isSubmitting={isSubmitting}
+                    matchWithValue={form.password}
+                    showMatchStatus
+                  />
                 </div>
               </div>
             </>

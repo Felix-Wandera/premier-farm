@@ -3,8 +3,9 @@
 import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "../forgot/page.module.css";
-import { Lock, ArrowLeft, Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "../../components/ui/Toast";
+import PasswordInput from "../../components/ui/PasswordInput";
 import { resetPasswordWithToken } from "@/actions/settings.actions";
 
 function ResetPasswordForm() {
@@ -15,7 +16,6 @@ function ResetPasswordForm() {
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,41 +97,32 @@ function ResetPasswordForm() {
 
               <div className={styles.inputGroup}>
                 <label htmlFor="newPassword">New Password</label>
-                <div className={styles.inputWrapper} style={{ position: "relative" }}>
-                  <Lock className={styles.inputIcon} size={20} />
-                  <input
-                    id="newPassword"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Min. 6 characters"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    disabled={isSubmitting}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
+                <PasswordInput
+                  id="newPassword"
+                  iconSize={20}
+                  autoComplete="new-password"
+                  placeholder="Min. 6 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  isSubmitting={isSubmitting}
+                  required
+                />
               </div>
 
               <div className={styles.inputGroup}>
                 <label htmlFor="confirmPassword">Confirm Password</label>
-                <div className={styles.inputWrapper}>
-                  <Lock className={styles.inputIcon} size={20} />
-                  <input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Re-enter password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isSubmitting}
-                    required
-                  />
-                </div>
+                <PasswordInput
+                  id="confirmPassword"
+                  iconSize={20}
+                  autoComplete="new-password"
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  isSubmitting={isSubmitting}
+                  matchWithValue={newPassword}
+                  showMatchStatus
+                  required
+                />
               </div>
 
               <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>

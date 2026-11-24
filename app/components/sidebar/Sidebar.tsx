@@ -6,34 +6,50 @@ import Image from "next/image";
 import logoPic from "@/public/logo.png";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Home, Beef, Droplet, LineChart, Package,
-  Settings, LogOut, Users, HeartPulse,
-  ChevronLeft, ChevronRight
+  Home,
+  Beef,
+  Droplet,
+  LineChart,
+  BarChart3,
+  Package,
+  Settings,
+  LogOut,
+  Users,
+  HeartPulse,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
 import { ThemeToggle } from "../theme-toggle/ThemeToggle";
 import { useToast } from "../ui/Toast";
 import { useAuth } from "../auth/AuthProvider";
 import TenantSwitcher from "../tenant/TenantSwitcher";
+import { APP_BRAND_NAME } from "@/lib/branding";
+import { PermissionKey } from "@/lib/permissions";
 
-const navItems = [
+const navItems: Array<{
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  href: string;
+  permission?: PermissionKey;
+}> = [
   { icon: Home, label: "Dashboard", href: "/" },
-  { icon: Beef, label: "Herd", href: "/herd" },
-  { icon: HeartPulse, label: "Breeding", href: "/breeding" },
-  { icon: Droplet, label: "Milk Production", href: "/milk" },
-  { icon: LineChart, label: "Sales & Finances", href: "/sales", allowedRoles: ["ADMIN", "MANAGER"] },
-  { icon: Package, label: "Inventory", href: "/inventory" },
-  { icon: Users, label: "User Management", href: "/users", allowedRoles: ["ADMIN"] },
+  { icon: BarChart3, label: "Analytics & Reports", href: "/analytics", permission: "analytics:view" },
+  { icon: Beef, label: "Herd", href: "/herd", permission: "herd:view" },
+  { icon: HeartPulse, label: "Breeding & Health", href: "/breeding", permission: "health:view" },
+  { icon: Droplet, label: "Milk Production", href: "/milk", permission: "milk:view" },
+  { icon: LineChart, label: "Sales & Finances", href: "/sales", permission: "finances:view" },
+  { icon: Package, label: "Inventory", href: "/inventory", permission: "inventory:view" },
+  { icon: Users, label: "User Management", href: "/users", permission: "users:manage" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const toast = useToast();
-  const { user, tenantRole } = useAuth();
+  const { hasPermission } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Persistence
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved !== null) {
@@ -53,22 +69,25 @@ export default function Sidebar() {
       await fetch("/api/auth/logout", { method: "POST" });
       router.push("/login");
       router.refresh();
-    } catch (err) {
+    } catch {
       router.push("/login");
     }
   };
 
   return (
-    <aside
-      className={styles.sidebar}
-      data-collapsed={isCollapsed}
-    >
+    <aside className={styles.sidebar} data-collapsed={isCollapsed}>
       <div className={styles.logoContainer}>
         <div className={styles.logoMarkWrapper}>
           {!isCollapsed && (
             <>
-              <Image src={logoPic} alt="Premier Ranch Logo" width={32} height={32} className={styles.logoMark} />
-              <h1 className={styles.logoText}>Premier Ranch</h1>
+              <Image
+                src={logoPic}
+                alt={`${APP_BRAND_NAME} Logo`}
+                width={32}
+                height={32}
+                className={styles.logoMark}
+              />
+              <h1 className={styles.logoText}>{APP_BRAND_NAME}</h1>
             </>
           )}
         </div>
@@ -85,32 +104,26 @@ export default function Sidebar() {
 
       <nav className={styles.navItems}>
         {navItems
-          .filter((item) => {
-            if (!item.allowedRoles) return true;
-            const effectiveRole = tenantRole || user?.role;
-            return effectiveRole && item.allowedRoles.includes(effectiveRole);
-          })
+          .filter((item) => !item.permission || hasPermission(item.permission))
           .map((item) => {
-          const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`${styles.navLink} ${isActive ? styles.active : ""}`}
-              title={isCollapsed ? item.label : undefined}
-            >
-              <item.icon size={20} className={styles.icon} />
-              {!isCollapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
+            const isActive =
+              item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`${styles.navLink} ${isActive ? styles.active : ""}`}
+                title={isCollapsed ? item.label : undefined}
+              >
+                <item.icon size={20} className={styles.icon} />
+                {!isCollapsed && <span>{item.label}</span>}
+              </Link>
+            );
+          })}
       </nav>
 
       <div className={styles.footer}>
-        <ThemeToggle
-          className={styles.navLink}
-          showLabel={!isCollapsed}
-        />
+        <ThemeToggle className={styles.navLink} showLabel={!isCollapsed} />
         <Link
           href="/settings"
           className={styles.navLink}

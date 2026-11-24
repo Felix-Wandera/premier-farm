@@ -13,8 +13,8 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Premier Ranch Mgmt",
-  description: "Next-generation Ranch Management system.",
+  title: "Premier Ranch Kitale",
+  description: "Next-generation herd and ranch management system for Premier Ranch Kitale.",
 };
 
 export default function RootLayout({

@@ -5,6 +5,8 @@ import { X, Save, Trash2, Clock, Check, Edit2, Loader2 } from "lucide-react";
 import { getSessionMilkLogs, updateSingleMilkLog, deleteSingleMilkLog } from "@/actions/milk.actions";
 import { useToast } from "../ui/Toast";
 import ConfirmationModal from "../ui/ConfirmationModal";
+import OutlierWarningModal from "../ui/OutlierWarningModal";
+import { useAuth } from "../auth/AuthProvider";
 import bsStyles from "../ui/BottomSheetModal.module.css";
 
 interface SessionDetailsModalProps {
@@ -39,7 +41,10 @@ export default function SessionDetailsModal({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [deletingLog, setDeletingLog] = useState<{ id: string; label: string } | null>(null);
+  const [outlierState, setOutlierState] = useState<{ logId: string; warnings: string[]; canOverride: boolean } | null>(null);
 
+  const { hasPermission } = useAuth();
+  const canManageHistory = hasPermission("milk:manage_history");
   const toast = useToast();
 
   useEffect(() => {
@@ -72,16 +77,27 @@ export default function SessionDetailsModal({
     setEditValue(String(log.amountLiters));
   };
 
-  const handleSaveEdit = async (logId: string) => {
+  const handleSaveEdit = async (logId: string, overrideWarnings = false) => {
     const val = parseFloat(editValue);
-    if (isNaN(val) || val <= 0 || val > 100) {
-      toast("Please enter a valid yield between 0.1 and 100 Liters.", "error");
+    if (isNaN(val) || val <= 0 || val > 60) {
+      toast("Please enter a valid yield between 0.1 and 60 Liters.", "error");
       return;
     }
 
     setIsSaving(true);
-    const res = await updateSingleMilkLog(logId, val);
+    const res: any = await updateSingleMilkLog(logId, val, overrideWarnings);
     setIsSaving(false);
+
+    if (res.code === "OUTLIER_WARNING" && res.warnings) {
+      setOutlierState({
+        logId,
+        warnings: res.warnings,
+        canOverride: Boolean(res.canOverride),
+      });
+      return;
+    }
+
+    setOutlierState(null);
 
     if (res.success) {
       toast(res.message, "success");
@@ -238,7 +254,7 @@ export default function SessionDetailsModal({
                           autoFocus
                         />
                         <button
-                          onClick={() => handleSaveEdit(log.id)}
+                          onClick={() => handleSaveEdit(log.id, false)}
                           disabled={isSaving}
                           style={{
                             background: "var(--color-primary, #16a34a)",
@@ -271,34 +287,38 @@ export default function SessionDetailsModal({
                         <span style={{ fontWeight: 700, fontSize: "1rem", minWidth: "55px", textAlign: "right" }}>
                           {log.amountLiters} L
                         </span>
-                        <button
-                          onClick={() => handleStartEdit(log)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: "4px",
-                            color: "var(--color-text-sub, #64748b)",
-                          }}
-                          title="Edit Yield"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteLog(log.id, log.name || log.tagNumber || "this animal")}
-                          disabled={isDeleting}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: "4px",
-                            color: "#ef4444",
-                            opacity: isDeleting ? 0.4 : 1,
-                          }}
-                          title="Delete Record"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {canManageHistory && (
+                          <>
+                            <button
+                              onClick={() => handleStartEdit(log)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "4px",
+                                color: "var(--color-text-sub, #64748b)",
+                              }}
+                              title="Edit Yield"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLog(log.id, log.name || log.tagNumber || "this animal")}
+                              disabled={isDeleting}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "4px",
+                                color: "#ef4444",
+                                opacity: isDeleting ? 0.4 : 1,
+                              }}
+                              title="Delete Record"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
@@ -348,6 +368,17 @@ export default function SessionDetailsModal({
         }
         confirmText="Delete Record"
         isLoading={!!isDeletingId}
+      />
+
+      <OutlierWarningModal
+        isOpen={!!outlierState}
+        warnings={outlierState?.warnings || []}
+        canOverride={outlierState?.canOverride || false}
+        isSubmitting={isSaving}
+        onCancel={() => setOutlierState(null)}
+        onOverride={() => {
+          if (outlierState) handleSaveEdit(outlierState.logId, true);
+        }}
       />
     </div>
   );

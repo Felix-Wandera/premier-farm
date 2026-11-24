@@ -96,7 +96,7 @@ export default function TenantSwitcher({ isCollapsed = false }: TenantSwitcherPr
           {isSwitching ? <Loader2 size={18} className="animate-spin" /> : <Building2 size={18} />}
         </div>
         <div className={styles.farmInfo}>
-          <span className={styles.farmName}>{activeTenant?.name || "Premier Ranch"}</span>
+          <span className={styles.farmName}>{activeTenant?.name || "Premier Ranch Kitale"}</span>
           <span className={styles.roleBadge}>{tenantRole || "Organization"}</span>
         </div>
         <ChevronDown size={16} className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`} />

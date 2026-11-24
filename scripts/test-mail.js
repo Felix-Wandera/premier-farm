@@ -19,7 +19,7 @@ if (!recipient || !recipient.includes('@')) {
     process.exit(1);
 }
 
-console.log(`\n\x1b[34m--- Premier Farm Mail Diagnostic ---\x1b[0m`);
+console.log(`\n\x1b[34m--- Premier Ranch Kitale Mail Diagnostic ---\x1b[0m`);
 console.log(`Target Recipient: ${recipient}`);
 console.log(`SMTP Host: ${process.env.SMTP_HOST}`);
 console.log(`SMTP User: ${process.env.SMTP_USER}`);
@@ -60,7 +60,7 @@ async function runTest() {
         console.log(`\x1b[33m[1/2] Testing INVITATION email...\x1b[0m`);
         const inviteHtml = await render('invite', { link: "http://localhost:3000/accept-invite?token=test-token" });
         await transporter.sendMail({
-            from: `"Premier Farm Test" <${process.env.SMTP_USER}>`,
+            from: `"Premier Ranch Kitale Test" <${process.env.SMTP_USER}>`,
             to: recipient,
             subject: "Diagnostic Test: Invitation",
             html: inviteHtml
@@ -70,7 +70,7 @@ async function runTest() {
         console.log(`\x1b[33m[2/2] Testing PASSWORD RESET email...\x1b[0m`);
         const resetHtml = await render('reset', { link: "http://localhost:3000/login/reset?token=test-token" });
         await transporter.sendMail({
-            from: `"Premier Farm Test" <${process.env.SMTP_USER}>`,
+            from: `"Premier Ranch Kitale Test" <${process.env.SMTP_USER}>`,
             to: recipient,
             subject: "Diagnostic Test: Password Reset",
             html: resetHtml

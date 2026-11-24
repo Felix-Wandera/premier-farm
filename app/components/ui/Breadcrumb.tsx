@@ -9,8 +9,9 @@ import styles from "./Breadcrumb.module.css";
 const routeLabels: Record<string, string> = {
   herd: "Herd",
   milk: "Milk Production",
-  breeding: "Breeding",
-  sales: "Sales",
+  breeding: "Breeding & Health",
+  sales: "Sales & Finances",
+  analytics: "Analytics & Reports",
   inventory: "Inventory",
   users: "Team Management",
   settings: "Settings",

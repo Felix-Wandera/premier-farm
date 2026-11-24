@@ -64,9 +64,9 @@ enum Role {
 // =======================
 model Tenant {
   id             String           @id @default(cuid())
-  name           String
+  name           String           @default("Premier Ranch Kitale")
   slug           String           @unique
-  location       String?          @default("Kenya")
+  location       String?          @default("Kitale, Trans-Nzoia County, Kenya")
   phoneNumber    String?
   email          String?
   currencySymbol String           @default("KES")
@@ -107,7 +107,8 @@ model TenantUser {
   userId         String
   user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  role           Role       @default(WORKER)
+  role              Role       @default(WORKER)
+  customPermissions Json?
 
   // Invitation Flow scoped to this tenant
   inviteToken    String?    @unique
@@ -159,8 +160,9 @@ model Animal {
   healthRecords  HealthRecord[]
   breedingEvents BreedingEvent[] @relation("MotherBreeding")
 
-  @@unique([tenantId, tagNumber])
   @@index([tenantId])
+  @@index([tenantId, name])
+  @@index([tenantId, tagNumber])
 }
 
 enum Species {
@@ -412,6 +414,7 @@ model Expense {
 
 enum ExpenseCategory {
   INVENTORY_PURCHASE
+  FEED
   LABOR
   VET_SERVICES
   MAINTENANCE
@@ -423,8 +426,8 @@ enum ExpenseCategory {
 // =======================
 model FarmSetting {
   id             String   @id @default("default")
-  farmName       String   @default("Premier Ranch")
-  location       String   @default("Nakuru County, Kenya")
+  farmName       String   @default("Premier Ranch Kitale")
+  location       String   @default("Kitale, Trans-Nzoia County, Kenya")
   phoneNumber    String?  @default("+254 700 000 000")
   email          String?  @default("info@premierfarm.com")
   currencySymbol String   @default("KES")

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { resolveEffectivePermissions } from "@/lib/permissions";
 
 export async function GET() {
   const session = await getSession();
@@ -22,7 +23,7 @@ export async function GET() {
         firstName: true,
         lastName: true,
         phoneNumber: true,
-      }
+      },
     });
 
     memberships = await prisma.tenantUser.findMany({
@@ -47,19 +48,26 @@ export async function GET() {
   }
 
   const activeTenantId = (session.tenantId as string) || memberships[0]?.tenantId;
-  const activeMembership = memberships.find(m => m.tenantId === activeTenantId) || memberships[0];
+  const activeMembership = memberships.find((m) => m.tenantId === activeTenantId) || memberships[0];
+  const effectiveRole = activeMembership?.role || fullUser.role;
+  const permissions = resolveEffectivePermissions(
+    effectiveRole,
+    activeMembership?.customPermissions
+  );
 
   return NextResponse.json({
     authenticated: true,
     user: fullUser,
     activeTenant: activeMembership?.tenant || null,
-    tenantRole: activeMembership?.role || fullUser.role,
-    memberships: memberships.map(m => ({
+    tenantRole: effectiveRole,
+    permissions,
+    memberships: memberships.map((m) => ({
       tenantId: m.tenant.id,
       name: m.tenant.name,
       slug: m.tenant.slug,
       role: m.role,
       status: m.tenant.status,
+      permissions: resolveEffectivePermissions(m.role, m.customPermissions),
     })),
   });
 }

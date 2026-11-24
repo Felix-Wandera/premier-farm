@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import fs from "fs/promises";
 import path from "path";
+import { APP_BRAND_NAME } from "@/lib/branding";
 
 /**
  * Shared Nodemailer Transporter
@@ -59,11 +60,14 @@ async function renderTemplate(name: string, data: Record<string, string>) {
 /**
  * Sends an email using the centralized SMTP configuration and templates.
  */
-export async function sendEmail({ to, subject, template, data, fromName = "Premier Ranch" }: MailOptions) {
+export async function sendEmail({ to, subject, template, data, fromName = APP_BRAND_NAME }: MailOptions) {
     const transporter = getTransporter();
     
     // Render the HTML using the template engine
-    const html = await renderTemplate(template, data);
+    const html = await renderTemplate(template, {
+        orgName: APP_BRAND_NAME,
+        ...data,
+    });
 
     if (!transporter) {
         console.warn(`[MAIL SKIP] To: ${to} | SMTP_HOST not configured. logging to console.`);

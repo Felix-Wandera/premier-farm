@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { User, Mail, Phone, Lock, CheckCircle2, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
+import { User, Mail, Phone, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import { validateInviteToken, completeInvitedSetup } from "@/actions/user.actions";
 import { useToast } from "@/app/components/ui/Toast";
+import PasswordInput from "@/app/components/ui/PasswordInput";
+import { APP_BRAND_NAME } from "@/lib/branding";
 import styles from "./page.module.css";
 import Link from "next/link";
 
@@ -16,7 +18,7 @@ function AcceptInviteContent() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [inviteData, setInviteData] = useState<{ email: string; role: string } | null>(null);
+  const [inviteData, setInviteData] = useState<{ email: string; role: string; farmName?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
@@ -98,7 +100,7 @@ function AcceptInviteContent() {
     <div className={styles.container}>
       <div className={styles.setupCard}>
         <div className={styles.header}>
-          <span className={styles.logo}>Premier Farm</span>
+          <span className={styles.logo}>{APP_BRAND_NAME}</span>
           <h1>Setup Your Account</h1>
           <p>Complete your profile to join the team as a <strong>{inviteData?.role}</strong>.</p>
         </div>
@@ -119,6 +121,7 @@ function AcceptInviteContent() {
                 <User className={styles.inputIcon} size={18} />
                 <input
                   type="text"
+                  autoComplete="given-name"
                   placeholder="e.g. John"
                   required
                   value={form.firstName}
@@ -132,6 +135,7 @@ function AcceptInviteContent() {
                 <User className={styles.inputIcon} size={18} />
                 <input
                   type="text"
+                  autoComplete="family-name"
                   placeholder="e.g. Doe"
                   required
                   value={form.lastName}
@@ -147,7 +151,8 @@ function AcceptInviteContent() {
               <Phone className={styles.inputIcon} size={18} />
               <input
                 type="tel"
-                placeholder="+254..."
+                autoComplete="tel"
+                placeholder="+254 700 000 000"
                 required
                 value={form.phoneNumber}
                 onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
@@ -156,31 +161,33 @@ function AcceptInviteContent() {
           </div>
 
           <div className={styles.inputGroup}>
-            <label>Create Password</label>
-            <div className={styles.inputWrapper}>
-              <Lock className={styles.inputIcon} size={18} />
-              <input
-                type="password"
-                placeholder="Min. 6 characters"
-                required
-                value={form.password}
-                onChange={e => setForm({ ...form, password: e.target.value })}
-              />
-            </div>
+            <label htmlFor="invite-password">Create Password</label>
+            <PasswordInput
+              id="invite-password"
+              autoComplete="new-password"
+              placeholder="Min. 6 characters"
+              required
+              minLength={6}
+              value={form.password}
+              onChange={e => setForm({ ...form, password: e.target.value })}
+              isSubmitting={isSubmitting}
+            />
           </div>
 
           <div className={styles.inputGroup}>
-            <label>Confirm Password</label>
-            <div className={styles.inputWrapper}>
-              <Lock className={styles.inputIcon} size={18} />
-              <input
-                type="password"
-                placeholder="Repeat password"
-                required
-                value={form.confirmPassword}
-                onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
-              />
-            </div>
+            <label htmlFor="invite-confirm-password">Confirm Password</label>
+            <PasswordInput
+              id="invite-confirm-password"
+              autoComplete="new-password"
+              placeholder="Repeat password"
+              required
+              minLength={6}
+              value={form.confirmPassword}
+              onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+              isSubmitting={isSubmitting}
+              matchWithValue={form.password}
+              showMatchStatus
+            />
           </div>
 
           <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>

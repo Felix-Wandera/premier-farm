@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, Banknote, Filter, Plus, Search, Info, X, Down
 import { useToast } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
 import NewTransactionModal from "./NewTransactionModal";
+import { useAuth } from "../auth/AuthProvider";
 
 // Helper for formatting Currency securely
 function formatCurrency(c: number) {
@@ -36,6 +37,9 @@ export default function ClientSalesFinances({
   cashFlow: { day: string; income: number; expense: number }[]
 }) {
   const toast = useToast();
+  const { hasPermission } = useAuth();
+  const canManageFinances = hasPermission("finances:manage");
+  const canExport = hasPermission("exports:download");
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -118,17 +122,19 @@ export default function ClientSalesFinances({
           <p className={styles.subtitle}>Farm Ledger & Cash Flow</p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <a
-            href="/api/export?type=finances"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.exportBtn}
-            aria-label="Export CSV"
-            title="Export Finances CSV"
-          >
-            <Download size={16} />
-            <span className={styles.exportBtnText}>Export CSV</span>
-          </a>
+          {canExport && (
+            <a
+              href="/api/export?type=finances"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.exportBtn}
+              aria-label="Export CSV"
+              title="Export Finances CSV"
+            >
+              <Download size={16} />
+              <span className={styles.exportBtnText}>Export CSV</span>
+            </a>
+          )}
 
           <button
             className={styles.filterBtn}
@@ -424,13 +430,15 @@ export default function ClientSalesFinances({
       </div>
 
       {/* Add Transaction FAB */}
-      <button 
-        className={styles.fabMain} 
-        aria-label="Add Transaction"
-        onClick={() => setIsModalOpen(true)}
-      >
-        <Plus size={28} color="white" strokeWidth={2.5} />
-      </button>
+      {canManageFinances && (
+        <button 
+          className={styles.fabMain} 
+          aria-label="Add Transaction"
+          onClick={() => setIsModalOpen(true)}
+        >
+          <Plus size={28} color="white" strokeWidth={2.5} />
+        </button>
+      )}
 
       {/* Add Transaction Modal */}
       <NewTransactionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />

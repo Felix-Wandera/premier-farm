@@ -9,6 +9,8 @@ import { logBatchMilkSession, deleteMilkLogSession } from "@/actions/milk.action
 import { useRouter } from "next/navigation";
 import SessionDetailsModal from "./SessionDetailsModal";
 import ConfirmationModal from "../ui/ConfirmationModal";
+import OutlierWarningModal from "../ui/OutlierWarningModal";
+import { useAuth } from "../auth/AuthProvider";
 
 // Formatter helper
 function formatSpecies(s: string) {
@@ -28,6 +30,11 @@ export default function ClientMilkLogging({
   initialCows: any[], 
   historyData: any[] 
 }) {
+  const { hasPermission } = useAuth();
+  const canLogMilk = hasPermission("milk:log");
+  const canManageHistory = hasPermission("milk:manage_history");
+  const canExport = hasPermission("exports:download");
+
   const [session, setSession] = useState<"Morning" | "Mid-day" | "Evening">("Morning");
   const todayStr = new Date().toISOString().split('T')[0];
   const [logDate, setLogDate] = useState<string>(todayStr);
@@ -35,6 +42,7 @@ export default function ClientMilkLogging({
   const [activeTab, setActiveTab] = useState<"log" | "history">("log");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [outlierState, setOutlierState] = useState<{ warnings: string[]; canOverride: boolean } | null>(null);
   const [selectedSession, setSelectedSession] = useState<{ date: string; session: string } | null>(null);
   const [savedSummary, setSavedSummary] = useState<{
     session: "Morning" | "Mid-day" | "Evening";
@@ -53,6 +61,8 @@ export default function ClientMilkLogging({
       tagNumber: cow.tagNumber,
       name: cow.name,
       species: formatSpecies(cow.species),
+      status: cow.status || "ACTIVE",
+      hasRecentTreatment: Boolean(cow.hasRecentTreatment),
       amount: "" as number | "",
     }))
   );
@@ -112,10 +122,9 @@ export default function ClientMilkLogging({
     }
   };
 
-  const handleSaveSession = async () => {
+  const handleSaveSession = async (overrideWarnings = false) => {
     if (isSubmitting) return;
 
-    // Build the payload
     const payloadRecords = records
       .filter(r => (Number(r.amount) || 0) > 0)
       .map(r => ({
@@ -124,18 +133,29 @@ export default function ClientMilkLogging({
       }));
 
     if (payloadRecords.length === 0) {
-      toast("No milk yields > 0 entered. Nothing to save.", "error"); // Wait, does useToast take 'error'? Assumed yes.
+      toast("No milk yields > 0 entered. Nothing to save.", "error");
       return;
     }
 
     setIsSubmitting(true);
     try {
       const dbSession = session === "Mid-day" ? "MIDDAY" : session.toUpperCase();
-      const response = await logBatchMilkSession({
+      const response: any = await logBatchMilkSession({
         session: dbSession,
         date: logDate,
+        overrideWarnings,
         records: payloadRecords
       });
+
+      if (response.code === "OUTLIER_WARNING" && response.warnings) {
+        setOutlierState({
+          warnings: response.warnings,
+          canOverride: Boolean(response.canOverride),
+        });
+        return;
+      }
+
+      setOutlierState(null);
 
       if (response.success) {
         toast(response.message, "success");
@@ -145,13 +165,12 @@ export default function ClientMilkLogging({
           count: payloadRecords.length,
           totalLiters: totalYield,
         });
-        // Reset amounts and stay on current logging view
         setRecords(prev => prev.map(r => ({ ...r, amount: "" })));
-        router.refresh(); // Refresh Server Components to pull latest history
+        router.refresh();
       } else {
         toast(response.message, "error");
       }
-    } catch (e: any) {
+    } catch {
       toast("An unexpected error occurred.", "error");
     } finally {
       setIsSubmitting(false);
@@ -303,9 +322,14 @@ export default function ClientMilkLogging({
               {filteredRecords.map(record => (
                 <div key={record.id} className={styles.recordRow}>
                   <div className={styles.cowTag}>
-                     <span className={styles.badge} style={{display: "flex", alignItems: "center", gap: "6px"}}>
+                     <span className={styles.badge} style={{display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap"}}>
                       <AnimalIcon species={record.species} size={16} />
                       {record.name || record.tagNumber} {record.tagNumber && record.name && <span style={{fontWeight: 500, opacity: 0.8}}>#{record.tagNumber}</span>}
+                      {(record.status === "SICK" || record.hasRecentTreatment) && (
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "1px 6px", borderRadius: "99px", backgroundColor: "rgba(245, 158, 11, 0.16)", color: "#d97706" }}>
+                          {record.status === "SICK" ? "Sick" : "Withdrawal?"}
+                        </span>
+                      )}
                     </span>
                   </div>
                   
@@ -349,8 +373,8 @@ export default function ClientMilkLogging({
 
               <button 
                 className={styles.submitBtn} 
-                onClick={handleSaveSession}
-                disabled={isSubmitting || totalYield === 0}
+                onClick={() => handleSaveSession(false)}
+                disabled={isSubmitting || totalYield === 0 || !canLogMilk}
               >
                 <CheckCircle2 size={16} />
                 <span>{isSubmitting ? "Saving..." : `Save ${session}`}</span>
@@ -362,27 +386,29 @@ export default function ClientMilkLogging({
 
       {activeTab === 'history' && (
         <div className={styles.batchList}>
-          <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 0.5rem 0.5rem" }}>
-            <a
-              href="/api/export?type=milk"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                color: "var(--color-primary, #16a34a)",
-                textDecoration: "none",
-                padding: "0.4rem 0.8rem",
-                borderRadius: "8px",
-                backgroundColor: "rgba(22, 163, 74, 0.1)",
-              }}
-            >
-              <Download size={14} /> Export Milk CSV
-            </a>
-          </div>
+          {canExport && (
+            <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 0.5rem 0.5rem" }}>
+              <a
+                href="/api/export?type=milk"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  color: "var(--color-primary, #16a34a)",
+                  textDecoration: "none",
+                  padding: "0.4rem 0.8rem",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(22, 163, 74, 0.1)",
+                }}
+              >
+                <Download size={14} /> Export Milk CSV
+              </a>
+            </div>
+          )}
 
           {historyData.length === 0 ? (
              <div style={{padding: '2rem', textAlign: 'center', opacity: 0.6}}>No milk history found.</div>
@@ -428,20 +454,22 @@ export default function ClientMilkLogging({
                       <button
                         onClick={() => setSelectedSession({ date: new Date(entry.date).toISOString(), session: entry.session })}
                         className={styles.historyEditBtn}
-                        title="View and Edit Breakdown"
+                        title="View Breakdown"
                       >
                         <ExternalLink size={14} />
                         <span>View Breakdown</span>
                       </button>
-                      <button
-                        onClick={() => handleDeleteSession(entry.date, entry.session)}
-                        disabled={isDeleting}
-                        className={styles.historyDeleteBtn}
-                        title="Delete Entire Session"
-                        aria-label="Delete Entire Session"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {canManageHistory && (
+                        <button
+                          onClick={() => handleDeleteSession(entry.date, entry.session)}
+                          disabled={isDeleting}
+                          className={styles.historyDeleteBtn}
+                          title="Delete Entire Session"
+                          aria-label="Delete Entire Session"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
@@ -476,6 +504,15 @@ export default function ClientMilkLogging({
         }
         confirmText="Delete Session"
         isLoading={isDeleting}
+      />
+
+      <OutlierWarningModal
+        isOpen={!!outlierState}
+        warnings={outlierState?.warnings || []}
+        canOverride={outlierState?.canOverride || false}
+        isSubmitting={isSubmitting}
+        onCancel={() => setOutlierState(null)}
+        onOverride={() => handleSaveSession(true)}
       />
 
       {/* Post-Save Success Modal / Action Sheet */}

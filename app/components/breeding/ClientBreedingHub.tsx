@@ -11,6 +11,7 @@ import { useToast } from "../ui/Toast";
 import NewBreedingEventModal from "./NewBreedingEventModal";
 import NewHealthRecordModal from "./NewHealthRecordModal";
 import { completeBreedingEvent } from "@/actions/event.actions";
+import { useAuth } from "../auth/AuthProvider";
 
 function formatSpecies(s: string) {
   if (s === "DAIRY_COW") return "Dairy Cow";
@@ -39,6 +40,8 @@ export default function ClientBreedingHub({
 
   const searchParams = useSearchParams();
   const toast = useToast();
+  const { hasPermission } = useAuth();
+  const canManageHealth = hasPermission("health:manage");
 
   useEffect(() => {
     const action = searchParams.get("action");
@@ -78,51 +81,53 @@ export default function ClientBreedingHub({
           <p className={styles.subtitle}>Upcoming events & herd health timeline</p>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-          <button
-            onClick={() => setIsBreedingModalOpen(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              background: "var(--color-primary, #16a34a)",
-              color: "#ffffff",
-              border: "none",
-              padding: "0.5rem 0.9rem",
-              borderRadius: "99px",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)",
-              transition: "all 0.2s ease",
-            }}
-          >
-            <Sparkles size={16} />
-            <span>Log Breeding</span>
-          </button>
+        {canManageHealth && (
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={() => setIsBreedingModalOpen(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                background: "var(--color-primary, #16a34a)",
+                color: "#ffffff",
+                border: "none",
+                padding: "0.5rem 0.9rem",
+                borderRadius: "99px",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <Sparkles size={16} />
+              <span>Log Breeding</span>
+            </button>
 
-          <button
-            onClick={() => setIsHealthModalOpen(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              background: "var(--color-surface, #ffffff)",
-              color: "var(--color-text-main, #0f172a)",
-              border: "1px solid var(--color-border, #e2e8f0)",
-              padding: "0.5rem 0.9rem",
-              borderRadius: "99px",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              boxShadow: "var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05))",
-              transition: "all 0.2s ease",
-            }}
-          >
-            <HeartPulse size={16} color="#e11d48" />
-            <span>Log Health</span>
-          </button>
-        </div>
+            <button
+              onClick={() => setIsHealthModalOpen(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                background: "var(--color-surface, #ffffff)",
+                color: "var(--color-text-main, #0f172a)",
+                border: "1px solid var(--color-border, #e2e8f0)",
+                padding: "0.5rem 0.9rem",
+                borderRadius: "99px",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                boxShadow: "var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05))",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <HeartPulse size={16} color="#e11d48" />
+              <span>Log Health</span>
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Summary Row */}
@@ -174,7 +179,7 @@ export default function ClientBreedingHub({
                         </div>
                         <h4 className={styles.eventTitle}>{event.title}</h4>
                         <p className={styles.eventDesc}>{event.description}</p>
-                        {event.type === "warning" && (
+                        {canManageHealth && event.type === "warning" && (
                           <button
                             className={styles.actionBtn}
                             disabled={completingId === event.id}
@@ -212,7 +217,7 @@ export default function ClientBreedingHub({
                         </div>
                         <h4 className={styles.eventTitle}>{event.title}</h4>
                         <p className={styles.eventDesc}>{event.description}</p>
-                        {event.type === "warning" && (
+                        {canManageHealth && event.type === "warning" && (
                           <button
                             className={styles.actionBtn}
                             disabled={completingId === event.id}
