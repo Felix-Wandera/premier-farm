@@ -1,7 +1,17 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import styles from "../../(dashboard)/milk/page.module.css";
-import { CheckCircle2, History, Clock, Search, Info, Trash2, Download, ExternalLink } from "lucide-react";
+import {
+  CheckCircle2,
+  History,
+  Clock,
+  Search,
+  Info,
+  Trash2,
+  Download,
+  ExternalLink,
+  ArrowLeft,
+} from "lucide-react";
 import AnimalIcon from "../ui/AnimalIcon";
 import { useToast } from "../ui/Toast";
 import EmptyState from "../ui/EmptyState";
@@ -10,9 +20,11 @@ import { useRouter } from "next/navigation";
 import SessionDetailsModal from "./SessionDetailsModal";
 import ConfirmationModal from "../ui/ConfirmationModal";
 import OutlierWarningModal from "../ui/OutlierWarningModal";
+import ResponsiveSheet from "../ui/ResponsiveSheet";
+import sheetStyles from "../ui/ResponsiveSheet.module.css";
 import { useAuth } from "../auth/AuthProvider";
+import { QUICK_ACTION_EVENT, QuickActionId } from "@/lib/quick-actions";
 
-// Formatter helper
 function formatSpecies(s: string) {
   if (s === "DAIRY_COW") return "Dairy Cow";
   if (s === "INDIGENOUS_COW") return "Indigenous";
@@ -23,12 +35,27 @@ function formatSpecies(s: string) {
   return s;
 }
 
-export default function ClientMilkLogging({ 
-  initialCows, 
-  historyData 
-}: { 
-  initialCows: any[], 
-  historyData: any[] 
+interface MilkingCowItem {
+  id: string;
+  tagNumber: string | null;
+  name: string;
+  species: string;
+  status?: string;
+  hasRecentTreatment?: boolean;
+}
+
+interface MilkHistoryEntry {
+  date: Date;
+  session: string;
+  total: number;
+}
+
+export default function ClientMilkLogging({
+  initialCows,
+  historyData,
+}: {
+  initialCows: MilkingCowItem[];
+  historyData: MilkHistoryEntry[];
 }) {
   const { hasPermission } = useAuth();
   const canLogMilk = hasPermission("milk:log");
@@ -36,27 +63,35 @@ export default function ClientMilkLogging({
   const canExport = hasPermission("exports:download");
 
   const [session, setSession] = useState<"Morning" | "Mid-day" | "Evening">("Morning");
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toISOString().split("T")[0];
   const [logDate, setLogDate] = useState<string>(todayStr);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<"log" | "history">("log");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [outlierState, setOutlierState] = useState<{ warnings: string[]; canOverride: boolean } | null>(null);
-  const [selectedSession, setSelectedSession] = useState<{ date: string; session: string } | null>(null);
+  const [outlierState, setOutlierState] = useState<{
+    warnings: string[];
+    canOverride: boolean;
+  } | null>(null);
+  const [selectedSession, setSelectedSession] = useState<{
+    date: string;
+    session: string;
+  } | null>(null);
   const [savedSummary, setSavedSummary] = useState<{
     session: "Morning" | "Mid-day" | "Evening";
     date: string;
     count: number;
     totalLiters: number;
   } | null>(null);
-  const [deletingSession, setDeletingSession] = useState<{ date: Date; sessionType: string } | null>(null);
+  const [deletingSession, setDeletingSession] = useState<{
+    date: Date;
+    sessionType: string;
+  } | null>(null);
   const toast = useToast();
   const router = useRouter();
 
-  // Convert initialCows to mutable records state
   const [records, setRecords] = useState(
-    initialCows.map(cow => ({
+    initialCows.map((cow) => ({
       id: cow.id,
       tagNumber: cow.tagNumber,
       name: cow.name,
@@ -67,47 +102,66 @@ export default function ClientMilkLogging({
     }))
   );
 
-  const filteredRecords = records.filter(rec => 
-    (rec.tagNumber ? rec.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
-    (rec.name ? rec.name.toLowerCase().includes(searchQuery.toLowerCase()) : false)
+  useEffect(() => {
+    const handleQuickAction = (e: Event) => {
+      const detail = (e as CustomEvent<{ action: QuickActionId }>).detail;
+      if (detail?.action === "log-milk") {
+        setActiveTab("log");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+    window.addEventListener(QUICK_ACTION_EVENT, handleQuickAction);
+    return () => window.removeEventListener(QUICK_ACTION_EVENT, handleQuickAction);
+  }, []);
+
+  const filteredRecords = records.filter(
+    (rec) =>
+      !searchQuery.trim() ||
+      (rec.tagNumber ? rec.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
+      (rec.name ? rec.name.toLowerCase().includes(searchQuery.toLowerCase()) : false)
   );
-  
+
   const handleAmountChange = (id: string, val: string) => {
-    setRecords(prev => prev.map(rec => 
-      rec.id === id 
-        ? { ...rec, amount: val === "" ? "" : Number(val) } 
-        : rec
-    ));
+    setRecords((prev) =>
+      prev.map((rec) =>
+        rec.id === id ? { ...rec, amount: val === "" ? "" : Number(val) } : rec
+      )
+    );
   };
 
   const increment = (id: string) => {
-    setRecords(prev => prev.map(rec => 
-      rec.id === id 
-        ? { ...rec, amount: (Number(rec.amount) || 0) + 1 } 
-        : rec
-    ));
+    setRecords((prev) =>
+      prev.map((rec) =>
+        rec.id === id
+          ? { ...rec, amount: Math.round(((Number(rec.amount) || 0) + 1) * 10) / 10 }
+          : rec
+      )
+    );
   };
 
   const decrement = (id: string) => {
-    setRecords(prev => prev.map(rec => {
-      if (rec.id !== id) return rec;
-      const current = Number(rec.amount) || 0;
-      return { ...rec, amount: current > 0 ? current - 1 : 0 };
-    }));
+    setRecords((prev) =>
+      prev.map((rec) => {
+        if (rec.id !== id) return rec;
+        const current = Number(rec.amount) || 0;
+        const next = Math.max(0, Math.round((current - 1) * 10) / 10);
+        return { ...rec, amount: next === 0 ? "" : next };
+      })
+    );
   };
 
-  const totalYield = records.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-
-  const handleDeleteSession = (date: Date, sessionType: string) => {
-    setDeletingSession({ date, sessionType });
-  };
+  const totalYield =
+    Math.round(records.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) * 10) / 10;
 
   const confirmDeleteSession = async () => {
     if (!deletingSession || isDeleting) return;
     setIsDeleting(true);
 
     try {
-      const response = await deleteMilkLogSession(deletingSession.date, deletingSession.sessionType.toUpperCase());
+      const response = await deleteMilkLogSession(
+        deletingSession.date,
+        deletingSession.sessionType.toUpperCase()
+      );
       if (response.success) {
         toast(response.message, "success");
         setDeletingSession(null);
@@ -115,7 +169,7 @@ export default function ClientMilkLogging({
       } else {
         toast(response.message, "error");
       }
-    } catch (e: any) {
+    } catch {
       toast("An unexpected error occurred.", "error");
     } finally {
       setIsDeleting(false);
@@ -126,10 +180,10 @@ export default function ClientMilkLogging({
     if (isSubmitting) return;
 
     const payloadRecords = records
-      .filter(r => (Number(r.amount) || 0) > 0)
-      .map(r => ({
+      .filter((r) => (Number(r.amount) || 0) > 0)
+      .map((r) => ({
         animalId: r.id,
-        amount: Number(r.amount)
+        amount: Number(r.amount),
       }));
 
     if (payloadRecords.length === 0) {
@@ -140,11 +194,11 @@ export default function ClientMilkLogging({
     setIsSubmitting(true);
     try {
       const dbSession = session === "Mid-day" ? "MIDDAY" : session.toUpperCase();
-      const response: any = await logBatchMilkSession({
+      const response = await logBatchMilkSession({
         session: dbSession,
         date: logDate,
         overrideWarnings,
-        records: payloadRecords
+        records: payloadRecords,
       });
 
       if (response.code === "OUTLIER_WARNING" && response.warnings) {
@@ -165,7 +219,7 @@ export default function ClientMilkLogging({
           count: payloadRecords.length,
           totalLiters: totalYield,
         });
-        setRecords(prev => prev.map(r => ({ ...r, amount: "" })));
+        setRecords((prev) => prev.map((r) => ({ ...r, amount: "" })));
         router.refresh();
       } else {
         toast(response.message, "error");
@@ -177,6 +231,12 @@ export default function ClientMilkLogging({
     }
   };
 
+  const yesterdayStr = (() => {
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    return y.toISOString().split("T")[0];
+  })();
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -184,127 +244,100 @@ export default function ClientMilkLogging({
           <h1 className={styles.pageTitle}>
             {activeTab === "history" ? "Milk History" : "Milk Production"}
           </h1>
-          <p className={styles.subtitle}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+          <p className={styles.subtitle}>
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "short",
+              day: "numeric",
+            })}
+          </p>
         </div>
         <button
           type="button"
-          onClick={() => setActiveTab(prev => prev === 'log' ? 'history' : 'log')}
+          onClick={() => setActiveTab((prev) => (prev === "log" ? "history" : "log"))}
           className={styles.historyBtn}
-          title={activeTab === 'log' ? "View Milk History" : "Back to Record Yield"}
-          aria-label={activeTab === 'log' ? "View Milk History" : "Back to Record Yield"}
+          aria-label={activeTab === "log" ? "View Milk History" : "Back to Record Yield"}
         >
-          {activeTab === 'log' ? (
+          {activeTab === "log" ? (
             <>
-              <History size={18} />
-              <span className={styles.historyBtnText}>History</span>
+              <History size={17} />
+              <span>History</span>
             </>
           ) : (
             <>
-              <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>←</span>
-              <span className={styles.historyBtnText}>Record Yield</span>
+              <ArrowLeft size={17} />
+              <span>Log Milk</span>
             </>
           )}
         </button>
       </header>
 
-      {activeTab === 'log' && (
+      {activeTab === "log" && (
         <>
-          {/* Mobile-Friendly Date Selector */}
-          <div style={{ backgroundColor: "var(--color-surface)", padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)", marginBottom: "0.75rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-sub)" }}>Milking Date</span>
-              <div style={{ display: "flex", gap: "6px" }}>
+          {/* Compact Unified Control Deck (Date + Session) */}
+          <div className={styles.controlDeck}>
+            <div className={styles.dateBar}>
+              <div className={styles.datePresets}>
                 <button
                   type="button"
                   onClick={() => setLogDate(todayStr)}
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: "99px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: logDate === todayStr ? "var(--color-primary)" : "var(--color-bg)",
-                    color: logDate === todayStr ? "white" : "var(--color-text-main)",
-                    cursor: "pointer",
-                  }}
+                  className={`${styles.presetPill} ${
+                    logDate === todayStr ? styles.presetActive : ""
+                  }`}
                 >
                   Today
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    const y = new Date();
-                    y.setDate(y.getDate() - 1);
-                    setLogDate(y.toISOString().split('T')[0]);
-                  }}
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: "99px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: logDate !== todayStr ? "var(--color-primary)" : "var(--color-bg)",
-                    color: logDate !== todayStr ? "white" : "var(--color-text-main)",
-                    cursor: "pointer",
-                  }}
+                  onClick={() => setLogDate(yesterdayStr)}
+                  className={`${styles.presetPill} ${
+                    logDate === yesterdayStr ? styles.presetActive : ""
+                  }`}
                 >
                   Yesterday
                 </button>
               </div>
+              <input
+                type="date"
+                max={todayStr}
+                value={logDate}
+                onChange={(e) => setLogDate(e.target.value)}
+                className={styles.dateInput}
+                aria-label="Milking date"
+              />
             </div>
+
+            <div className={styles.sessionToggle} role="tablist">
+              {(
+                [
+                  { id: "Morning", emoji: "🌅", label: "Morning" },
+                  { id: "Mid-day", emoji: "☀️", label: "Mid-day" },
+                  { id: "Evening", emoji: "🌃", label: "Evening" },
+                ] as const
+              ).map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`${styles.sessionBtn} ${
+                    session === s.id ? styles.activeSession : ""
+                  }`}
+                  onClick={() => setSession(s.id)}
+                  role="tab"
+                  aria-selected={session === s.id}
+                >
+                  <span>{s.emoji}</span>
+                  <span>{s.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search Box */}
+          <div className={styles.searchBox}>
+            <Search className={styles.searchIcon} size={18} />
             <input
-              type="date"
-              max={todayStr}
-              value={logDate}
-              onChange={(e) => setLogDate(e.target.value)}
-              style={{
-                width: "100%",
-                minHeight: "44px",
-                padding: "0.6rem 0.75rem",
-                borderRadius: "8px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-bg)",
-                color: "var(--color-text-main)",
-                fontSize: "0.95rem",
-                fontWeight: 600,
-              }}
-            />
-          </div>
-
-          {/* Session Toggle (Morning, Mid-day, Evening) */}
-          <div className={styles.sessionToggle} role="tablist" style={{ marginBottom: "0.75rem" }}>
-            <button 
-              className={`${styles.sessionBtn} ${session === 'Morning' ? styles.activeSession : ''}`}
-              onClick={() => setSession('Morning')}
-              role="tab"
-              aria-selected={session === 'Morning'}
-            >
-              🌅 Morning
-            </button>
-            <button 
-              className={`${styles.sessionBtn} ${session === 'Mid-day' ? styles.activeSession : ''}`}
-              onClick={() => setSession('Mid-day')}
-              role="tab"
-              aria-selected={session === 'Mid-day'}
-            >
-              ☀️ Mid-day
-            </button>
-            <button 
-              className={`${styles.sessionBtn} ${session === 'Evening' ? styles.activeSession : ''}`}
-              onClick={() => setSession('Evening')}
-              role="tab"
-              aria-selected={session === 'Evening'}
-            >
-              🌃 Evening
-            </button>
-          </div>
-
-          {/* Search Box Placed Directly Above Animals */}
-          <div className={styles.searchBox} style={{ marginBottom: "0.75rem" }}>
-            <Search className={styles.searchIcon} size={20} />
-            <input 
-              type="text" 
-              placeholder="Search by Tag ID or Name..." 
+              type="text"
+              placeholder="Filter cows by name or ear tag..."
               className={styles.searchInput}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -315,68 +348,98 @@ export default function ClientMilkLogging({
           {filteredRecords.length > 0 ? (
             <div className={styles.batchList}>
               <div className={styles.listHeader}>
-                <span>Animal</span>
-                <span>Amount (L)</span>
+                <span>Cow</span>
+                <span>Yield (Liters)</span>
               </div>
 
-              {filteredRecords.map(record => (
+              {filteredRecords.map((record) => (
                 <div key={record.id} className={styles.recordRow}>
-                  <div className={styles.cowTag}>
-                     <span className={styles.badge} style={{display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap"}}>
-                      <AnimalIcon species={record.species} size={16} />
-                      {record.name || record.tagNumber} {record.tagNumber && record.name && <span style={{fontWeight: 500, opacity: 0.8}}>#{record.tagNumber}</span>}
+                  <div className={styles.cowInfo}>
+                    <div className={styles.cowAvatar}>
+                      <AnimalIcon species={record.species} size={20} />
+                    </div>
+                    <div className={styles.cowMeta}>
+                      <div className={styles.cowNameRow}>
+                        <span className={styles.cowName}>
+                          {record.name || record.tagNumber}
+                        </span>
+                        {record.tagNumber && record.name && (
+                          <span className={`${styles.cowTagPill} tabular-nums`}>
+                            #{record.tagNumber}
+                          </span>
+                        )}
+                      </div>
                       {(record.status === "SICK" || record.hasRecentTreatment) && (
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "1px 6px", borderRadius: "99px", backgroundColor: "rgba(245, 158, 11, 0.16)", color: "#d97706" }}>
+                        <span className={styles.withdrawalBadge}>
                           {record.status === "SICK" ? "Sick" : "Withdrawal?"}
                         </span>
                       )}
-                    </span>
+                    </div>
                   </div>
-                  
+
                   <div className={styles.inputControls}>
-                    <button className={styles.qtyBtn} onClick={() => decrement(record.id)} aria-label="Decrease amount">-</button>
-                    <input 
-                      type="number" 
-                      inputMode="numeric"
-                      className={styles.qtyInput} 
-                      value={record.amount} 
+                    <button
+                      type="button"
+                      className={styles.qtyBtn}
+                      onClick={() => decrement(record.id)}
+                      aria-label={`Decrease yield for ${record.name}`}
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.5"
+                      min="0"
+                      className={`${styles.qtyInput} tabular-nums`}
+                      value={record.amount}
                       onChange={(e) => handleAmountChange(record.id, e.target.value)}
                       placeholder="0"
-                      aria-label={`Amount for ${record.name || record.tagNumber || "animal"}`}
+                      aria-label={`Yield in liters for ${record.name || record.tagNumber}`}
                     />
-                    <button className={styles.qtyBtn} onClick={() => increment(record.id)} aria-label="Increase amount">+</button>
+                    <button
+                      type="button"
+                      className={styles.qtyBtn}
+                      onClick={() => increment(record.id)}
+                      aria-label={`Increase yield for ${record.name}`}
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <EmptyState 
+            <EmptyState
               icon={<Info size={36} />}
-              title="No cows found"
-              description={searchQuery ? `No records matching "${searchQuery}"` : "You haven't added any active dairy animals to your herd yet."}
-              actionLabel="Add Animal"
+              title="No milking cows found"
+              description={
+                searchQuery
+                  ? `No cows matched "${searchQuery}".`
+                  : "Register active female dairy or indigenous cows to start logging milk."
+              }
+              actionLabel="Go to Herd"
               onAction={() => router.push("/herd")}
             />
           )}
 
-          {/* Sticky Footer Bar with Running Total and Save Action */}
+          {/* Sticky Footer Bar */}
           <div className={styles.stickyFooter}>
             <div className={styles.stickyBar}>
               <div className={styles.footerYieldInfo}>
-                <span className={styles.footerYieldLabel}>
-                  {session} Total
-                </span>
-                <span className={styles.footerYieldValue}>
+                <span className={styles.footerYieldLabel}>{session} Total</span>
+                <span className={`${styles.footerYieldValue} tabular-nums`}>
                   {totalYield} <span className={styles.footerYieldUnit}>Liters</span>
                 </span>
               </div>
 
-              <button 
-                className={styles.submitBtn} 
+              <button
+                type="button"
+                className={styles.submitBtn}
                 onClick={() => handleSaveSession(false)}
                 disabled={isSubmitting || totalYield === 0 || !canLogMilk}
               >
-                <CheckCircle2 size={16} />
+                <CheckCircle2 size={17} />
                 <span>{isSubmitting ? "Saving..." : `Save ${session}`}</span>
               </button>
             </div>
@@ -384,26 +447,15 @@ export default function ClientMilkLogging({
         </>
       )}
 
-      {activeTab === 'history' && (
+      {activeTab === "history" && (
         <div className={styles.batchList}>
           {canExport && (
-            <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 0.5rem 0.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", paddingBottom: "0.4rem" }}>
               <a
                 href="/api/export?type=milk"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: "var(--color-primary, #16a34a)",
-                  textDecoration: "none",
-                  padding: "0.4rem 0.8rem",
-                  borderRadius: "8px",
-                  backgroundColor: "rgba(22, 163, 74, 0.1)",
-                }}
+                className={styles.csvLink}
               >
                 <Download size={14} /> Export Milk CSV
               </a>
@@ -411,7 +463,9 @@ export default function ClientMilkLogging({
           )}
 
           {historyData.length === 0 ? (
-             <div style={{padding: '2rem', textAlign: 'center', opacity: 0.6}}>No milk history found.</div>
+            <div style={{ padding: "2rem", textAlign: "center", color: "var(--color-text-sub)" }}>
+              No milk history logged yet.
+            </div>
           ) : (
             <>
               <div className={styles.listHeader}>
@@ -420,26 +474,34 @@ export default function ClientMilkLogging({
                 <span style={{ textAlign: "right" }}>Actions</span>
               </div>
               {historyData.map((entry, i) => {
-                // Determine 'Today', 'Yesterday', or Date String
                 const entryDate = new Date(entry.date);
                 const today = new Date();
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
-                
-                let dateStr = entryDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-                if (entryDate.toDateString() === today.toDateString()) dateStr = "Today";
-                else if (entryDate.toDateString() === yesterday.toDateString()) dateStr = "Yesterday";
 
-                const sessionEmoji = entry.session === 'Morning' ? '🌅' : entry.session === 'Evening' ? '🌃' : '☀️';
+                let dateStr = entryDate.toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "short",
+                });
+                if (entryDate.toDateString() === today.toDateString()) dateStr = "Today";
+                else if (entryDate.toDateString() === yesterday.toDateString())
+                  dateStr = "Yesterday";
+
+                const sessionEmoji =
+                  entry.session === "Morning"
+                    ? "🌅"
+                    : entry.session === "Evening"
+                    ? "🌃"
+                    : "☀️";
 
                 return (
                   <div key={i} className={styles.historyCard}>
                     <div className={styles.historyCardTop}>
                       <div className={styles.historySessionBadge}>
-                        <span style={{ fontSize: "1.15rem", lineHeight: 1 }}>{sessionEmoji}</span>
+                        <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>{sessionEmoji}</span>
                         <span>{entry.session} Session</span>
                       </div>
-                      <div className={styles.historyYield}>
+                      <div className={`${styles.historyYield} tabular-nums`}>
                         <strong>{entry.total}</strong> <small>Liters</small>
                       </div>
                     </div>
@@ -452,16 +514,24 @@ export default function ClientMilkLogging({
 
                     <div className={styles.historyCardActions}>
                       <button
-                        onClick={() => setSelectedSession({ date: new Date(entry.date).toISOString(), session: entry.session })}
+                        type="button"
+                        onClick={() =>
+                          setSelectedSession({
+                            date: new Date(entry.date).toISOString(),
+                            session: entry.session,
+                          })
+                        }
                         className={styles.historyEditBtn}
-                        title="View Breakdown"
                       >
                         <ExternalLink size={14} />
                         <span>View Breakdown</span>
                       </button>
                       {canManageHistory && (
                         <button
-                          onClick={() => handleDeleteSession(entry.date, entry.session)}
+                          type="button"
+                          onClick={() =>
+                            setDeletingSession({ date: entry.date, sessionType: entry.session })
+                          }
                           disabled={isDeleting}
                           className={styles.historyDeleteBtn}
                           title="Delete Entire Session"
@@ -472,7 +542,7 @@ export default function ClientMilkLogging({
                       )}
                     </div>
                   </div>
-                )
+                );
               })}
             </>
           )}
@@ -489,7 +559,6 @@ export default function ClientMilkLogging({
         />
       )}
 
-      {/* Confirmation Modal for Session Deletion */}
       <ConfirmationModal
         isOpen={!!deletingSession}
         onClose={() => setDeletingSession(null)}
@@ -499,7 +568,12 @@ export default function ClientMilkLogging({
           <span>
             Are you sure you want to delete all milk records for the{" "}
             <strong>{deletingSession?.sessionType}</strong> session on{" "}
-            <strong>{deletingSession?.date ? new Date(deletingSession.date).toLocaleDateString() : ""}</strong>? This will permanently wipe all cow yields for this session.
+            <strong>
+              {deletingSession?.date
+                ? new Date(deletingSession.date).toLocaleDateString()
+                : ""}
+            </strong>
+            ? This will permanently wipe all cow yields for this session.
           </span>
         }
         confirmText="Delete Session"
@@ -515,65 +589,15 @@ export default function ClientMilkLogging({
         onOverride={() => handleSaveSession(true)}
       />
 
-      {/* Post-Save Success Modal / Action Sheet */}
-      {savedSummary && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "rgba(15, 23, 42, 0.65)",
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)",
-            padding: "1rem",
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setSavedSummary(null);
-            }
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "420px",
-              backgroundColor: "var(--color-surface, #ffffff)",
-              color: "var(--color-text-main, #0f172a)",
-              borderRadius: "20px",
-              padding: "1.75rem 1.5rem 1.5rem",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              border: "1px solid var(--color-border, #e2e8f0)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              textAlign: "center",
-              position: "relative",
-            }}
-          >
-            <button
-              onClick={() => setSavedSummary(null)}
-              aria-label="Close"
-              style={{
-                position: "absolute",
-                top: "14px",
-                right: "14px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "var(--color-text-muted, #94a3b8)",
-                padding: "6px",
-                borderRadius: "8px",
-                fontSize: "1rem",
-              }}
-            >
-              ✕
-            </button>
-
+      {/* Post-Save Summary Sheet */}
+      <ResponsiveSheet
+        isOpen={!!savedSummary}
+        onClose={() => setSavedSummary(null)}
+        size="sm"
+        title={savedSummary ? `${savedSummary.session} Session Logged!` : "Session Saved"}
+      >
+        {savedSummary && (
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
             <div
               style={{
                 width: "56px",
@@ -582,49 +606,49 @@ export default function ClientMilkLogging({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                marginBottom: "1rem",
-                backgroundColor: "rgba(22, 163, 74, 0.12)",
-                color: "#16a34a",
+                backgroundColor: "rgba(16, 185, 129, 0.14)",
+                color: "#10b981",
               }}
             >
-              <CheckCircle2 size={32} />
+              <CheckCircle2 size={30} />
             </div>
 
-            <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.25rem", fontWeight: 700 }}>
-              {savedSummary.session} Session Logged!
-            </h3>
-
-            <p style={{ margin: "0 0 1.5rem", fontSize: "0.92rem", color: "var(--color-text-secondary, #64748b)", lineHeight: 1.55 }}>
-              Successfully recorded <strong>{savedSummary.count} {savedSummary.count === 1 ? "cow" : "cows"}</strong> for a total of{" "}
-              <strong style={{ color: "#16a34a" }}>{savedSummary.totalLiters} Liters</strong> on {new Date(savedSummary.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}.
+            <p style={{ margin: 0, fontSize: "0.92rem", color: "var(--color-text-sub)", lineHeight: 1.55 }}>
+              Recorded <strong>{savedSummary.count} {savedSummary.count === 1 ? "cow" : "cows"}</strong> totaling{" "}
+              <strong style={{ color: "var(--color-primary)" }} className="tabular-nums">
+                {savedSummary.totalLiters} Liters
+              </strong>{" "}
+              on{" "}
+              {new Date(savedSummary.date).toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              })}
+              .
             </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", width: "100%" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", width: "100%", marginTop: "0.25rem" }}>
               <button
                 type="button"
                 onClick={() => {
-                  const nextSession = savedSummary.session === "Morning" ? "Mid-day" : savedSummary.session === "Mid-day" ? "Evening" : "Morning";
+                  const nextSession =
+                    savedSummary.session === "Morning"
+                      ? "Mid-day"
+                      : savedSummary.session === "Mid-day"
+                      ? "Evening"
+                      : "Morning";
                   setSession(nextSession);
                   setSavedSummary(null);
                 }}
-                style={{
-                  width: "100%",
-                  padding: "0.85rem 1rem",
-                  borderRadius: "12px",
-                  border: "none",
-                  backgroundColor: "var(--color-primary, #16a34a)",
-                  color: "white",
-                  fontWeight: 600,
-                  fontSize: "0.95rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
-                }}
+                className={sheetStyles.primaryBtn}
               >
-                Record Next Session ({savedSummary.session === "Morning" ? "☀️ Mid-day" : savedSummary.session === "Mid-day" ? "🌃 Evening" : "🌅 Morning"})
+                Log Next Session (
+                {savedSummary.session === "Morning"
+                  ? "☀️ Mid-day"
+                  : savedSummary.session === "Mid-day"
+                  ? "🌃 Evening"
+                  : "🌅 Morning"}
+                )
               </button>
 
               <button
@@ -633,44 +657,15 @@ export default function ClientMilkLogging({
                   setSavedSummary(null);
                   setActiveTab("history");
                 }}
-                style={{
-                  width: "100%",
-                  padding: "0.8rem 1rem",
-                  borderRadius: "12px",
-                  border: "1px solid var(--color-border, #e2e8f0)",
-                  backgroundColor: "var(--color-bg, #f8fafc)",
-                  color: "var(--color-text-main, #334155)",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                }}
+                className={sheetStyles.secondaryBtn}
+                style={{ width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
               >
                 <History size={16} /> View Milk History
               </button>
-
-              <button
-                type="button"
-                onClick={() => setSavedSummary(null)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  padding: "0.5rem",
-                  fontSize: "0.85rem",
-                  color: "var(--color-text-sub, #64748b)",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                Stay on This Page
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </ResponsiveSheet>
     </div>
   );
 }

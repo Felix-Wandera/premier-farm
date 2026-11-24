@@ -28,7 +28,6 @@ export default function NotificationPopover({ alerts, onClose }: NotificationPop
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  // Map alerts to pages (simple heuristic)
   const getHref = (title: string) => {
     const t = title.toLowerCase();
     if (t.includes("inventory") || t.includes("stock")) return "/inventory";
@@ -38,49 +37,59 @@ export default function NotificationPopover({ alerts, onClose }: NotificationPop
   };
 
   return (
-    <div className={styles.popover} ref={popoverRef}>
-      <div className={styles.header}>
-        <h3>Quick Notifications</h3>
-        {alerts.length > 0 && <span className={styles.badgeCount}>{alerts.length} Active</span>}
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '4px' }}>
-            <X size={18} color="var(--color-text-sub)" />
-        </button>
-      </div>
+    <>
+      <div className={styles.mobileScrim} onClick={onClose} />
+      <div className={styles.popover} ref={popoverRef} role="dialog" aria-label="Notifications">
+        <div className={styles.dragHandle} />
+        <div className={styles.header}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <h3>Ranch Alerts</h3>
+            {alerts.length > 0 && <span className={styles.badgeCount}>{alerts.length} Active</span>}
+          </div>
+          <button
+            onClick={onClose}
+            className={styles.closeBtn}
+            aria-label="Close notifications"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-      <div className={styles.list}>
-        {alerts.length > 0 ? (
-          alerts.map((alert, index) => (
-            <Link 
-              key={index} 
-              href={getHref(alert.title)} 
-              className={styles.alertItem}
-              onClick={onClose}
-            >
-              <div className={`${styles.iconWrapper} ${alert.type === 'warning' ? styles.warningIcon : styles.infoIcon}`}>
-                {alert.type === 'warning' ? <AlertTriangle size={18} /> : <Info size={18} />}
-              </div>
-              <div className={styles.content}>
-                <h4>{alert.title}</h4>
-                <p>{alert.description}</p>
-              </div>
+        <div className={styles.list}>
+          {alerts.length > 0 ? (
+            alerts.map((alert, index) => (
+              <Link
+                key={index}
+                href={getHref(alert.title)}
+                className={styles.alertItem}
+                onClick={onClose}
+              >
+                <div className={`${styles.iconWrapper} ${alert.type === "warning" ? styles.warningIcon : styles.infoIcon}`}>
+                  {alert.type === "warning" ? <AlertTriangle size={18} /> : <Info size={18} />}
+                </div>
+                <div className={styles.content}>
+                  <h4>{alert.title}</h4>
+                  <p>{alert.description}</p>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div className={styles.emptyState}>
+              <BellOff size={36} strokeWidth={1.6} opacity={0.35} />
+              <p style={{ fontWeight: 600, color: "var(--color-text-main)" }}>All caught up!</p>
+              <p>No active alerts for Premier Ranch Kitale right now.</p>
+            </div>
+          )}
+        </div>
+
+        {alerts.length > 0 && (
+          <div className={styles.footer}>
+            <Link href="/" className={styles.viewAll} onClick={onClose}>
+              View Home Overview
             </Link>
-          ))
-        ) : (
-          <div className={styles.emptyState}>
-            <BellOff size={40} strokeWidth={1.5} opacity={0.3} />
-            <p>All caught up!</p>
-            <p style={{ opacity: 0.7 }}>No active alerts for your farm at the moment.</p>
           </div>
         )}
       </div>
-
-      {alerts.length > 0 && (
-        <div className={styles.footer}>
-          <Link href="/" className={styles.viewAll} onClick={onClose}>
-            View Home Dashboard
-          </Link>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

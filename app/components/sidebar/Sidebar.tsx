@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import logoPic from "@/public/logo.png";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
-  Beef,
   Droplet,
   LineChart,
   BarChart3,
@@ -23,7 +22,7 @@ import styles from "./Sidebar.module.css";
 import { ThemeToggle } from "../theme-toggle/ThemeToggle";
 import { useToast } from "../ui/Toast";
 import { useAuth } from "../auth/AuthProvider";
-import TenantSwitcher from "../tenant/TenantSwitcher";
+import { CattleIcon } from "../ui/AnimalIcon";
 import { APP_BRAND_NAME } from "@/lib/branding";
 import { PermissionKey } from "@/lib/permissions";
 
@@ -35,7 +34,7 @@ const navItems: Array<{
 }> = [
   { icon: Home, label: "Dashboard", href: "/" },
   { icon: BarChart3, label: "Analytics & Reports", href: "/analytics", permission: "analytics:view" },
-  { icon: Beef, label: "Herd", href: "/herd", permission: "herd:view" },
+  { icon: CattleIcon, label: "Herd", href: "/herd", permission: "herd:view" },
   { icon: HeartPulse, label: "Breeding & Health", href: "/breeding", permission: "health:view" },
   { icon: Droplet, label: "Milk Production", href: "/milk", permission: "milk:view" },
   { icon: LineChart, label: "Sales & Finances", href: "/sales", permission: "finances:view" },
@@ -48,19 +47,23 @@ export default function Sidebar() {
   const router = useRouter();
   const toast = useToast();
   const { hasPermission } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebar-collapsed");
-    if (saved !== null) {
-      setIsCollapsed(JSON.parse(saved));
-    }
-  }, []);
+  const isCollapsed = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener("sidebar-collapse-change", onStoreChange);
+      window.addEventListener("storage", onStoreChange);
+      return () => {
+        window.removeEventListener("sidebar-collapse-change", onStoreChange);
+        window.removeEventListener("storage", onStoreChange);
+      };
+    },
+    () => localStorage.getItem("sidebar-collapsed") === "true",
+    () => false
+  );
 
   const toggleCollapse = () => {
     const newState = !isCollapsed;
-    setIsCollapsed(newState);
     localStorage.setItem("sidebar-collapsed", JSON.stringify(newState));
+    window.dispatchEvent(new Event("sidebar-collapse-change"));
   };
 
   const handleLogout = async () => {
@@ -99,8 +102,6 @@ export default function Sidebar() {
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
       </div>
-
-      <TenantSwitcher isCollapsed={isCollapsed} />
 
       <nav className={styles.navItems}>
         {navItems

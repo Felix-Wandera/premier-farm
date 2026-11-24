@@ -1,9 +1,10 @@
 .container {
   display: flex;
-  height: 100vh;
-  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   background: var(--color-bg);
+  overflow-y: auto;
 }
 
 .formSection {
@@ -11,7 +12,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: 1.5rem 1.25rem calc(2rem + env(safe-area-inset-bottom, 0px));
 }
 
 .formWrapper {

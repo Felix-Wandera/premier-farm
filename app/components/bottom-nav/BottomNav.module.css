@@ -3,30 +3,28 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--app-bar-height);
+  height: calc(var(--app-bar-height) + env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 1.5rem;
-  padding-bottom: env(safe-area-inset-bottom, 0);
-  /* iPhone notch support */
-  z-index: 50;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
-  /* Slight shadow pointing up */
-  background-color: white;
+  padding: 0 0.75rem env(safe-area-inset-bottom, 0px) 0.75rem;
+  z-index: 120;
+  box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.06);
+}
+
+:global([data-theme='dark']) .bottomNav {
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.45);
 }
 
 @media (min-width: 768px) {
   .bottomNav {
     display: none;
-    /* Hide entirely on desktop */
   }
 }
 
 .navGroup {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
   flex: 1;
   justify-content: space-around;
 }
@@ -35,19 +33,23 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 3px;
+  min-width: 56px;
+  min-height: 48px;
   text-decoration: none;
   color: var(--color-text-sub);
-  transition: all 0.2s ease;
+  transition: color 0.18s ease, transform 0.15s ease;
   padding: 0.25rem 0.5rem;
   background: none;
   border: none;
   cursor: pointer;
   font-family: inherit;
+  border-radius: 12px;
 }
 
 .navItem:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
 }
 
 .navItem.active {
@@ -55,48 +57,41 @@
 }
 
 .label {
-  font-size: 0.65rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .fabWrapper {
   position: relative;
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: var(--app-bar-height);
   display: flex;
   justify-content: center;
-  margin: 0 1rem;
+  flex-shrink: 0;
 }
 
-/* 
-  The FAB is positioned half-outside the navigation bar 
-  to mimic iOS/Android floating action buttons securely 
-*/
 .fab {
   position: absolute;
-  top: -20px;
+  top: -18px;
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
   border: 4px solid var(--color-surface);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 20px rgba(4, 120, 87, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
 }
 
-:global([data-theme='dark']) {
-  .fab {
-    border-color: var(--color-surface);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  }
+:global([data-theme='dark']) .fab {
+  border-color: var(--color-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
 }
 
 .fab:active {
-  transform: scale(0.9);
-  background: var(--color-primary-dark);
+  transform: scale(0.91);
 }

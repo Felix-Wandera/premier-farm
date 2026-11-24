@@ -6,7 +6,6 @@ import {
   BarChart3,
   Droplet,
   DollarSign,
-  Beef,
   Package,
   Download,
   Printer,
@@ -21,6 +20,7 @@ import {
 } from "@/actions/analytics.actions";
 import { useAuth } from "../auth/AuthProvider";
 import DataExportModal from "../settings/DataExportModal";
+import { CattleIcon } from "../ui/AnimalIcon";
 import { APP_BRAND_NAME } from "@/lib/branding";
 import {
   CashFlowComboChart,
@@ -57,7 +57,7 @@ function DeltaBadge({ pct, invertColors = false }: { pct: number | null; invertC
   const isPositive = pct >= 0;
   const good = invertColors ? !isPositive : isPositive;
   return (
-    <span className={good ? styles.deltaPos : styles.deltaNeg}>
+    <span className={`${good ? styles.deltaPos : styles.deltaNeg} tabular-nums`}>
       {isPositive ? "↑" : "↓"} {Math.abs(pct)}%
     </span>
   );
@@ -68,7 +68,9 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
   const canExport = hasPermission("exports:download");
 
   const [data, setData] = useState<AnalyticsData>(initialData);
-  const [activeTab, setActiveTab] = useState<"overview" | "milk" | "finances" | "herd" | "inventory">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "milk" | "finances" | "herd" | "inventory"
+  >("overview");
   const [preset, setPreset] = useState<AnalyticsPreset>(initialData.meta.preset);
   const [customFrom, setCustomFrom] = useState(initialData.meta.from);
   const [customTo, setCustomTo] = useState(initialData.meta.to);
@@ -112,8 +114,8 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
     { value: "this_month", label: "This Month" },
     { value: "last_month", label: "Last Month" },
     { value: "90d", label: "90 Days" },
-    { value: "ytd", label: "Year to Date" },
-    { value: "custom", label: "Custom Range" },
+    { value: "ytd", label: "YTD" },
+    { value: "custom", label: "Custom" },
   ];
 
   const dropAlertCows = data.milk.cowLeaderboard.filter((c) => c.dropAlertPct !== null);
@@ -123,14 +125,23 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
       {/* Print-Only Masthead */}
       <div className={styles.printHeader}>
         <div>
-          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#047857", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          <div
+            style={{
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              color: "#047857",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}
+          >
             {APP_BRAND_NAME} • Executive Management Report
           </div>
           <h1 style={{ margin: "2px 0 0", fontSize: "1.5rem", fontWeight: 800, color: "#0f172a" }}>
             {data.meta.farmName} — Performance Summary
           </h1>
           <div style={{ fontSize: "0.82rem", color: "#475569", marginTop: "2px" }}>
-            {data.meta.location} • Period: <strong>{data.meta.periodLabel}</strong> ({data.meta.from} to {data.meta.to})
+            {data.meta.location} • Period: <strong>{data.meta.periodLabel}</strong> ({data.meta.from} to{" "}
+            {data.meta.to})
           </div>
         </div>
         <div style={{ textAlign: "right", fontSize: "0.78rem", color: "#64748b" }}>
@@ -141,42 +152,43 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
       {/* Screen Header */}
       <header className={`${styles.header} ${styles.noPrint}`}>
         <div>
-          <h1 className={styles.pageTitle}>Analytics &amp; Reporting</h1>
+          <h1 className={styles.pageTitle}>Analytics &amp; Reports</h1>
           <p className={styles.subtitle}>
-            {data.meta.farmName} • {data.meta.periodLabel} ({data.meta.daysSpan} days)
+            {data.meta.periodLabel} ({data.meta.daysSpan} days)
           </p>
         </div>
 
-        <div className={styles.headerActions}>
-          {canExport && (
-            <>
-              <button
-                type="button"
-                className={styles.actionBtnSecondary}
-                onClick={() => window.print()}
-                title="Print or Save Executive Summary as PDF"
-              >
-                <Printer size={16} />
-                <span>Print / PDF Report</span>
-              </button>
-              <button
-                type="button"
-                className={styles.actionBtnPrimary}
-                onClick={() => setIsExportOpen(true)}
-              >
-                <Download size={16} />
-                <span>Export CSV</span>
-              </button>
-            </>
-          )}
-        </div>
+        {canExport && (
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={styles.actionBtnSecondary}
+              onClick={() => window.print()}
+              title="Print or Save Executive Summary as PDF"
+            >
+              <Printer size={16} />
+              <span className={styles.btnLabelDesktop}>Print / PDF</span>
+            </button>
+            <button
+              type="button"
+              className={styles.actionBtnPrimary}
+              onClick={() => setIsExportOpen(true)}
+            >
+              <Download size={16} />
+              <span>Export CSV</span>
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Date Range Filter Bar */}
       <div className={styles.filterBar}>
         <div className={styles.presetRow}>
           <div className={styles.presetPills}>
-            <Calendar size={16} style={{ color: "var(--color-text-sub)", marginRight: "4px" }} />
+            <Calendar
+              size={15}
+              style={{ color: "var(--color-text-sub)", flexShrink: 0, marginRight: "2px" }}
+            />
             {presets.map((p) => (
               <button
                 key={p.value}
@@ -188,7 +200,9 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
                     applyFilter(p.value);
                   }
                 }}
-                className={`${styles.presetPill} ${preset === p.value ? styles.presetPillActive : ""}`}
+                className={`${styles.presetPill} ${
+                  preset === p.value ? styles.presetPillActive : ""
+                }`}
               >
                 {p.label}
               </button>
@@ -196,27 +210,28 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
           </div>
 
           {isPending && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", color: "var(--color-primary)", fontWeight: 600 }}>
-              <Loader2 size={15} className="animate-spin" /> Refreshing metrics...
+            <div className={styles.refreshingPill}>
+              <Loader2 size={14} className="animate-spin" /> Refreshing...
             </div>
           )}
         </div>
 
         {preset === "custom" && (
           <div className={styles.customDateRow}>
-            <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>From:</label>
             <input
               type="date"
               className={styles.dateInput}
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
+              aria-label="From date"
             />
-            <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>To:</label>
+            <span style={{ fontSize: "0.8rem", color: "var(--color-text-sub)" }}>to</span>
             <input
               type="date"
               className={styles.dateInput}
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
+              aria-label="To date"
             />
             <button
               type="button"
@@ -224,7 +239,7 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
               onClick={() => applyFilter("custom", customFrom, customTo)}
               disabled={isPending}
             >
-              Apply Range
+              Apply
             </button>
           </div>
         )}
@@ -237,14 +252,14 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
           className={`${styles.tabBtn} ${activeTab === "overview" ? styles.tabBtnActive : ""}`}
           onClick={() => setActiveTab("overview")}
         >
-          <BarChart3 size={17} /> Overview
+          <BarChart3 size={16} /> Overview
         </button>
         <button
           type="button"
           className={`${styles.tabBtn} ${activeTab === "milk" ? styles.tabBtnActive : ""}`}
           onClick={() => setActiveTab("milk")}
         >
-          <Droplet size={17} /> Milk &amp; Cow Productivity
+          <Droplet size={16} /> Milk &amp; Cows
         </button>
         {canViewFinances && (
           <button
@@ -252,7 +267,7 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
             className={`${styles.tabBtn} ${activeTab === "finances" ? styles.tabBtnActive : ""}`}
             onClick={() => setActiveTab("finances")}
           >
-            <DollarSign size={17} /> Finances &amp; Unit Economics
+            <DollarSign size={16} /> Finances
           </button>
         )}
         <button
@@ -260,86 +275,90 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
           className={`${styles.tabBtn} ${activeTab === "herd" ? styles.tabBtnActive : ""}`}
           onClick={() => setActiveTab("herd")}
         >
-          <Beef size={17} /> Herd, Breeding &amp; Health
+          <CattleIcon size={16} /> Herd &amp; Health
         </button>
         <button
           type="button"
           className={`${styles.tabBtn} ${activeTab === "inventory" ? styles.tabBtnActive : ""}`}
           onClick={() => setActiveTab("inventory")}
         >
-          <Package size={17} /> Inventory Burn &amp; Runway
+          <Package size={16} /> Stock Runway
         </button>
       </nav>
 
       {/* Interactive Screen Tabs */}
-      <div className={styles.screenOnlySection} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      <div className={styles.screenOnlySection}>
         {/* ================= OVERVIEW TAB ================= */}
         {activeTab === "overview" && (
           <>
             <div className={styles.kpiGrid}>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiTop}>
-                  <span className={styles.kpiLabel}>Total Milk Produced</span>
+                  <span className={styles.kpiLabel}>Milk Output</span>
                   <DeltaBadge pct={data.milk.litersDeltaPct} />
                 </div>
-                <div className={styles.kpiValue}>{data.milk.totalLiters.toLocaleString()} L</div>
-                <div className={styles.kpiSub}>
-                  <span>Avg {data.milk.avgDailyLiters} L/day</span> •{" "}
-                  <span>{data.milk.avgLitersPerCowPerDay} L/cow/day</span>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {data.milk.totalLiters.toLocaleString()} L
+                </div>
+                <div className={`${styles.kpiSub} tabular-nums`}>
+                  <span>{data.milk.avgDailyLiters} L/d</span> •{" "}
+                  <span>{data.milk.avgLitersPerCowPerDay} L/cow</span>
                 </div>
               </div>
 
               {canViewFinances && data.finances ? (
                 <div className={styles.kpiCard}>
                   <div className={styles.kpiTop}>
-                    <span className={styles.kpiLabel}>Net Ranch Profit</span>
+                    <span className={styles.kpiLabel}>Net Profit</span>
                     <DeltaBadge pct={data.finances.netDeltaPct} />
                   </div>
                   <div
-                    className={styles.kpiValue}
-                    style={{ color: data.finances.netProfit >= 0 ? "#16a34a" : "#dc2626" }}
+                    className={`${styles.kpiValue} tabular-nums`}
+                    style={{ color: data.finances.netProfit >= 0 ? "#10b981" : "#ef4444" }}
                   >
                     {formatMoney(data.finances.netProfit, currency)}
                   </div>
-                  <div className={styles.kpiSub}>
-                    <span>Margin: {data.finances.profitMarginPct}%</span> •{" "}
-                    <span>Rev: {formatMoney(data.finances.totalIncome, currency)}</span>
+                  <div className={`${styles.kpiSub} tabular-nums`}>
+                    <span>Margin {data.finances.profitMarginPct}%</span>
                   </div>
                 </div>
               ) : (
                 <div className={styles.kpiCard}>
                   <div className={styles.kpiTop}>
-                    <span className={styles.kpiLabel}>Active Milking Cows</span>
+                    <span className={styles.kpiLabel}>Milking Cows</span>
                   </div>
-                  <div className={styles.kpiValue}>{data.milk.activeLactatingCows}</div>
+                  <div className={`${styles.kpiValue} tabular-nums`}>
+                    {data.milk.activeLactatingCows}
+                  </div>
                   <div className={styles.kpiSub}>
-                    <span>{data.milk.milkedCowsCount} cows milked in period</span>
+                    <span>{data.milk.milkedCowsCount} milked</span>
                   </div>
                 </div>
               )}
 
               <div className={styles.kpiCard}>
                 <div className={styles.kpiTop}>
-                  <span className={styles.kpiLabel}>Living Herd Size</span>
+                  <span className={styles.kpiLabel}>Living Herd</span>
                 </div>
-                <div className={styles.kpiValue}>{data.herd.livingTotal}</div>
-                <div className={styles.kpiSub}>
-                  <span>+{data.herd.periodAdditions} added</span> •{" "}
-                  <span>{data.herd.sick} sick</span> •{" "}
-                  <span>Mortality: {data.herd.mortalityRatePct}%</span>
+                <div className={`${styles.kpiValue} tabular-nums`}>{data.herd.livingTotal}</div>
+                <div className={`${styles.kpiSub} tabular-nums`}>
+                  <span>+{data.herd.periodAdditions} new</span> •{" "}
+                  <span>{data.herd.sick} sick</span>
                 </div>
               </div>
 
               <div className={styles.kpiCard}>
                 <div className={styles.kpiTop}>
-                  <span className={styles.kpiLabel}>Operational Watchlist</span>
+                  <span className={styles.kpiLabel}>Watchlist</span>
                 </div>
-                <div className={styles.kpiValue}>
-                  {data.herd.overdueEvents.length + data.inventory.criticalCount + dropAlertCows.length}
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {data.herd.overdueEvents.length +
+                    data.inventory.criticalCount +
+                    dropAlertCows.length}
                 </div>
                 <div className={styles.kpiSub}>
-                  <span>{data.herd.overdueEvents.length} overdue breeding</span> •{" "}
-                  <span>{data.inventory.criticalCount} critical stock</span>
+                  <span>{data.herd.overdueEvents.length} breeding</span> •{" "}
+                  <span>{data.inventory.criticalCount} stock</span>
                 </div>
               </div>
             </div>
@@ -349,7 +368,9 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
                 <div className={styles.cardHeader}>
                   <div>
                     <h3 className={styles.cardTitle}>Milk Production Trend (Liters)</h3>
-                    <p className={styles.cardSubtitle}>Morning, Mid-day &amp; Evening session yields</p>
+                    <p className={styles.cardSubtitle}>
+                      Slide finger or tap points to inspect session yields
+                    </p>
                   </div>
                 </div>
                 <div className={styles.chartBox}>
@@ -401,60 +422,40 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
               )}
             </div>
 
-            {/* Actionable Alerts Table */}
-            {(dropAlertCows.length > 0 || data.herd.overdueEvents.length > 0 || data.inventory.criticalCount > 0) && (
+            {(dropAlertCows.length > 0 ||
+              data.herd.overdueEvents.length > 0 ||
+              data.inventory.criticalCount > 0) && (
               <div className={styles.card}>
                 <div className={styles.cardHeader}>
                   <div>
                     <h3 className={styles.cardTitle}>Priority Management Attention</h3>
-                    <p className={styles.cardSubtitle}>Automated anomaly &amp; threshold detections across the ranch</p>
+                    <p className={styles.cardSubtitle}>
+                      Automated anomaly &amp; threshold detections across the ranch
+                    </p>
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                   {dropAlertCows.map((cow) => (
-                    <div
-                      key={`drop-${cow.id}`}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "0.75rem 1rem",
-                        borderRadius: "10px",
-                        backgroundColor: "rgba(239, 68, 68, 0.08)",
-                        border: "1px solid rgba(239, 68, 68, 0.22)",
-                        fontSize: "0.86rem",
-                        gap: "1rem",
-                      }}
-                    >
+                    <div key={`drop-${cow.id}`} className={styles.alertBannerDanger}>
                       <span>
-                        <strong>Milk Drop Alert:</strong> {cow.name}{cow.tagNumber ? ` (#${cow.tagNumber})` : ""} is down{" "}
-                        <strong>{cow.dropAlertPct}%</strong> over the last 7 days vs prior 14-day baseline. Check for mastitis or illness.
+                        <strong>Milk Drop Alert:</strong> {cow.name}
+                        {cow.tagNumber ? ` (#${cow.tagNumber})` : ""} is down{" "}
+                        <strong>{cow.dropAlertPct}%</strong> over the last 7 days vs prior 14-day
+                        baseline.
                       </span>
-                      <Link href={`/herd/${cow.id}`} style={{ color: "#dc2626", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+                      <Link href={`/herd/${cow.id}`} className={styles.alertBannerLinkDanger}>
                         Inspect &rarr;
                       </Link>
                     </div>
                   ))}
                   {data.herd.overdueEvents.slice(0, 4).map((ev) => (
-                    <div
-                      key={`ov-${ev.id}`}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "0.75rem 1rem",
-                        borderRadius: "10px",
-                        backgroundColor: "rgba(245, 158, 11, 0.09)",
-                        border: "1px solid rgba(245, 158, 11, 0.25)",
-                        fontSize: "0.86rem",
-                        gap: "1rem",
-                      }}
-                    >
+                    <div key={`ov-${ev.id}`} className={styles.alertBannerWarn}>
                       <span>
                         <strong>Overdue {ev.eventType}:</strong> {ev.animalName}
-                        {ev.tagNumber ? ` (#${ev.tagNumber})` : ""} was expected {ev.expectedDate} ({ev.daysOverdue}d overdue).
+                        {ev.tagNumber ? ` (#${ev.tagNumber})` : ""} expected {ev.expectedDate} (
+                        {ev.daysOverdue}d overdue).
                       </span>
-                      <Link href="/breeding" style={{ color: "#d97706", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+                      <Link href="/breeding" className={styles.alertBannerLinkWarn}>
                         Resolve &rarr;
                       </Link>
                     </div>
@@ -471,31 +472,39 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
             <div className={styles.kpiGrid}>
               <div className={styles.kpiCard}>
                 <div className={styles.kpiTop}>
-                  <span className={styles.kpiLabel}>Period Milk Output</span>
+                  <span className={styles.kpiLabel}>Period Output</span>
                   <DeltaBadge pct={data.milk.litersDeltaPct} />
                 </div>
-                <div className={styles.kpiValue}>{data.milk.totalLiters.toLocaleString()} L</div>
-                <div className={styles.kpiSub}>Prev period: {data.milk.prevTotalLiters.toLocaleString()} L</div>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {data.milk.totalLiters.toLocaleString()} L
+                </div>
+                <div className={`${styles.kpiSub} tabular-nums`}>
+                  Prev: {data.milk.prevTotalLiters.toLocaleString()} L
+                </div>
               </div>
 
               <div className={styles.kpiCard}>
-                <span className={styles.kpiLabel}>Avg Ranch Yield / Day</span>
-                <div className={styles.kpiValue}>{data.milk.avgDailyLiters} L</div>
-                <div className={styles.kpiSub}>Across {data.meta.daysSpan} calendar days</div>
+                <span className={styles.kpiLabel}>Avg Ranch / Day</span>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {data.milk.avgDailyLiters} L
+                </div>
+                <div className={styles.kpiSub}>Over {data.meta.daysSpan} days</div>
               </div>
 
               <div className={styles.kpiCard}>
-                <span className={styles.kpiLabel}>Avg Yield / Milking Cow</span>
-                <div className={styles.kpiValue}>{data.milk.avgLitersPerCowPerDay} L/day</div>
+                <span className={styles.kpiLabel}>Avg / Cow / Day</span>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {data.milk.avgLitersPerCowPerDay} L
+                </div>
                 <div className={styles.kpiSub}>{data.milk.milkedCowsCount} cows milked</div>
               </div>
 
               <div className={styles.kpiCard}>
-                <span className={styles.kpiLabel}>Retained / Unsold Milk</span>
-                <div className={styles.kpiValue}>{data.milk.retainedOrVarianceLiters} L</div>
-                <div className={styles.kpiSub}>
-                  Sold with qty logged: {data.milk.soldMilkLiters} L (calf feed / home / shrinkage)
+                <span className={styles.kpiLabel}>Retained / Unsold</span>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {data.milk.retainedOrVarianceLiters} L
                 </div>
+                <div className={styles.kpiSub}>Sold logged: {data.milk.soldMilkLiters} L</div>
               </div>
             </div>
 
@@ -521,8 +530,8 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
               <div className={styles.card}>
                 <div className={styles.cardHeader}>
                   <div>
-                    <h3 className={styles.cardTitle}>Individual Cow Lactation Curve</h3>
-                    <p className={styles.cardSubtitle}>Inspect single-cow yield trajectory</p>
+                    <h3 className={styles.cardTitle}>Cow Lactation Curve</h3>
+                    <p className={styles.cardSubtitle}>Single-cow yield trajectory</p>
                   </div>
                   {data.milk.cowLeaderboard.length > 0 && (
                     <select
@@ -560,57 +569,111 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
               <div className={styles.cardHeader}>
                 <div>
                   <h3 className={styles.cardTitle}>Cow Productivity Leaderboard</h3>
-                  <p className={styles.cardSubtitle}>Ranked by average daily yield across milking days</p>
+                  <p className={styles.cardSubtitle}>Ranked by average daily yield</p>
                 </div>
               </div>
-              <div className={styles.tableWrapper}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Rank</th>
-                      <th>Cow</th>
-                      <th>Species</th>
-                      <th>Milking Days</th>
-                      <th>Total Yield</th>
-                      <th>Avg L / Day</th>
-                      <th>Health / Trend Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.milk.cowLeaderboard.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} style={{ textAlign: "center", opacity: 0.6, padding: "2rem" }}>
-                          No cow milking logs recorded in this period.
-                        </td>
-                      </tr>
-                    ) : (
-                      data.milk.cowLeaderboard.map((cow, idx) => (
-                        <tr key={cow.id}>
-                          <td><strong>#{idx + 1}</strong></td>
-                          <td>
-                            <Link href={`/herd/${cow.id}`} style={{ fontWeight: 700, color: "var(--color-primary)", textDecoration: "none" }}>
+
+              {data.milk.cowLeaderboard.length === 0 ? (
+                <p className={styles.emptyTableMsg}>No cow milking logs recorded in this period.</p>
+              ) : (
+                <>
+                  {/* Mobile Ranked Cards (< 640px) */}
+                  <div className={styles.mobileCardList}>
+                    {data.milk.cowLeaderboard.map((cow, idx) => (
+                      <Link
+                        key={cow.id}
+                        href={`/herd/${cow.id}`}
+                        className={styles.mobileDataCard}
+                      >
+                        <div className={styles.mobileCardTop}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                            <span className={`${styles.rankBadge} tabular-nums`}>#{idx + 1}</span>
+                            <strong className={styles.mobileCardTitle}>
                               {cow.name} {cow.tagNumber ? `(#${cow.tagNumber})` : ""}
-                            </Link>
-                          </td>
-                          <td>{cow.species}</td>
-                          <td>{cow.milkingDays} d</td>
-                          <td><strong>{cow.totalLiters} L</strong></td>
-                          <td><strong>{cow.avgDailyLiters} L/d</strong></td>
-                          <td>
-                            {cow.dropAlertPct !== null ? (
-                              <span className={styles.badgeCritical}>
-                                <AlertTriangle size={12} /> Down {cow.dropAlertPct}% (7d)
-                              </span>
-                            ) : (
-                              <span className={styles.badgeHealthy}>Steady</span>
-                            )}
-                          </td>
+                            </strong>
+                          </div>
+                          {cow.dropAlertPct !== null ? (
+                            <span className={styles.badgeCritical}>
+                              <AlertTriangle size={11} /> −{cow.dropAlertPct}%
+                            </span>
+                          ) : (
+                            <span className={styles.badgeHealthy}>Steady</span>
+                          )}
+                        </div>
+                        <div className={`${styles.mobileMetricsRow} tabular-nums`}>
+                          <div>
+                            <span>Avg / Day</span>
+                            <strong>{cow.avgDailyLiters} L</strong>
+                          </div>
+                          <div>
+                            <span>Total Yield</span>
+                            <strong>{cow.totalLiters} L</strong>
+                          </div>
+                          <div>
+                            <span>Days</span>
+                            <strong>{cow.milkingDays} d</strong>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table (>= 640px) */}
+                  <div className={styles.desktopTableWrapper}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Rank</th>
+                          <th>Cow</th>
+                          <th>Species</th>
+                          <th>Milking Days</th>
+                          <th>Total Yield</th>
+                          <th>Avg L / Day</th>
+                          <th>Health / Trend Status</th>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody>
+                        {data.milk.cowLeaderboard.map((cow, idx) => (
+                          <tr key={cow.id}>
+                            <td className="tabular-nums">
+                              <strong>#{idx + 1}</strong>
+                            </td>
+                            <td>
+                              <Link
+                                href={`/herd/${cow.id}`}
+                                style={{
+                                  fontWeight: 700,
+                                  color: "var(--color-primary)",
+                                  textDecoration: "none",
+                                }}
+                              >
+                                {cow.name} {cow.tagNumber ? `(#${cow.tagNumber})` : ""}
+                              </Link>
+                            </td>
+                            <td>{cow.species}</td>
+                            <td className="tabular-nums">{cow.milkingDays} d</td>
+                            <td className="tabular-nums">
+                              <strong>{cow.totalLiters} L</strong>
+                            </td>
+                            <td className="tabular-nums">
+                              <strong>{cow.avgDailyLiters} L/d</strong>
+                            </td>
+                            <td>
+                              {cow.dropAlertPct !== null ? (
+                                <span className={styles.badgeCritical}>
+                                  <AlertTriangle size={12} /> Down {cow.dropAlertPct}% (7d)
+                                </span>
+                              ) : (
+                                <span className={styles.badgeHealthy}>Steady</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}
@@ -624,45 +687,52 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
                   <span className={styles.kpiLabel}>Gross Revenue</span>
                   <DeltaBadge pct={data.finances.incomeDeltaPct} />
                 </div>
-                <div className={styles.kpiValue}>{formatMoney(data.finances.totalIncome, currency)}</div>
-                <div className={styles.kpiSub}>Prev: {formatMoney(data.finances.prevIncome, currency)}</div>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {formatMoney(data.finances.totalIncome, currency)}
+                </div>
+                <div className={`${styles.kpiSub} tabular-nums`}>
+                  Prev: {formatMoney(data.finances.prevIncome, currency)}
+                </div>
               </div>
 
               <div className={styles.kpiCard}>
                 <div className={styles.kpiTop}>
-                  <span className={styles.kpiLabel}>Operating Expenses</span>
+                  <span className={styles.kpiLabel}>Expenses</span>
                   <DeltaBadge pct={data.finances.expenseDeltaPct} invertColors />
                 </div>
-                <div className={styles.kpiValue}>{formatMoney(data.finances.totalExpenses, currency)}</div>
-                <div className={styles.kpiSub}>Prev: {formatMoney(data.finances.prevExpenses, currency)}</div>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {formatMoney(data.finances.totalExpenses, currency)}
+                </div>
+                <div className={`${styles.kpiSub} tabular-nums`}>
+                  Prev: {formatMoney(data.finances.prevExpenses, currency)}
+                </div>
               </div>
 
               <div className={styles.kpiCard}>
                 <div className={styles.kpiTop}>
-                  <span className={styles.kpiLabel}>Net Profit &amp; Margin</span>
+                  <span className={styles.kpiLabel}>Net Profit</span>
                   <DeltaBadge pct={data.finances.netDeltaPct} />
                 </div>
                 <div
-                  className={styles.kpiValue}
-                  style={{ color: data.finances.netProfit >= 0 ? "#16a34a" : "#dc2626" }}
+                  className={`${styles.kpiValue} tabular-nums`}
+                  style={{ color: data.finances.netProfit >= 0 ? "#10b981" : "#ef4444" }}
                 >
                   {formatMoney(data.finances.netProfit, currency)}
                 </div>
-                <div className={styles.kpiSub}>Net Margin: {data.finances.profitMarginPct}%</div>
+                <div className={styles.kpiSub}>Margin: {data.finances.profitMarginPct}%</div>
               </div>
 
               <div className={styles.kpiCard}>
-                <span className={styles.kpiLabel}>Dairy Unit Economics</span>
-                <div className={styles.kpiValue}>
+                <span className={styles.kpiLabel}>Cost / Liter</span>
+                <div className={`${styles.kpiValue} tabular-nums`}>
                   {data.finances.unitEconomics.costPerLiterProduced !== null
-                    ? `${currency} ${data.finances.unitEconomics.costPerLiterProduced}/L`
+                    ? `${currency} ${data.finances.unitEconomics.costPerLiterProduced}`
                     : "N/A"}
                 </div>
                 <div className={styles.kpiSub}>
-                  Cost/L produced
                   {data.finances.unitEconomics.realizedMilkPricePerLiter !== null
-                    ? ` • Sold @ ${currency} ${data.finances.unitEconomics.realizedMilkPricePerLiter}/L`
-                    : ""}
+                    ? `Sold @ ${currency} ${data.finances.unitEconomics.realizedMilkPricePerLiter}/L`
+                    : "Unit cost produced"}
                 </div>
               </div>
             </div>
@@ -671,8 +741,10 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
               <div className={styles.card}>
                 <div className={styles.cardHeader}>
                   <div>
-                    <h3 className={styles.cardTitle}>Cash Flow &amp; Net Profit Trajectory</h3>
-                    <p className={styles.cardSubtitle}>Revenue vs operating expenses over {data.meta.periodLabel}</p>
+                    <h3 className={styles.cardTitle}>Cash Flow &amp; Net Trajectory</h3>
+                    <p className={styles.cardSubtitle}>
+                      Revenue vs operating expenses ({data.meta.periodLabel})
+                    </p>
                   </div>
                 </div>
                 <div className={styles.chartBox}>
@@ -687,7 +759,7 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
                 <div className={styles.cardHeader}>
                   <div>
                     <h3 className={styles.cardTitle}>Expense Cost Breakdown</h3>
-                    <p className={styles.cardSubtitle}>Share of total ranch operating costs</p>
+                    <p className={styles.cardSubtitle}>Tap any slice or category to inspect</p>
                   </div>
                 </div>
                 <div className={styles.chartBox}>
@@ -703,58 +775,103 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
             <div className={styles.chartsRow}>
               <div className={styles.card}>
                 <h3 className={styles.cardTitle}>Expense Ledger by Category</h3>
-                <div className={styles.tableWrapper}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Category</th>
-                        <th>Amount</th>
-                        <th>Share</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.finances.expenseByCategory.length === 0 ? (
-                        <tr><td colSpan={3} style={{ opacity: 0.6, textAlign: "center" }}>No expenses in period</td></tr>
-                      ) : (
-                        data.finances.expenseByCategory.map((e) => (
-                          <tr key={e.category}>
-                            <td><strong>{e.label}</strong></td>
-                            <td>{formatMoney(e.amount, currency)}</td>
-                            <td>{e.sharePct}%</td>
+                {data.finances.expenseByCategory.length === 0 ? (
+                  <p className={styles.emptyTableMsg}>No expenses in this period.</p>
+                ) : (
+                  <>
+                    <div className={styles.mobileCardList}>
+                      {data.finances.expenseByCategory.map((e) => (
+                        <div key={e.category} className={styles.mobileDataCardStatic}>
+                          <div className={styles.mobileCardTop}>
+                            <strong className={styles.mobileCardTitle}>{e.label}</strong>
+                            <span className={`${styles.rankBadge} tabular-nums`}>
+                              {e.sharePct}%
+                            </span>
+                          </div>
+                          <div className="tabular-nums" style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                            {formatMoney(e.amount, currency)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className={styles.desktopTableWrapper}>
+                      <table className={styles.table}>
+                        <thead>
+                          <tr>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Share</th>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                        </thead>
+                        <tbody>
+                          {data.finances.expenseByCategory.map((e) => (
+                            <tr key={e.category}>
+                              <td>
+                                <strong>{e.label}</strong>
+                              </td>
+                              <td className="tabular-nums">{formatMoney(e.amount, currency)}</td>
+                              <td className="tabular-nums">{e.sharePct}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className={styles.card}>
                 <h3 className={styles.cardTitle}>Top Buyers &amp; Revenue Channels</h3>
-                <div className={styles.tableWrapper}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Buyer / Channel</th>
-                        <th>Transactions</th>
-                        <th>Total Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.finances.topBuyers.length === 0 ? (
-                        <tr><td colSpan={3} style={{ opacity: 0.6, textAlign: "center" }}>No sales in period</td></tr>
-                      ) : (
-                        data.finances.topBuyers.map((b, i) => (
-                          <tr key={i}>
-                            <td><strong>{b.buyerName}</strong></td>
-                            <td>{b.count}</td>
-                            <td><strong>{formatMoney(b.totalAmount, currency)}</strong></td>
+                {data.finances.topBuyers.length === 0 ? (
+                  <p className={styles.emptyTableMsg}>No sales in this period.</p>
+                ) : (
+                  <>
+                    <div className={styles.mobileCardList}>
+                      {data.finances.topBuyers.map((b, i) => (
+                        <div key={i} className={styles.mobileDataCardStatic}>
+                          <div className={styles.mobileCardTop}>
+                            <strong className={styles.mobileCardTitle}>{b.buyerName}</strong>
+                            <span className={`${styles.rankBadge} tabular-nums`}>
+                              {b.count} tx
+                            </span>
+                          </div>
+                          <div
+                            className="tabular-nums"
+                            style={{ fontWeight: 800, color: "#10b981", fontSize: "0.95rem" }}
+                          >
+                            {formatMoney(b.totalAmount, currency)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className={styles.desktopTableWrapper}>
+                      <table className={styles.table}>
+                        <thead>
+                          <tr>
+                            <th>Buyer / Channel</th>
+                            <th>Transactions</th>
+                            <th>Total Revenue</th>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                        </thead>
+                        <tbody>
+                          {data.finances.topBuyers.map((b, i) => (
+                            <tr key={i}>
+                              <td>
+                                <strong>{b.buyerName}</strong>
+                              </td>
+                              <td className="tabular-nums">{b.count}</td>
+                              <td className="tabular-nums">
+                                <strong>{formatMoney(b.totalAmount, currency)}</strong>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </>
@@ -766,37 +883,40 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
             <div className={styles.kpiGrid}>
               <div className={styles.kpiCard}>
                 <span className={styles.kpiLabel}>Living Herd</span>
-                <div className={styles.kpiValue}>{data.herd.livingTotal}</div>
+                <div className={`${styles.kpiValue} tabular-nums`}>{data.herd.livingTotal}</div>
                 <div className={styles.kpiSub}>
                   {data.herd.active} Healthy • {data.herd.sick} Sick
                 </div>
               </div>
 
               <div className={styles.kpiCard}>
-                <span className={styles.kpiLabel}>Period Herd Turnover</span>
-                <div className={styles.kpiValue}>
-                  +{data.herd.periodAdditions} / -{data.herd.periodSales + data.herd.periodDeaths}
+                <span className={styles.kpiLabel}>Herd Turnover</span>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  +{data.herd.periodAdditions} / −{data.herd.periodSales + data.herd.periodDeaths}
                 </div>
                 <div className={styles.kpiSub}>
-                  {data.herd.periodSales} Sold • {data.herd.periodDeaths} Deceased ({data.herd.mortalityRatePct}% mortality)
+                  {data.herd.periodSales} Sold • {data.herd.mortalityRatePct}% Mort.
                 </div>
               </div>
 
               <div className={styles.kpiCard}>
-                <span className={styles.kpiLabel}>Open Gestations</span>
-                <div className={styles.kpiValue}>{data.herd.pendingPregnanciesCount}</div>
-                <div className={styles.kpiSub}>
-                  {data.herd.overdueEvents.length} overdue follow-ups
+                <span className={styles.kpiLabel}>Gestations</span>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {data.herd.pendingPregnanciesCount}
                 </div>
+                <div className={styles.kpiSub}>{data.herd.overdueEvents.length} overdue</div>
               </div>
 
               <div className={styles.kpiCard}>
-                <span className={styles.kpiLabel}>Health Interventions</span>
-                <div className={styles.kpiValue}>
-                  {data.herd.healthSummary.vaccinations + data.herd.healthSummary.treatments + data.herd.healthSummary.checkups}
+                <span className={styles.kpiLabel}>Health Logs</span>
+                <div className={`${styles.kpiValue} tabular-nums`}>
+                  {data.herd.healthSummary.vaccinations +
+                    data.herd.healthSummary.treatments +
+                    data.herd.healthSummary.checkups}
                 </div>
                 <div className={styles.kpiSub}>
-                  {data.herd.healthSummary.vaccinations} Vac • {data.herd.healthSummary.treatments} Treat
+                  {data.herd.healthSummary.vaccinations} Vac • {data.herd.healthSummary.treatments}{" "}
+                  Treat
                   {canViewFinances && data.herd.healthSummary.totalVetCost !== null
                     ? ` • ${formatMoney(data.herd.healthSummary.totalVetCost, currency)}`
                     : ""}
@@ -808,8 +928,10 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
               <div className={styles.card}>
                 <div className={styles.cardHeader}>
                   <div>
-                    <h3 className={styles.cardTitle}>6-Month Expected Calving &amp; Check Forecast</h3>
-                    <p className={styles.cardSubtitle}>Plan maternity pens and steaming-up rations ahead</p>
+                    <h3 className={styles.cardTitle}>6-Month Calving &amp; Check Forecast</h3>
+                    <p className={styles.cardSubtitle}>
+                      Plan maternity pens and steaming-up rations ahead
+                    </p>
                   </div>
                 </div>
                 <div className={styles.chartBox}>
@@ -842,11 +964,39 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
               <div className={styles.card}>
                 <div className={styles.cardHeader}>
                   <div>
-                    <h3 className={styles.cardTitle}>Chronic / Repeat-Treated Animals (Last 90 Days)</h3>
-                    <p className={styles.cardSubtitle}>Animals with 2 or more medical treatments</p>
+                    <h3 className={styles.cardTitle}>
+                      Chronic / Repeat-Treated Animals (Last 90 Days)
+                    </h3>
+                    <p className={styles.cardSubtitle}>
+                      Animals with 2 or more medical treatments
+                    </p>
                   </div>
                 </div>
-                <div className={styles.tableWrapper}>
+
+                {/* Mobile Cards */}
+                <div className={styles.mobileCardList}>
+                  {data.herd.repeatTreatedAnimals.map((a) => (
+                    <Link key={a.id} href={`/herd/${a.id}`} className={styles.mobileDataCard}>
+                      <div className={styles.mobileCardTop}>
+                        <strong className={styles.mobileCardTitle}>
+                          {a.name} {a.tagNumber ? `(#${a.tagNumber})` : ""}
+                        </strong>
+                        <span className={styles.badgeCritical}>{a.count} treatments</span>
+                      </div>
+                      <div style={{ fontSize: "0.82rem", color: "var(--color-text-sub)" }}>
+                        {a.species} • {a.lastReason}
+                      </div>
+                      {canViewFinances && a.totalCost !== null && (
+                        <div className="tabular-nums" style={{ fontSize: "0.82rem", fontWeight: 700, color: "#ef4444" }}>
+                          90d Vet Cost: {formatMoney(a.totalCost, currency)}
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className={styles.desktopTableWrapper}>
                   <table className={styles.table}>
                     <thead>
                       <tr>
@@ -861,14 +1011,27 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
                       {data.herd.repeatTreatedAnimals.map((a) => (
                         <tr key={a.id}>
                           <td>
-                            <Link href={`/herd/${a.id}`} style={{ fontWeight: 700, color: "var(--color-primary)", textDecoration: "none" }}>
+                            <Link
+                              href={`/herd/${a.id}`}
+                              style={{
+                                fontWeight: 700,
+                                color: "var(--color-primary)",
+                                textDecoration: "none",
+                              }}
+                            >
                               {a.name} {a.tagNumber ? `(#${a.tagNumber})` : ""}
                             </Link>
                           </td>
                           <td>{a.species}</td>
-                          <td><span className={styles.badgeCritical}>{a.count} treatments</span></td>
+                          <td>
+                            <span className={styles.badgeCritical}>{a.count} treatments</span>
+                          </td>
                           <td>{a.lastReason}</td>
-                          {canViewFinances && <td>{a.totalCost !== null ? formatMoney(a.totalCost, currency) : "—"}</td>}
+                          {canViewFinances && (
+                            <td className="tabular-nums">
+                              {a.totalCost !== null ? formatMoney(a.totalCost, currency) : "—"}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -886,62 +1049,115 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
               <div>
                 <h3 className={styles.cardTitle}>Feed &amp; Supplies Burn Rate &amp; Stock Runway</h3>
                 <p className={styles.cardSubtitle}>
-                  Calculated from actual 30-day Stock-Out consumption across your organization
+                  Based on 30-day Stock-Out consumption across your ranch
                 </p>
               </div>
             </div>
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Category</th>
-                    <th>In Stock</th>
-                    <th>30d Consumed</th>
-                    <th>Daily Burn</th>
-                    <th>Est. Days Remaining</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.inventory.items.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} style={{ textAlign: "center", opacity: 0.6, padding: "2rem" }}>
-                        No inventory items configured yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    data.inventory.items.map((item) => (
-                      <tr key={item.id}>
-                        <td><strong>{item.name}</strong></td>
-                        <td>{item.category}</td>
-                        <td>
-                          <strong>{item.quantity}</strong> {item.unit}
-                        </td>
-                        <td>{item.used30d} {item.unit}</td>
-                        <td>{item.dailyBurnRate > 0 ? `${item.dailyBurnRate} ${item.unit}/d` : "—"}</td>
-                        <td>
-                          {item.estimatedDaysLeft !== null ? (
-                            <strong>{item.estimatedDaysLeft} days</strong>
-                          ) : (
-                            <span style={{ opacity: 0.6 }}>No 30d usage</span>
-                          )}
-                        </td>
-                        <td>
-                          {item.status === "CRITICAL" ? (
-                            <span className={styles.badgeCritical}>Critical / Restock</span>
-                          ) : item.status === "REORDER_SOON" ? (
-                            <span className={styles.badgeWarn}>Reorder (&lt;14d)</span>
-                          ) : (
-                            <span className={styles.badgeHealthy}>Healthy</span>
-                          )}
-                        </td>
+
+            {data.inventory.items.length === 0 ? (
+              <p className={styles.emptyTableMsg}>No inventory items configured yet.</p>
+            ) : (
+              <>
+                {/* Mobile Cards (< 640px) */}
+                <div className={styles.mobileCardList}>
+                  {data.inventory.items.map((item) => (
+                    <div key={item.id} className={styles.mobileDataCardStatic}>
+                      <div className={styles.mobileCardTop}>
+                        <div>
+                          <strong className={styles.mobileCardTitle}>{item.name}</strong>
+                          <span style={{ display: "block", fontSize: "0.73rem", color: "var(--color-text-sub)" }}>
+                            {item.category}
+                          </span>
+                        </div>
+                        {item.status === "CRITICAL" ? (
+                          <span className={styles.badgeCritical}>Critical</span>
+                        ) : item.status === "REORDER_SOON" ? (
+                          <span className={styles.badgeWarn}>Reorder (&lt;14d)</span>
+                        ) : (
+                          <span className={styles.badgeHealthy}>Healthy</span>
+                        )}
+                      </div>
+                      <div className={`${styles.mobileMetricsRow} tabular-nums`}>
+                        <div>
+                          <span>In Stock</span>
+                          <strong>
+                            {item.quantity} {item.unit}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Daily Burn</span>
+                          <strong>
+                            {item.dailyBurnRate > 0 ? `${item.dailyBurnRate}/d` : "—"}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Runway</span>
+                          <strong>
+                            {item.estimatedDaysLeft !== null
+                              ? `${item.estimatedDaysLeft} days`
+                              : "No usage"}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table (>= 640px) */}
+                <div className={styles.desktopTableWrapper}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th>In Stock</th>
+                        <th>30d Consumed</th>
+                        <th>Daily Burn</th>
+                        <th>Est. Days Remaining</th>
+                        <th>Status</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {data.inventory.items.map((item) => (
+                        <tr key={item.id}>
+                          <td>
+                            <strong>{item.name}</strong>
+                          </td>
+                          <td>{item.category}</td>
+                          <td className="tabular-nums">
+                            <strong>{item.quantity}</strong> {item.unit}
+                          </td>
+                          <td className="tabular-nums">
+                            {item.used30d} {item.unit}
+                          </td>
+                          <td className="tabular-nums">
+                            {item.dailyBurnRate > 0
+                              ? `${item.dailyBurnRate} ${item.unit}/d`
+                              : "—"}
+                          </td>
+                          <td className="tabular-nums">
+                            {item.estimatedDaysLeft !== null ? (
+                              <strong>{item.estimatedDaysLeft} days</strong>
+                            ) : (
+                              <span style={{ opacity: 0.6 }}>No 30d usage</span>
+                            )}
+                          </td>
+                          <td>
+                            {item.status === "CRITICAL" ? (
+                              <span className={styles.badgeCritical}>Critical / Restock</span>
+                            ) : item.status === "REORDER_SOON" ? (
+                              <span className={styles.badgeWarn}>Reorder (&lt;14d)</span>
+                            ) : (
+                              <span className={styles.badgeHealthy}>Healthy</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -952,23 +1168,34 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
           <div className={styles.kpiCard}>
             <span className={styles.kpiLabel}>Total Milk Produced</span>
             <div className={styles.kpiValue}>{data.milk.totalLiters.toLocaleString()} L</div>
-            <div className={styles.kpiSub}>Avg {data.milk.avgDailyLiters} L/d ({data.milk.avgLitersPerCowPerDay} L/cow/d)</div>
+            <div className={styles.kpiSub}>
+              Avg {data.milk.avgDailyLiters} L/d ({data.milk.avgLitersPerCowPerDay} L/cow/d)
+            </div>
           </div>
           <div className={styles.kpiCard}>
             <span className={styles.kpiLabel}>Living Herd</span>
             <div className={styles.kpiValue}>{data.herd.livingTotal}</div>
-            <div className={styles.kpiSub}>{data.herd.active} Healthy • {data.herd.sick} Sick • Mortality {data.herd.mortalityRatePct}%</div>
+            <div className={styles.kpiSub}>
+              {data.herd.active} Healthy • {data.herd.sick} Sick • Mortality{" "}
+              {data.herd.mortalityRatePct}%
+            </div>
           </div>
           {canViewFinances && data.finances ? (
             <>
               <div className={styles.kpiCard}>
                 <span className={styles.kpiLabel}>Gross Revenue</span>
-                <div className={styles.kpiValue}>{formatMoney(data.finances.totalIncome, currency)}</div>
-                <div className={styles.kpiSub}>Expenses: {formatMoney(data.finances.totalExpenses, currency)}</div>
+                <div className={styles.kpiValue}>
+                  {formatMoney(data.finances.totalIncome, currency)}
+                </div>
+                <div className={styles.kpiSub}>
+                  Expenses: {formatMoney(data.finances.totalExpenses, currency)}
+                </div>
               </div>
               <div className={styles.kpiCard}>
                 <span className={styles.kpiLabel}>Net Profit</span>
-                <div className={styles.kpiValue}>{formatMoney(data.finances.netProfit, currency)}</div>
+                <div className={styles.kpiValue}>
+                  {formatMoney(data.finances.netProfit, currency)}
+                </div>
                 <div className={styles.kpiSub}>Margin: {data.finances.profitMarginPct}%</div>
               </div>
             </>
@@ -1001,7 +1228,9 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
             <tbody>
               {data.milk.cowLeaderboard.slice(0, 10).map((c) => (
                 <tr key={c.id}>
-                  <td>{c.name} {c.tagNumber ? `(#${c.tagNumber})` : ""}</td>
+                  <td>
+                    {c.name} {c.tagNumber ? `(#${c.tagNumber})` : ""}
+                  </td>
                   <td>{c.species}</td>
                   <td>{c.milkingDays}</td>
                   <td>{c.totalLiters} L</td>
@@ -1052,8 +1281,12 @@ export default function ClientAnalyticsHub({ initialData }: { initialData: Analy
               {data.inventory.items.map((item) => (
                 <tr key={item.id}>
                   <td>{item.name}</td>
-                  <td>{item.quantity} {item.unit}</td>
-                  <td>{item.used30d} {item.unit}</td>
+                  <td>
+                    {item.quantity} {item.unit}
+                  </td>
+                  <td>
+                    {item.used30d} {item.unit}
+                  </td>
                   <td>{item.estimatedDaysLeft !== null ? `${item.estimatedDaysLeft}d` : "—"}</td>
                   <td>{item.status}</td>
                 </tr>

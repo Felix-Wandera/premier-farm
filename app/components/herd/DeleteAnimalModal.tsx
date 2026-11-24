@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AlertTriangle, Trash2, X, Loader2, ArrowRight } from "lucide-react";
+import { AlertTriangle, Trash2, Loader2, ArrowRight } from "lucide-react";
 import { deleteAnimal, getAnimalDeletionImpact } from "@/actions/animal.actions";
 import { useToast } from "../ui/Toast";
 import { useRouter } from "next/navigation";
+import ResponsiveSheet from "../ui/ResponsiveSheet";
+import sheetStyles from "../ui/ResponsiveSheet.module.css";
 
 interface DeleteAnimalModalProps {
   isOpen: boolean;
@@ -18,12 +20,15 @@ interface DeleteAnimalModalProps {
   };
 }
 
-export default function DeleteAnimalModal({
-  isOpen,
+function DeleteAnimalForm({
   onClose,
   onOpenStatusModal,
   animal,
-}: DeleteAnimalModalProps) {
+}: {
+  onClose: () => void;
+  onOpenStatusModal?: () => void;
+  animal: DeleteAnimalModalProps["animal"];
+}) {
   const toast = useToast();
   const router = useRouter();
 
@@ -37,26 +42,24 @@ export default function DeleteAnimalModal({
     breedingEventsCount: number;
     offspringCount: number;
   } | null>(null);
-  const [isLoadingImpact, setIsLoadingImpact] = useState(false);
+  const [isLoadingImpact, setIsLoadingImpact] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return;
-    setTypedName("");
-    setReason("");
-    setVoidHistoricalLogs(false);
-    setIsLoadingImpact(true);
-
+    let active = true;
     getAnimalDeletionImpact(animal.id)
       .then((res) => {
-        if (res.success && res.data) {
+        if (active && res.success && res.data) {
           setImpact(res.data);
         }
       })
-      .finally(() => setIsLoadingImpact(false));
-  }, [isOpen, animal.id]);
-
-  if (!isOpen) return null;
+      .finally(() => {
+        if (active) setIsLoadingImpact(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [animal.id]);
 
   const isNameMatch = typedName.trim() === animal.name.trim();
   const hasHistoricalRecords =
@@ -65,8 +68,7 @@ export default function DeleteAnimalModal({
       (impact?.breedingEventsCount || 0) >
     0;
 
-  const handleConfirmDelete = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConfirmDelete = async () => {
     if (!isNameMatch || isDeleting) return;
 
     setIsDeleting(true);
@@ -88,281 +90,235 @@ export default function DeleteAnimalModal({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "rgba(15, 23, 42, 0.72)",
-        backdropFilter: "blur(4px)",
-        padding: "1rem",
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !isDeleting) onClose();
-      }}
-    >
-      <form
-        onSubmit={handleConfirmDelete}
-        style={{
-          width: "100%",
-          maxWidth: "480px",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          backgroundColor: "var(--color-surface, #ffffff)",
-          color: "var(--color-text-main, #0f172a)",
-          borderRadius: "20px",
-          border: "1px solid rgba(239, 68, 68, 0.35)",
-          boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
-          padding: "1.5rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div
-              style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "12px",
-                backgroundColor: "rgba(239, 68, 68, 0.14)",
-                color: "#dc2626",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Trash2 size={22} />
-            </div>
-            <div>
-              <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#dc2626" }}>
-                Delete Animal Record
-              </h2>
-              <p style={{ margin: "2px 0 0", fontSize: "0.82rem", color: "var(--color-text-sub)" }}>
-                {animal.name} {animal.tagNumber ? `(#${animal.tagNumber})` : ""}
-              </p>
-            </div>
-          </div>
+    <ResponsiveSheet
+      isOpen={true}
+      onClose={onClose}
+      size="md"
+      zIndex={450}
+      disableClose={isDeleting}
+      title={
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#ef4444" }}>
+          <Trash2 size={20} />
+          <span>Delete Animal Record</span>
+        </span>
+      }
+      subtitle={`${animal.name} ${animal.tagNumber ? `(#${animal.tagNumber})` : ""}`}
+      footer={
+        <div style={{ display: "flex", gap: "0.65rem" }}>
           <button
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-sub)" }}
-            aria-label="Close"
-          >
-            <X size={22} />
-          </button>
-        </div>
-
-        {/* Lifecycle Exit Guardrail */}
-        {animal.status !== "SOLD" && animal.status !== "DECEASED" && onOpenStatusModal && (
-          <div
-            style={{
-              padding: "0.85rem 1rem",
-              borderRadius: "12px",
-              backgroundColor: "rgba(245, 158, 11, 0.1)",
-              border: "1px solid rgba(245, 158, 11, 0.3)",
-              fontSize: "0.83rem",
-              lineHeight: 1.5,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, color: "#d97706", marginBottom: "4px" }}>
-              <AlertTriangle size={15} />
-              <span>Did this animal pass away or get sold?</span>
-            </div>
-            <p style={{ margin: "0 0 0.5rem", color: "var(--color-text-main)" }}>
-              Deleting removes the animal as a mistaken entry. To preserve mortality &amp; financial analytics, update its status instead.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenStatusModal();
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                color: "#d97706",
-                fontWeight: 700,
-                fontSize: "0.82rem",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <span>Switch to Update Status (Sold / Deceased)</span>
-              <ArrowRight size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* Relational Impact Summary */}
-        <div
-          style={{
-            padding: "0.85rem 1rem",
-            borderRadius: "12px",
-            backgroundColor: "var(--color-bg, #f8fafc)",
-            border: "1px solid var(--color-border, #e2e8f0)",
-            fontSize: "0.84rem",
-          }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: "0.45rem" }}>Record Impact Summary</div>
-          {isLoadingImpact ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", opacity: 0.7 }}>
-              <Loader2 size={15} className="animate-spin" /> Checking linked records...
-            </div>
-          ) : impact ? (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.35rem", color: "var(--color-text-sub)" }}>
-              <span>• Milk Logs: <strong>{impact.milkLogsCount}</strong></span>
-              <span>• Health Logs: <strong>{impact.healthRecordsCount}</strong></span>
-              <span>• Breeding Events: <strong>{impact.breedingEventsCount}</strong></span>
-              <span>• Recorded Offspring: <strong>{impact.offspringCount}</strong></span>
-              {impact.hasLinkedSale && (
-                <span style={{ gridColumn: "1 / -1", color: "#dc2626", fontWeight: 600, marginTop: "2px" }}>
-                  • Linked Animal Sale entry will also be voided.
-                </span>
-              )}
-            </div>
-          ) : null}
-
-          <div style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: "var(--color-text-sub)" }}>
-            Deleting frees up the name <strong>&quot;{animal.name}&quot;</strong>
-            {animal.tagNumber ? ` and tag #${animal.tagNumber}` : ""} for reuse.
-          </div>
-        </div>
-
-        {hasHistoricalRecords && (
-          <label
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "8px",
-              fontSize: "0.82rem",
-              cursor: "pointer",
-              padding: "0.5rem 0.25rem",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={voidHistoricalLogs}
-              onChange={(e) => setVoidHistoricalLogs(e.target.checked)}
-              style={{ marginTop: "3px", width: "16px", height: "16px", accentColor: "#dc2626" }}
-            />
-            <span>
-              <strong>Also void historical milk, health &amp; breeding logs</strong> (check this if the animal was created as test/duplicate data; leave unchecked to keep past ranch totals intact).
-            </span>
-          </label>
-        )}
-
-        <div>
-          <label style={{ display: "block", fontSize: "0.83rem", fontWeight: 600, marginBottom: "0.35rem" }}>
-            Reason for Deletion (Optional)
-          </label>
-          <input
-            type="text"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g. Duplicate registration / test entry"
-            style={{
-              width: "100%",
-              padding: "0.65rem 0.75rem",
-              borderRadius: "8px",
-              border: "1px solid var(--color-border)",
-              background: "var(--color-bg)",
-              color: "var(--color-text-main)",
-              fontSize: "0.9rem",
-            }}
-          />
-        </div>
-
-        {/* Explicit Type-to-Confirm Step */}
-        <div
-          style={{
-            padding: "0.9rem",
-            borderRadius: "12px",
-            backgroundColor: "rgba(239, 68, 68, 0.06)",
-            border: "1px solid rgba(239, 68, 68, 0.25)",
-          }}
-        >
-          <label
-            htmlFor="confirm-animal-name"
-            style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, marginBottom: "0.45rem" }}
-          >
-            To confirm, type <span style={{ color: "#dc2626", fontFamily: "monospace", fontSize: "0.95rem" }}>{animal.name}</span> below:
-          </label>
-          <input
-            id="confirm-animal-name"
-            type="text"
-            autoComplete="off"
-            value={typedName}
-            onChange={(e) => setTypedName(e.target.value)}
-            placeholder={`Type "${animal.name}"`}
-            style={{
-              width: "100%",
-              padding: "0.7rem 0.8rem",
-              borderRadius: "8px",
-              border: `1.5px solid ${isNameMatch ? "#16a34a" : "rgba(239, 68, 68, 0.4)"}`,
-              background: "var(--color-surface)",
-              color: "var(--color-text-main)",
-              fontSize: "0.95rem",
-              fontWeight: 600,
-              outline: "none",
-            }}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.25rem" }}>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isDeleting}
-            style={{
-              flex: 1,
-              padding: "0.8rem",
-              borderRadius: "10px",
-              border: "1px solid var(--color-border)",
-              background: "var(--color-bg)",
-              color: "var(--color-text-main)",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className={sheetStyles.secondaryBtn}
+            style={{ flex: 1 }}
           >
             Cancel
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={handleConfirmDelete}
             disabled={!isNameMatch || isDeleting}
             style={{
-              flex: 1.3,
-              padding: "0.8rem",
-              borderRadius: "10px",
+              flex: 1.4,
+              minHeight: "46px",
+              padding: "0.7rem 1rem",
+              borderRadius: "12px",
               border: "none",
               backgroundColor: "#dc2626",
               color: "#ffffff",
               fontWeight: 700,
+              fontSize: "0.92rem",
               cursor: !isNameMatch || isDeleting ? "not-allowed" : "pointer",
               opacity: !isNameMatch || isDeleting ? 0.45 : 1,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               gap: "6px",
-              transition: "opacity 0.15s ease",
             }}
           >
             {isDeleting ? <Loader2 size={17} className="animate-spin" /> : <Trash2 size={17} />}
             <span>{isDeleting ? "Deleting..." : "Confirm Delete"}</span>
           </button>
         </div>
-      </form>
-    </div>
+      }
+    >
+      {animal.status !== "SOLD" && animal.status !== "DECEASED" && onOpenStatusModal && (
+        <div
+          style={{
+            padding: "0.85rem 1rem",
+            borderRadius: "12px",
+            backgroundColor: "rgba(245, 158, 11, 0.1)",
+            border: "1px solid rgba(245, 158, 11, 0.3)",
+            fontSize: "0.83rem",
+            lineHeight: 1.5,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontWeight: 700,
+              color: "#d97706",
+              marginBottom: "4px",
+            }}
+          >
+            <AlertTriangle size={15} />
+            <span>Did this animal pass away or get sold?</span>
+          </div>
+          <p style={{ margin: "0 0 0.5rem", color: "var(--color-text-main)" }}>
+            Deleting removes a mistaken entry. To preserve mortality &amp; financial analytics, update its status instead.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenStatusModal();
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              color: "#d97706",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <span>Switch to Update Status (Sold / Deceased)</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
+
+      <div className={sheetStyles.cardBox} style={{ fontSize: "0.84rem" }}>
+        <div style={{ fontWeight: 700, marginBottom: "0.45rem" }}>Record Impact Summary</div>
+        {isLoadingImpact ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", opacity: 0.7 }}>
+            <Loader2 size={15} className="animate-spin" /> Checking linked records...
+          </div>
+        ) : impact ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "0.35rem",
+              color: "var(--color-text-sub)",
+            }}
+          >
+            <span>
+              • Milk Logs: <strong className="tabular-nums">{impact.milkLogsCount}</strong>
+            </span>
+            <span>
+              • Health Logs: <strong className="tabular-nums">{impact.healthRecordsCount}</strong>
+            </span>
+            <span>
+              • Breeding Events: <strong className="tabular-nums">{impact.breedingEventsCount}</strong>
+            </span>
+            <span>
+              • Offspring: <strong className="tabular-nums">{impact.offspringCount}</strong>
+            </span>
+            {impact.hasLinkedSale && (
+              <span style={{ gridColumn: "1 / -1", color: "#ef4444", fontWeight: 600, marginTop: "2px" }}>
+                • Linked Animal Sale entry will also be voided.
+              </span>
+            )}
+          </div>
+        ) : null}
+
+        <div style={{ marginTop: "0.55rem", fontSize: "0.78rem", color: "var(--color-text-sub)" }}>
+          Deleting frees up the name <strong>&quot;{animal.name}&quot;</strong>
+          {animal.tagNumber ? ` and tag #${animal.tagNumber}` : ""} for reuse.
+        </div>
+      </div>
+
+      {hasHistoricalRecords && (
+        <label
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "10px",
+            fontSize: "0.82rem",
+            cursor: "pointer",
+            lineHeight: 1.45,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={voidHistoricalLogs}
+            onChange={(e) => setVoidHistoricalLogs(e.target.checked)}
+            style={{ marginTop: "2px", width: "18px", height: "18px", accentColor: "#dc2626", flexShrink: 0 }}
+          />
+          <span>
+            <strong>Also void historical milk, health &amp; breeding logs</strong> (enable for duplicate/test data; leave unchecked to preserve past ranch totals).
+          </span>
+        </label>
+      )}
+
+      <div className={sheetStyles.fieldGroup}>
+        <label className={sheetStyles.label}>Reason for Deletion (Optional)</label>
+        <input
+          type="text"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="e.g. Duplicate registration / test entry"
+          className={sheetStyles.input}
+        />
+      </div>
+
+      <div
+        style={{
+          padding: "0.95rem",
+          borderRadius: "14px",
+          backgroundColor: "rgba(239, 68, 68, 0.06)",
+          border: "1px solid rgba(239, 68, 68, 0.25)",
+        }}
+      >
+        <label
+          htmlFor="confirm-animal-name"
+          style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, marginBottom: "0.45rem" }}
+        >
+          To confirm, type{" "}
+          <span style={{ color: "#ef4444", fontFamily: "monospace", fontSize: "0.95rem" }}>
+            {animal.name}
+          </span>{" "}
+          below:
+        </label>
+        <input
+          id="confirm-animal-name"
+          type="text"
+          autoComplete="off"
+          value={typedName}
+          onChange={(e) => setTypedName(e.target.value)}
+          placeholder={`Type "${animal.name}"`}
+          className={sheetStyles.input}
+          style={{
+            borderColor: isNameMatch ? "#10b981" : "rgba(239, 68, 68, 0.45)",
+            backgroundColor: "var(--color-surface)",
+            fontWeight: 700,
+          }}
+        />
+      </div>
+    </ResponsiveSheet>
+  );
+}
+
+export default function DeleteAnimalModal({
+  isOpen,
+  onClose,
+  onOpenStatusModal,
+  animal,
+}: DeleteAnimalModalProps) {
+  if (!isOpen) return null;
+  return (
+    <DeleteAnimalForm
+      key={animal.id}
+      onClose={onClose}
+      onOpenStatusModal={onOpenStatusModal}
+      animal={animal}
+    />
   );
 }

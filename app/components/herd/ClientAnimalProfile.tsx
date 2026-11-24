@@ -2,10 +2,25 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Edit, Activity, Droplet, HeartPulse, Info, DollarSign, Skull, Trash2, Edit2, Check, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Edit,
+  Activity,
+  Droplet,
+  HeartPulse,
+  Info,
+  DollarSign,
+  Skull,
+  Trash2,
+  Edit2,
+  Check,
+  X,
+  Stethoscope,
+  RefreshCw,
+} from "lucide-react";
 import styles from "../../(dashboard)/herd/[id]/page.module.css";
 import AnimalIcon from "../ui/AnimalIcon";
-import EditAnimalModal from "./EditAnimalModal";
+import EditAnimalModal, { EditableAnimalData } from "./EditAnimalModal";
 import StatusUpdateModal from "./StatusUpdateModal";
 import DeleteAnimalModal from "./DeleteAnimalModal";
 import { updateAnimal, updateAnimalStatus } from "@/actions/animal.actions";
@@ -15,8 +30,58 @@ import { useAuth } from "../auth/AuthProvider";
 import ConfirmationModal from "../ui/ConfirmationModal";
 import OutlierWarningModal from "../ui/OutlierWarningModal";
 
+interface AnimalMilkLogRow {
+  id: string;
+  amountLiters: number;
+  milkingTime: string;
+  date: Date | string;
+  recordDate?: Date | string;
+}
+
+interface AnimalHealthRow {
+  id: string;
+  recordType: string;
+  description: string;
+  cost?: number | null;
+  date: Date | string;
+}
+
+interface AnimalBreedingRow {
+  id: string;
+  eventType: string;
+  sireDetails?: string | null;
+  expectedDate?: Date | string | null;
+  actualDate?: Date | string | null;
+  date: Date | string;
+}
+
+interface AnimalOffspringRow {
+  id: string;
+  name: string;
+  tagNumber?: string | null;
+  status: string;
+  species: string;
+  gender: string;
+  dateOfBirth?: Date | string | null;
+}
+
+interface AnimalProfileFullData extends EditableAnimalData {
+  causeOfDeath?: string | null;
+  dateOfDeath?: Date | string | null;
+  sale?: {
+    amount?: number | null;
+    buyerName?: string | null;
+    date?: Date | string | null;
+    notes?: string | null;
+  } | null;
+  milkLogs?: AnimalMilkLogRow[];
+  healthRecords?: AnimalHealthRow[];
+  breedingEvents?: AnimalBreedingRow[];
+  offspring?: AnimalOffspringRow[];
+}
+
 function calculateAge(dob: Date | null) {
-  if (!dob) return "Unknown";
+  if (!dob) return "Not recorded";
   const diff = Date.now() - new Date(dob).getTime();
   const ageDate = new Date(diff);
   const years = Math.abs(ageDate.getUTCFullYear() - 1970);
@@ -36,7 +101,11 @@ function formatSpecies(s: string) {
   return s;
 }
 
-export default function ClientAnimalProfile({ initialData }: { initialData: any }) {
+export default function ClientAnimalProfile({
+  initialData,
+}: {
+  initialData: AnimalProfileFullData | null;
+}) {
   const router = useRouter();
   const { hasPermission } = useAuth();
   const canEdit = hasPermission("herd:edit");
@@ -48,15 +117,24 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [milkLogs, setMilkLogs] = useState<any[]>(initialData?.milkLogs || []);
+  const [milkLogs, setMilkLogs] = useState<AnimalMilkLogRow[]>(initialData?.milkLogs || []);
   const [editingMilkLogId, setEditingMilkLogId] = useState<string | null>(null);
   const [editMilkYield, setEditMilkYield] = useState<string>("");
   const [isMilkActionLoading, setIsMilkActionLoading] = useState(false);
-  const [deletingMilkLog, setDeletingMilkLog] = useState<{ id: string; session: string; date: string; amount: number } | null>(null);
-  const [milkOutlierState, setMilkOutlierState] = useState<{ logId: string; warnings: string[]; canOverride: boolean } | null>(null);
+  const [deletingMilkLog, setDeletingMilkLog] = useState<{
+    id: string;
+    session: string;
+    date: string;
+    amount: number;
+  } | null>(null);
+  const [milkOutlierState, setMilkOutlierState] = useState<{
+    logId: string;
+    warnings: string[];
+    canOverride: boolean;
+  } | null>(null);
   const toast = useToast();
 
-  const handleStartMilkEdit = (log: any) => {
+  const handleStartMilkEdit = (log: AnimalMilkLogRow) => {
     setEditingMilkLogId(log.id);
     setEditMilkYield(String(log.amountLiters));
   };
@@ -68,7 +146,7 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
       return;
     }
     setIsMilkActionLoading(true);
-    const res: any = await updateSingleMilkLog(logId, val, overrideWarnings);
+    const res = await updateSingleMilkLog(logId, val, overrideWarnings);
     setIsMilkActionLoading(false);
 
     if (res.code === "OUTLIER_WARNING" && res.warnings) {
@@ -84,14 +162,16 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
 
     if (res.success) {
       toast(res.message, "success");
-      setMilkLogs((prev) => prev.map((item) => (item.id === logId ? { ...item, amountLiters: val } : item)));
+      setMilkLogs((prev) =>
+        prev.map((item) => (item.id === logId ? { ...item, amountLiters: val } : item))
+      );
       setEditingMilkLogId(null);
     } else {
       toast(res.message, "error");
     }
   };
 
-  const handleDeleteMilkLog = (log: any) => {
+  const handleDeleteMilkLog = (log: AnimalMilkLogRow) => {
     setDeletingMilkLog({
       id: log.id,
       session: log.milkingTime,
@@ -118,43 +198,63 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
     return <div style={{ padding: "2rem", textAlign: "center" }}>Animal not found.</div>;
   }
 
-  const ageInfo = calculateAge(initialData.dateOfBirth);
+  const ageInfo = calculateAge(initialData.dateOfBirth ? new Date(initialData.dateOfBirth) : null);
   const prettySpecies = formatSpecies(initialData.species);
-  const displayStatus = initialData.status.charAt(0).toUpperCase() + initialData.status.slice(1).toLowerCase();
+  const displayStatus =
+    initialData.status.charAt(0).toUpperCase() + initialData.status.slice(1).toLowerCase();
+  const canTransitionStatus =
+    canEdit && initialData.status !== "DECEASED" && initialData.status !== "SOLD";
 
-  const births = initialData.breedingEvents?.filter((e: any) => e.eventType === "BIRTH" && e.actualDate) || [];
-  const lastCalved =
-    births.length > 0
-      ? new Date(births[0].actualDate).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })
-      : "Never";
+  const births =
+    initialData.breedingEvents?.filter((e) => e.eventType === "BIRTH" && e.actualDate) || [];
+  const latestBirthDate = births[0]?.actualDate;
+  const lastCalved = latestBirthDate
+    ? new Date(latestBirthDate).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "Never";
 
   return (
     <div className={styles.container}>
       {/* Sticky Header */}
       <header className={styles.header}>
-        <Link href="/herd" className={styles.backBtn}>
-          <ArrowLeft size={24} />
+        <Link href="/herd" className={styles.backBtn} aria-label="Back to Herd Directory">
+          <ArrowLeft size={20} />
         </Link>
-        <div className={styles.headerActions} style={{ display: "flex", gap: "0.5rem" }}>
+
+        <div className={styles.headerActions}>
+          {canTransitionStatus && (
+            <button
+              type="button"
+              className={styles.statusActionBtn}
+              onClick={() => setIsStatusModalOpen(true)}
+            >
+              <RefreshCw size={15} />
+              <span>Status</span>
+            </button>
+          )}
           {canEdit && (
             <button
+              type="button"
               className={styles.iconBtn}
               aria-label="Edit Profile"
               title="Edit Animal Profile"
               onClick={() => setIsEditModalOpen(true)}
             >
-              <Edit size={20} />
+              <Edit size={18} />
             </button>
           )}
           {canDelete && (
             <button
-              className={styles.iconBtn}
+              type="button"
+              className={`${styles.iconBtn} ${styles.deleteIconBtn}`}
               aria-label="Delete Animal"
               title="Delete Animal Record"
               onClick={() => setIsDeleteModalOpen(true)}
-              style={{ color: "#ef4444", borderColor: "rgba(239, 68, 68, 0.35)" }}
             >
-              <Trash2 size={20} />
+              <Trash2 size={18} />
             </button>
           )}
         </div>
@@ -198,36 +298,52 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
       {/* Cover Profile */}
       <section className={styles.cover}>
         <div
-          className={styles.profileBadge}
+          className={`${styles.profileBadge} ${
+            initialData.status === "SICK" || initialData.status === "DECEASED"
+              ? styles.badgeSick
+              : initialData.status === "SOLD"
+              ? styles.badgeSold
+              : ""
+          }`}
           onClick={() => {
-            if (canEdit && initialData.status !== "DECEASED" && initialData.status !== "SOLD") {
-              setIsStatusModalOpen(true);
-            }
+            if (canTransitionStatus) setIsStatusModalOpen(true);
           }}
-          style={{
-            cursor: canEdit && initialData.status !== "DECEASED" && initialData.status !== "SOLD" ? "pointer" : "default",
-          }}
-          title={canEdit && initialData.status !== "DECEASED" && initialData.status !== "SOLD" ? "Click to record Sold or Deceased" : undefined}
+          style={{ cursor: canTransitionStatus ? "pointer" : "default" }}
         >
-          <div className={`${styles.statusDot} ${initialData.status === "SICK" ? styles.dotSick : ""}`}></div>
-          {displayStatus}
+          <div
+            className={`${styles.statusDot} ${
+              initialData.status === "SICK" || initialData.status === "DECEASED"
+                ? styles.dotSick
+                : initialData.status === "SOLD"
+                ? styles.dotSold
+                : ""
+            }`}
+          />
+          <span>{displayStatus}</span>
         </div>
-        <h1 className={styles.tagTitle} style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "center" }}>
-          <AnimalIcon species={prettySpecies} size={38} />
-          {initialData.name || initialData.tagNumber}{" "}
-          {initialData.tagNumber && initialData.name && (
-            <span style={{ fontSize: "0.6em", opacity: 0.8, fontWeight: 600 }}>#{initialData.tagNumber}</span>
-          )}
-        </h1>
+
+        <div className={styles.heroIdentity}>
+          <div className={styles.heroAvatar}>
+            <AnimalIcon species={prettySpecies} size={34} />
+          </div>
+          <div className={styles.heroTitles}>
+            <h1 className={styles.tagTitle}>{initialData.name || initialData.tagNumber}</h1>
+            {initialData.tagNumber && initialData.name && (
+              <span className={`${styles.heroTagPill} tabular-nums`}>#{initialData.tagNumber}</span>
+            )}
+          </div>
+        </div>
+
         <p className={styles.subtitle}>
           {prettySpecies}
-          {initialData.breed ? ` • ${initialData.breed}` : ""} • {initialData.gender === "MALE" ? "Male" : "Female"}
+          {initialData.breed ? ` • ${initialData.breed}` : ""} •{" "}
+          {initialData.gender === "MALE" ? "Male" : "Female"}
         </p>
 
         <div className={styles.quickStats}>
           <div className={styles.statBox}>
             <span>Age</span>
-            <strong>{ageInfo}</strong>
+            <strong className="tabular-nums">{ageInfo}</strong>
           </div>
           <div className={styles.statBox}>
             <span>Last Calved</span>
@@ -237,30 +353,17 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
 
         {/* Sale Banner if SOLD */}
         {initialData.status === "SOLD" && (
-          <div
-            style={{
-              marginTop: "1.25rem",
-              padding: "0.85rem 1.25rem",
-              borderRadius: "12px",
-              backgroundColor: "rgba(234, 179, 8, 0.12)",
-              border: "1px solid rgba(234, 179, 8, 0.35)",
-              color: "var(--color-text-main)",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              textAlign: "left",
-            }}
-          >
-            <div style={{ padding: "0.5rem", borderRadius: "50%", backgroundColor: "rgba(234, 179, 8, 0.2)", color: "#ca8a04" }}>
-              <DollarSign size={20} />
+          <div className={styles.soldBanner}>
+            <div className={styles.soldBannerIcon}>
+              <DollarSign size={18} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#ca8a04" }}>
+              <div className={`${styles.soldBannerTitle} tabular-nums`}>
                 {canViewFinances && initialData.sale?.amount != null
                   ? `Sold for KES ${initialData.sale.amount.toLocaleString()}`
                   : "Status: Sold"}
               </div>
-              <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+              <div className={styles.bannerMeta}>
                 {initialData.sale?.buyerName ? `Buyer: ${initialData.sale.buyerName} • ` : ""}
                 {initialData.sale?.date ? new Date(initialData.sale.date).toLocaleDateString() : ""}
                 {initialData.sale?.notes && ` • ${initialData.sale.notes}`}
@@ -271,26 +374,13 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
 
         {/* Deceased Banner if DECEASED */}
         {initialData.status === "DECEASED" && (
-          <div
-            style={{
-              marginTop: "1.25rem",
-              padding: "0.85rem 1.25rem",
-              borderRadius: "12px",
-              backgroundColor: "rgba(239, 68, 68, 0.1)",
-              border: "1px solid rgba(239, 68, 68, 0.3)",
-              color: "var(--color-text-main)",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              textAlign: "left",
-            }}
-          >
-            <div style={{ padding: "0.5rem", borderRadius: "50%", backgroundColor: "rgba(239, 68, 68, 0.2)", color: "#dc2626" }}>
-              <Skull size={20} />
+          <div className={styles.deceasedBanner}>
+            <div className={styles.deceasedBannerIcon}>
+              <Skull size={18} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#dc2626" }}>Deceased</div>
-              <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+              <div className={styles.deceasedBannerTitle}>Deceased</div>
+              <div className={styles.bannerMeta}>
                 {initialData.causeOfDeath ? `Cause: ${initialData.causeOfDeath} • ` : ""}
                 {initialData.dateOfDeath ? new Date(initialData.dateOfDeath).toLocaleDateString() : ""}
               </div>
@@ -300,21 +390,38 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
       </section>
 
       {/* Tabs */}
-      <nav className={styles.tabs}>
-        <button className={`${styles.tab} ${activeTab === "info" ? styles.activeTab : ""}`} onClick={() => setActiveTab("info")}>
-          <Info size={18} /> Info
+      <nav className={styles.tabs} aria-label="Animal Profile Sections">
+        <button
+          type="button"
+          className={`${styles.tab} ${activeTab === "info" ? styles.activeTab : ""}`}
+          onClick={() => setActiveTab("info")}
+        >
+          <Info size={16} /> Info
         </button>
-        {(initialData.species === "DAIRY_COW" || initialData.species === "INDIGENOUS_COW") && initialData.gender === "FEMALE" && (
-          <button className={`${styles.tab} ${activeTab === "milk" ? styles.activeTab : ""}`} onClick={() => setActiveTab("milk")}>
-            <Droplet size={18} /> Milk
-          </button>
-        )}
-        <button className={`${styles.tab} ${activeTab === "health" ? styles.activeTab : ""}`} onClick={() => setActiveTab("health")}>
-          <Activity size={18} /> Health
+        {(initialData.species === "DAIRY_COW" || initialData.species === "INDIGENOUS_COW") &&
+          initialData.gender === "FEMALE" && (
+            <button
+              type="button"
+              className={`${styles.tab} ${activeTab === "milk" ? styles.activeTab : ""}`}
+              onClick={() => setActiveTab("milk")}
+            >
+              <Droplet size={16} /> Milk ({milkLogs.length})
+            </button>
+          )}
+        <button
+          type="button"
+          className={`${styles.tab} ${activeTab === "health" ? styles.activeTab : ""}`}
+          onClick={() => setActiveTab("health")}
+        >
+          <Activity size={16} /> Health ({initialData.healthRecords?.length || 0})
         </button>
         {initialData.gender === "FEMALE" && (
-          <button className={`${styles.tab} ${activeTab === "breeding" ? styles.activeTab : ""}`} onClick={() => setActiveTab("breeding")}>
-            <HeartPulse size={18} /> Breeding
+          <button
+            type="button"
+            className={`${styles.tab} ${activeTab === "breeding" ? styles.activeTab : ""}`}
+            onClick={() => setActiveTab("breeding")}
+          >
+            <HeartPulse size={16} /> Breeding ({initialData.breedingEvents?.length || 0})
           </button>
         )}
       </nav>
@@ -326,78 +433,53 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
             <h3>Genealogy</h3>
             <div className={styles.genealogyTree}>
               <div className={styles.parent}>
-                <p className={styles.parentLabel}>Sire</p>
-                <div className={styles.parentCard}>{initialData.fatherName || "Unknown"}</div>
+                <p className={styles.parentLabel}>Sire (Father)</p>
+                <div className={styles.parentCard}>{initialData.fatherName || "Not recorded"}</div>
               </div>
               <div className={styles.parent}>
-                <p className={styles.parentLabel}>Dam</p>
+                <p className={styles.parentLabel}>Dam (Mother)</p>
                 {initialData.mother?.id && !initialData.mother.isDeleted ? (
                   <Link
                     href={`/herd/${initialData.mother.id}`}
                     className={styles.parentCard}
-                    style={{ textDecoration: "none", color: "inherit", display: "block" }}
+                    style={{ textDecoration: "none", display: "block" }}
                   >
-                    {initialData.mother.name} {initialData.mother.tagNumber ? `(#${initialData.mother.tagNumber})` : ""} &rarr;
+                    {initialData.mother.name}{" "}
+                    {initialData.mother.tagNumber ? `(#${initialData.mother.tagNumber})` : ""} &rarr;
                   </Link>
                 ) : (
                   <div className={styles.parentCard}>
                     {initialData.mother
-                      ? `${initialData.mother.name}${initialData.mother.tagNumber ? ` (#${initialData.mother.tagNumber})` : ""} (Archived)`
-                      : "Unknown"}
+                      ? `${initialData.mother.name}${
+                          initialData.mother.tagNumber ? ` (#${initialData.mother.tagNumber})` : ""
+                        } (Archived)`
+                      : "Not recorded"}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Offspring / Progeny List */}
-            <div style={{ marginTop: "2rem", borderTop: "1px solid var(--color-border)", paddingTop: "1.25rem" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.85rem" }}>
-                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Offspring &amp; Progeny</h3>
-                <span style={{ fontSize: "0.85rem", opacity: 0.6, fontWeight: 500 }}>
-                  {initialData.offspring?.length || 0} recorded
-                </span>
+            <div className={styles.offspringSection}>
+              <div className={styles.offspringHeader}>
+                <h3>Offspring &amp; Progeny</h3>
+                <span className="tabular-nums">{initialData.offspring?.length || 0} recorded</span>
               </div>
 
               {initialData.offspring && initialData.offspring.length > 0 ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
-                  {initialData.offspring.map((child: any) => (
-                    <Link
-                      key={child.id}
-                      href={`/herd/${child.id}`}
-                      style={{
-                        padding: "0.85rem 1rem",
-                        borderRadius: "10px",
-                        border: "1px solid var(--color-border)",
-                        backgroundColor: "var(--color-bg)",
-                        textDecoration: "none",
-                        color: "inherit",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "4px",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div className={styles.offspringGrid}>
+                  {initialData.offspring.map((child) => (
+                    <Link key={child.id} href={`/herd/${child.id}`} className={styles.offspringCard}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
                         <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
                           {child.name} {child.tagNumber ? `#${child.tagNumber}` : ""}
                         </span>
-                        <span
-                          style={{
-                            fontSize: "0.7rem",
-                            padding: "2px 7px",
-                            borderRadius: "99px",
-                            backgroundColor: child.status === "ACTIVE" ? "rgba(22, 163, 74, 0.15)" : "rgba(100, 116, 139, 0.15)",
-                            color: child.status === "ACTIVE" ? "#16a34a" : "inherit",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {child.status}
-                        </span>
+                        <span className={styles.offspringStatus}>{child.status}</span>
                       </div>
-                      <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>
+                      <div style={{ fontSize: "0.8rem", color: "var(--color-text-sub)" }}>
                         {formatSpecies(child.species)} ({child.gender.toLowerCase()})
                       </div>
                       {child.dateOfBirth && (
-                        <div style={{ fontSize: "0.75rem", opacity: 0.6, marginTop: "2px" }}>
+                        <div style={{ fontSize: "0.75rem", color: "var(--color-text-sub)", opacity: 0.8 }}>
                           Born: {new Date(child.dateOfBirth).toLocaleDateString()}
                         </div>
                       )}
@@ -405,7 +487,9 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
                   ))}
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.6 }}>No offspring recorded for this animal.</p>
+                <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--color-text-sub)" }}>
+                  No offspring recorded for this animal yet.
+                </p>
               )}
             </div>
           </div>
@@ -415,7 +499,7 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
           <div className={styles.panel}>
             {!milkLogs || milkLogs.length === 0 ? (
               <div className={styles.emptyState}>
-                <Droplet size={48} className={styles.emptyIcon} />
+                <Droplet size={40} className={styles.emptyIcon} />
                 <p>No recent milk records.</p>
                 {hasPermission("milk:log") && (
                   <Link href="/milk" className={styles.primaryBtn} style={{ textDecoration: "none" }}>
@@ -425,147 +509,97 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
               </div>
             ) : (
               <div className={styles.timeline}>
-                {milkLogs.map((log: any) => {
+                {milkLogs.map((log) => {
                   const isEditing = editingMilkLogId === log.id;
                   const sessionDisplay =
                     log.milkingTime === "MORNING"
                       ? "Morning"
                       : log.milkingTime === "MIDDAY"
-                        ? "Mid-day"
-                        : log.milkingTime === "EVENING"
-                          ? "Evening"
-                          : "Other";
+                      ? "Mid-day"
+                      : log.milkingTime === "EVENING"
+                      ? "Evening"
+                      : "Other";
 
                   return (
-                    <div key={log.id} className={styles.timelineItem} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-                        <div className={styles.timelineDot} style={{ background: "#3b82f6", marginTop: "4px" }}></div>
-                        <div className={styles.timelineContent}>
-                          {isEditing ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "6px 0", flexWrap: "wrap" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  min="0.1"
-                                  max="60"
-                                  value={editMilkYield}
-                                  onChange={(e) => setEditMilkYield(e.target.value)}
-                                  style={{
-                                    width: "90px",
-                                    minHeight: "38px",
-                                    padding: "4px 8px",
-                                    borderRadius: "8px",
-                                    border: "1px solid var(--color-border)",
-                                    background: "var(--color-bg)",
-                                    color: "var(--color-text-main)",
-                                    fontSize: "1rem",
-                                    fontWeight: 700,
-                                  }}
-                                  autoFocus
-                                />
-                                <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Liters</span>
+                    <div key={log.id} className={styles.timelineItem}>
+                      <div className={`${styles.timelineDot} ${styles.dotMilk}`}>
+                        <Droplet size={16} />
+                      </div>
+                      <div className={styles.timelineContent}>
+                        <div className={styles.timelineCardRow}>
+                          <div>
+                            {isEditing ? (
+                              <div className={styles.inlineMilkEdit}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.1"
+                                    min="0.1"
+                                    max="60"
+                                    value={editMilkYield}
+                                    onChange={(e) => setEditMilkYield(e.target.value)}
+                                    className={`${styles.inlineYieldInput} tabular-nums`}
+                                    autoFocus
+                                  />
+                                  <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Liters</span>
+                                </div>
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveMilkEdit(log.id, false)}
+                                    disabled={isMilkActionLoading}
+                                    className={styles.inlineSaveBtn}
+                                  >
+                                    <Check size={15} /> Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingMilkLogId(null)}
+                                    className={styles.inlineCancelBtn}
+                                    aria-label="Cancel edit"
+                                  >
+                                    <X size={15} />
+                                  </button>
+                                </div>
                               </div>
-                              <div style={{ display: "flex", gap: "6px" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveMilkEdit(log.id, false)}
-                                  disabled={isMilkActionLoading}
-                                  style={{
-                                    minWidth: "38px",
-                                    minHeight: "38px",
-                                    padding: "6px 12px",
-                                    borderRadius: "8px",
-                                    border: "none",
-                                    backgroundColor: "#22c55e",
-                                    color: "white",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "4px",
-                                    fontWeight: 600,
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  <Check size={16} /> Save
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingMilkLogId(null)}
-                                  style={{
-                                    minWidth: "38px",
-                                    minHeight: "38px",
-                                    padding: "6px 10px",
-                                    borderRadius: "8px",
-                                    border: "1px solid var(--color-border)",
-                                    backgroundColor: "transparent",
-                                    color: "var(--color-text-sub)",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                  }}
-                                >
-                                  <X size={16} />
-                                </button>
-                              </div>
+                            ) : (
+                              <h4 className="tabular-nums">{log.amountLiters} Liters</h4>
+                            )}
+                            <p>{sessionDisplay} Session</p>
+                            <span className={styles.date}>
+                              {new Date(log.date).toLocaleDateString("en-US", {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </span>
+                          </div>
+
+                          {!isEditing && canManageMilkHistory && (
+                            <div className={styles.recordActionBtns}>
+                              <button
+                                type="button"
+                                onClick={() => handleStartMilkEdit(log)}
+                                className={styles.miniActionBtn}
+                              >
+                                <Edit2 size={13} />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMilkLog(log)}
+                                disabled={isMilkActionLoading}
+                                className={`${styles.miniActionBtn} ${styles.miniDeleteBtn}`}
+                              >
+                                <Trash2 size={13} />
+                                <span>Delete</span>
+                              </button>
                             </div>
-                          ) : (
-                            <h4>{log.amountLiters} Liters</h4>
                           )}
-                          <p style={{ margin: "2px 0", fontSize: "0.85rem" }}>{sessionDisplay} Session</p>
-                          <span className={styles.date}>
-                            {new Date(log.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-                          </span>
                         </div>
                       </div>
-
-                      {!isEditing && canManageMilkHistory && (
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          <button
-                            type="button"
-                            onClick={() => handleStartMilkEdit(log)}
-                            style={{
-                              background: "none",
-                              border: "1px solid var(--color-border)",
-                              borderRadius: "8px",
-                              padding: "6px 8px",
-                              cursor: "pointer",
-                              color: "var(--color-text-sub)",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              fontSize: "0.75rem",
-                              fontWeight: 600,
-                            }}
-                          >
-                            <Edit2 size={13} />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteMilkLog(log)}
-                            disabled={isMilkActionLoading}
-                            style={{
-                              background: "none",
-                              border: "1px solid rgba(239, 68, 68, 0.3)",
-                              borderRadius: "8px",
-                              padding: "6px 8px",
-                              cursor: "pointer",
-                              color: "#ef4444",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              fontSize: "0.75rem",
-                              fontWeight: 600,
-                            }}
-                          >
-                            <Trash2 size={13} />
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -577,17 +611,22 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
         {activeTab === "health" && (
           <div className={styles.panel}>
             {!initialData.healthRecords || initialData.healthRecords.length === 0 ? (
-              <div style={{ opacity: 0.6, padding: "1rem" }}>No health records found.</div>
+              <div className={styles.emptyState}>
+                <Stethoscope size={40} className={styles.emptyIcon} />
+                <p>No health records logged yet.</p>
+              </div>
             ) : (
               <div className={styles.timeline}>
-                {initialData.healthRecords.map((hr: any) => (
+                {initialData.healthRecords.map((hr) => (
                   <div key={hr.id} className={styles.timelineItem}>
-                    <div className={styles.timelineDot} style={{ background: "#ef4444" }}></div>
+                    <div className={`${styles.timelineDot} ${styles.dotHealth}`}>
+                      <Stethoscope size={16} />
+                    </div>
                     <div className={styles.timelineContent}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                         <h4>{hr.recordType}</h4>
                         {canViewFinances && hr.cost != null && hr.cost > 0 && (
-                          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#dc2626", background: "rgba(239,68,68,0.1)", padding: "2px 7px", borderRadius: "99px" }}>
+                          <span className={`${styles.costBadge} tabular-nums`}>
                             KES {hr.cost.toLocaleString()}
                           </span>
                         )}
@@ -605,17 +644,22 @@ export default function ClientAnimalProfile({ initialData }: { initialData: any 
         {activeTab === "breeding" && (
           <div className={styles.panel}>
             {!initialData.breedingEvents || initialData.breedingEvents.length === 0 ? (
-              <div style={{ opacity: 0.6, padding: "1rem" }}>No breeding events found.</div>
+              <div className={styles.emptyState}>
+                <HeartPulse size={40} className={styles.emptyIcon} />
+                <p>No breeding events recorded yet.</p>
+              </div>
             ) : (
               <div className={styles.timeline}>
-                {initialData.breedingEvents.map((ev: any) => (
+                {initialData.breedingEvents.map((ev) => (
                   <div key={ev.id} className={styles.timelineItem}>
-                    <div className={styles.timelineDot} style={{ background: "#ec4899" }}></div>
+                    <div className={`${styles.timelineDot} ${styles.dotBreeding}`}>
+                      <HeartPulse size={16} />
+                    </div>
                     <div className={styles.timelineContent}>
                       <h4>{ev.eventType.replace("_", " ")}</h4>
                       <p>Sire: {ev.sireDetails || "N/A"}</p>
                       {ev.expectedDate && !ev.actualDate && (
-                        <p style={{ fontSize: "0.8rem", color: "#2563eb", margin: "2px 0" }}>
+                        <p className={styles.expectedDateNote}>
                           Expected: {new Date(ev.expectedDate).toLocaleDateString()}
                         </p>
                       )}

@@ -1,10 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { X, Save, DollarSign } from "lucide-react";
+import React, { useState } from "react";
+import { Save } from "lucide-react";
 import { useToast } from "../ui/Toast";
-import styles from "../../(dashboard)/inventory/page.module.css";
-import bsStyles from "../ui/BottomSheetModal.module.css";
 import { transactInventoryExact } from "@/actions/inventory.actions";
+import ResponsiveSheet from "../ui/ResponsiveSheet";
+import sheetStyles from "../ui/ResponsiveSheet.module.css";
+import { InventoryItemSummary } from "./EditItemModal";
 
 const RESTOCK_REASONS = [
   "Regular Supplier Purchase",
@@ -12,7 +13,7 @@ const RESTOCK_REASONS = [
   "Donation / Support Grant",
   "Return from Field / Unused",
   "Stocktake / Audit Adjustment",
-  "Other"
+  "Other",
 ];
 
 const REMOVAL_REASONS = [
@@ -23,47 +24,59 @@ const REMOVAL_REASONS = [
   "Expired Product Disposal",
   "Loss / Leakage / Breakage",
   "Stocktake / Audit Adjustment",
-  "Other"
+  "Other",
 ];
 
-export default function StockTransactionModal({ isOpen, onClose, item, type }: { isOpen: boolean, onClose: () => void, item: any, type: "STOCK_IN" | "STOCK_OUT" }) {
-  const todayStr = new Date().toISOString().split('T')[0];
+function StockTransactionForm({
+  onClose,
+  item,
+  allItems,
+  type,
+}: {
+  onClose: () => void;
+  item: InventoryItemSummary;
+  allItems?: InventoryItemSummary[];
+  type: "STOCK_IN" | "STOCK_OUT";
+}) {
+  const todayStr = new Date().toISOString().split("T")[0];
+  const [activeType, setActiveType] = useState<"STOCK_IN" | "STOCK_OUT">(type);
+  const [selectedItemId, setSelectedItemId] = useState<string>(item.id);
   const [quantity, setQuantity] = useState("");
   const [date, setDate] = useState(todayStr);
-  const [selectedReason, setSelectedReason] = useState("");
+  const [selectedReason, setSelectedReason] = useState(
+    (type === "STOCK_IN" ? RESTOCK_REASONS : REMOVAL_REASONS)[0]
+  );
   const [customReason, setCustomReason] = useState("");
   const [createFinanceTx, setCreateFinanceTx] = useState(true);
-  const [financeAmount, setFinanceAmount] = useState<string>("");
+  const [financeAmountOverride, setFinanceAmountOverride] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
 
-  const reasons = type === "STOCK_IN" ? RESTOCK_REASONS : REMOVAL_REASONS;
+  const currentItem =
+    (allItems && allItems.find((x) => x.id === selectedItemId)) || item;
 
-  // Auto-calculate finance amount when quantity or item changes
-  const unitPrice = type === "STOCK_IN" ? (item?.unitCost || 0) : (item?.unitRevenue || 0);
-  const hasFinanceCapability = Boolean(item?.linkToFinance && unitPrice > 0);
+  const reasons = activeType === "STOCK_IN" ? RESTOCK_REASONS : REMOVAL_REASONS;
+  const unitPrice =
+    activeType === "STOCK_IN"
+      ? currentItem.unitCost || 0
+      : currentItem.unitRevenue || 0;
+  const hasFinanceCapability = Boolean(currentItem.linkToFinance && unitPrice > 0);
 
-  useEffect(() => {
-    if (isOpen) {
-      setQuantity("");
-      setDate(todayStr);
-      setSelectedReason(reasons[0]);
-      setCustomReason("");
-      setCreateFinanceTx(true);
-      setFinanceAmount("");
-    }
-  }, [isOpen, type, item]);
+  const parsedQty = parseFloat(quantity);
+  const computedAutoAmount =
+    !isNaN(parsedQty) && parsedQty > 0 && unitPrice > 0
+      ? String(Math.round(parsedQty * unitPrice))
+      : "";
+  const effectiveFinanceAmount =
+    financeAmountOverride !== null ? financeAmountOverride : computedAutoAmount;
 
-  useEffect(() => {
-    const q = parseFloat(quantity);
-    if (!isNaN(q) && q > 0 && unitPrice > 0) {
-      setFinanceAmount(String(Math.round(q * unitPrice)));
-    } else {
-      setFinanceAmount("");
-    }
-  }, [quantity, unitPrice]);
-
-  if (!isOpen || !item) return null;
+  const handleTypeSwitch = (nextType: "STOCK_IN" | "STOCK_OUT") => {
+    setActiveType(nextType);
+    setSelectedReason(
+      (nextType === "STOCK_IN" ? RESTOCK_REASONS : REMOVAL_REASONS)[0]
+    );
+    setFinanceAmountOverride(null);
+  };
 
   const handleSave = async () => {
     const numQty = parseFloat(quantity);
@@ -72,197 +85,309 @@ export default function StockTransactionModal({ isOpen, onClose, item, type }: {
       return;
     }
 
-    if (type === "STOCK_OUT" && numQty > item.quantity) {
-      toast(`Cannot remove more than available stock (${item.quantity}).`, "error");
+    if (activeType === "STOCK_OUT" && numQty > currentItem.quantity) {
+      toast(
+        `Cannot remove more than available stock (${currentItem.quantity} ${currentItem.unit}).`,
+        "error"
+      );
       return;
     }
 
-    const finalReason = selectedReason === "Other" 
-      ? (customReason.trim() || "Other") 
-      : selectedReason;
+    const finalReason =
+      selectedReason === "Other"
+        ? customReason.trim() || "Other"
+        : selectedReason;
 
     setIsSubmitting(true);
     const res = await transactInventoryExact({
-      itemId: item.id,
-      type,
+      itemId: currentItem.id,
+      type: activeType,
       quantity: numQty,
       reason: finalReason,
       date,
       createFinanceTx: hasFinanceCapability ? createFinanceTx : false,
-      financeAmount: hasFinanceCapability && createFinanceTx && financeAmount ? parseFloat(financeAmount) : undefined,
+      financeAmount:
+        hasFinanceCapability && createFinanceTx && effectiveFinanceAmount
+          ? parseFloat(effectiveFinanceAmount)
+          : undefined,
     });
     setIsSubmitting(false);
 
     if (res.success) {
       toast(res.message, "success");
-      setQuantity("");
       onClose();
     } else {
       toast(res.message, "error");
     }
   };
 
+  const yesterdayStr = (() => {
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    return y.toISOString().split("T")[0];
+  })();
+
   return (
-    <div className={bsStyles.backdrop} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={bsStyles.sheet}>
-        <div className={bsStyles.dragHandle} />
+    <ResponsiveSheet
+      isOpen={true}
+      onClose={onClose}
+      size="sm"
+      title={activeType === "STOCK_IN" ? "Restock Item (Stock In)" : "Use / Remove Stock"}
+      subtitle={`${currentItem.name} • Available: ${currentItem.quantity} ${currentItem.unit}`}
+      disableClose={isSubmitting}
+      footer={
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSubmitting}
+          className={sheetStyles.primaryBtn}
+          style={{
+            background: activeType === "STOCK_IN" ? "var(--color-primary)" : "#ef4444",
+          }}
+        >
+          <Save size={18} />
+          <span>
+            {isSubmitting
+              ? "Processing..."
+              : activeType === "STOCK_IN"
+              ? "Confirm Restock"
+              : "Confirm Stock Out"}
+          </span>
+        </button>
+      }
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
+        <button
+          type="button"
+          onClick={() => handleTypeSwitch("STOCK_IN")}
+          style={{
+            minHeight: "44px",
+            borderRadius: "12px",
+            border:
+              activeType === "STOCK_IN"
+                ? "2px solid #10b981"
+                : "1px solid var(--color-border)",
+            backgroundColor:
+              activeType === "STOCK_IN"
+                ? "rgba(16, 185, 129, 0.14)"
+                : "var(--color-bg)",
+            color: activeType === "STOCK_IN" ? "#10b981" : "var(--color-text-sub)",
+            fontWeight: 700,
+            fontSize: "0.9rem",
+            cursor: "pointer",
+          }}
+        >
+          + Stock In
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTypeSwitch("STOCK_OUT")}
+          style={{
+            minHeight: "44px",
+            borderRadius: "12px",
+            border:
+              activeType === "STOCK_OUT"
+                ? "2px solid #ef4444"
+                : "1px solid var(--color-border)",
+            backgroundColor:
+              activeType === "STOCK_OUT"
+                ? "rgba(239, 68, 68, 0.14)"
+                : "var(--color-bg)",
+            color: activeType === "STOCK_OUT" ? "#ef4444" : "var(--color-text-sub)",
+            fontWeight: 700,
+            fontSize: "0.9rem",
+            cursor: "pointer",
+          }}
+        >
+          − Stock Out
+        </button>
+      </div>
 
-        <div className={bsStyles.header}>
-          <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--color-text-main)" }}>
-            {type === "STOCK_IN" ? "Restock Item (Stock In)" : "Remove Item (Stock Out)"}
-          </h2>
-          <button onClick={onClose} className={bsStyles.closeBtn} aria-label="Close modal"><X size={20} /></button>
+      {allItems && allItems.length > 1 && (
+        <div className={sheetStyles.fieldGroup}>
+          <label className={sheetStyles.label}>Inventory Item</label>
+          <select
+            className={sheetStyles.select}
+            value={currentItem.id}
+            onChange={(e) => {
+              setSelectedItemId(e.target.value);
+              setFinanceAmountOverride(null);
+            }}
+          >
+            {allItems.map((it) => (
+              <option key={it.id} value={it.id}>
+                {it.name} ({it.quantity} {it.unit} in stock)
+              </option>
+            ))}
+          </select>
         </div>
+      )}
 
-        <div className={bsStyles.body}>
-          <div style={{ backgroundColor: "var(--color-bg)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid var(--color-border)" }}>
-            <div style={{ fontWeight: 700, fontSize: "1rem", color: "var(--color-text-main)" }}>{item.name}</div>
-            <div style={{ fontSize: "0.85rem", color: "var(--color-text-sub)", marginTop: "2px" }}>
-              Current Stock: <strong>{item.quantity} {item.unit}</strong>
-              {item.linkToFinance && (
-                <span> • {type === "STOCK_IN" ? `Unit Cost: KES ${item.unitCost || 0}` : `Unit Price: KES ${item.unitRevenue || 0}`}</span>
-              )}
-            </div>
-          </div>
+      <div className={sheetStyles.fieldGroup}>
+        <label className={sheetStyles.label}>
+          Quantity to {activeType === "STOCK_IN" ? "Add" : "Remove"} ({currentItem.unit}) *
+        </label>
+        <input
+          type="number"
+          inputMode="decimal"
+          step="any"
+          min="0.01"
+          className={`${sheetStyles.input} tabular-nums`}
+          style={{ fontWeight: 700, fontSize: "1.05rem" }}
+          value={quantity}
+          onChange={(e) => {
+            setQuantity(e.target.value);
+            setFinanceAmountOverride(null);
+          }}
+          placeholder="e.g. 10"
+          autoFocus
+        />
+      </div>
 
-          <div>
-             <label style={{ display: "block", marginBottom: "0.4rem", fontWeight: 600, fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
-               Quantity to {type === "STOCK_IN" ? "Add" : "Remove"} ({item.unit}) *
-             </label>
-             <input
-               type="number"
-               step="any"
-               min="0.01"
-               style={{ width: "100%", minHeight: "44px", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)", fontSize: "1rem", fontWeight: 700 }}
-               value={quantity}
-               onChange={e => setQuantity(e.target.value)}
-               placeholder="e.g. 10"
-               autoFocus
-             />
-          </div>
-
-          {/* Mobile-Friendly Date Selector */}
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-              <label style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--color-text-sub)" }}>Date of Transfer *</label>
-              <div style={{ display: "flex", gap: "4px" }}>
+      <div className={sheetStyles.fieldGroup}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label className={sheetStyles.label}>Date of Transfer *</label>
+          <div style={{ display: "flex", gap: "5px" }}>
+            {[
+              { label: "Today", value: todayStr },
+              { label: "Yesterday", value: yesterdayStr },
+            ].map((p) => {
+              const active = date === p.value;
+              return (
                 <button
+                  key={p.label}
                   type="button"
-                  onClick={() => setDate(todayStr)}
+                  onClick={() => setDate(p.value)}
                   style={{
-                    padding: "3px 8px",
+                    padding: "3px 9px",
                     borderRadius: "99px",
-                    fontSize: "0.7rem",
-                    fontWeight: 600,
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: date === todayStr ? "var(--color-primary)" : "var(--color-bg)",
-                    color: date === todayStr ? "white" : "var(--color-text-main)",
-                    cursor: "pointer"
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    border: active
+                      ? "1px solid var(--color-primary)"
+                      : "1px solid var(--color-border)",
+                    backgroundColor: active ? "var(--color-primary)" : "var(--color-bg)",
+                    color: active ? "#ffffff" : "var(--color-text-sub)",
+                    cursor: "pointer",
                   }}
                 >
-                  Today
+                  {p.label}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const y = new Date();
-                    y.setDate(y.getDate() - 1);
-                    setDate(y.toISOString().split('T')[0]);
-                  }}
-                  style={{
-                    padding: "3px 8px",
-                    borderRadius: "99px",
-                    fontSize: "0.7rem",
-                    fontWeight: 600,
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: date !== todayStr ? "var(--color-primary)" : "var(--color-bg)",
-                    color: date !== todayStr ? "white" : "var(--color-text-main)",
-                    cursor: "pointer"
-                  }}
-                >
-                  Yesterday
-                </button>
+              );
+            })}
+          </div>
+        </div>
+        <input
+          type="date"
+          max={todayStr}
+          className={sheetStyles.input}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+      </div>
+
+      <div className={sheetStyles.fieldGroup}>
+        <label className={sheetStyles.label}>Reason</label>
+        <select
+          className={sheetStyles.select}
+          value={selectedReason}
+          onChange={(e) => setSelectedReason(e.target.value)}
+        >
+          {reasons.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        {selectedReason === "Other" && (
+          <input
+            type="text"
+            placeholder="Write custom reason..."
+            className={sheetStyles.input}
+            style={{ marginTop: "0.4rem" }}
+            value={customReason}
+            onChange={(e) => setCustomReason(e.target.value)}
+          />
+        )}
+      </div>
+
+      {hasFinanceCapability && (
+        <div
+          className={sheetStyles.cardBox}
+          style={{
+            borderColor:
+              activeType === "STOCK_IN"
+                ? "rgba(239, 68, 68, 0.25)"
+                : "rgba(16, 185, 129, 0.25)",
+          }}
+        >
+          <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              style={{
+                width: "18px",
+                height: "18px",
+                marginTop: "2px",
+                accentColor: "var(--color-primary)",
+              }}
+              checked={createFinanceTx}
+              onChange={(e) => setCreateFinanceTx(e.target.checked)}
+            />
+            <div style={{ fontSize: "0.85rem", color: "var(--color-text-main)" }}>
+              <strong>
+                Auto-record in Finances ({activeType === "STOCK_IN" ? "Expense" : "Sale"})
+              </strong>
+              <div style={{ fontSize: "0.75rem", color: "var(--color-text-sub)", marginTop: "2px" }}>
+                {activeType === "STOCK_IN"
+                  ? `Unit Cost: KES ${currentItem.unitCost} / ${currentItem.unit}`
+                  : `Unit Price: KES ${currentItem.unitRevenue} / ${currentItem.unit}`}
               </div>
             </div>
-            <input
-              type="date"
-              max={todayStr}
-              style={{ width: "100%", minHeight: "44px", padding: "0.6rem 0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)", fontSize: "0.95rem", fontWeight: 600 }}
-              value={date}
-              onChange={e => setDate(e.target.value)}
-            />
-          </div>
+          </label>
 
-          {/* Reason Dropdown + Custom Allowance */}
-          <div>
-            <label style={{ display: "block", marginBottom: "0.4rem", fontWeight: 600, fontSize: "0.85rem", color: "var(--color-text-sub)" }}>Reason for Transfer</label>
-            <select
-              style={{ width: "100%", minHeight: "44px", padding: "0.65rem 0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)", fontSize: "0.9rem" }}
-              value={selectedReason}
-              onChange={e => setSelectedReason(e.target.value)}
-            >
-              {reasons.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-            {selectedReason === "Other" && (
+          {createFinanceTx && (
+            <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-sub)" }}>
+                Amount (KES):
+              </span>
               <input
-                type="text"
-                placeholder="Write your custom reason..."
-                style={{ width: "100%", marginTop: "0.5rem", minHeight: "40px", padding: "0.6rem 0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)", fontSize: "0.9rem" }}
-                value={customReason}
-                onChange={e => setCustomReason(e.target.value)}
-                autoFocus
+                type="number"
+                inputMode="decimal"
+                className={`${sheetStyles.input} tabular-nums`}
+                style={{ flex: 1, minHeight: "38px", padding: "0.4rem 0.65rem", fontWeight: 700 }}
+                value={effectiveFinanceAmount}
+                onChange={(e) => setFinanceAmountOverride(e.target.value)}
+                placeholder="Total amount"
               />
-            )}
-          </div>
-
-          {/* Financial Linkage Card */}
-          {hasFinanceCapability && (
-            <div style={{ backgroundColor: type === "STOCK_IN" ? "rgba(239, 68, 68, 0.06)" : "rgba(34, 197, 94, 0.06)", border: `1px solid ${type === "STOCK_IN" ? "rgba(239, 68, 68, 0.2)" : "rgba(34, 197, 94, 0.2)"}`, borderRadius: "10px", padding: "0.85rem" }}>
-              <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  style={{ width: "18px", height: "18px", marginTop: "2px", accentColor: "var(--color-primary)" }}
-                  checked={createFinanceTx}
-                  onChange={e => setCreateFinanceTx(e.target.checked)}
-                />
-                <div style={{ fontSize: "0.85rem", color: "var(--color-text-main)" }}>
-                  <strong>Auto-record in Finances ({type === "STOCK_IN" ? "Expense" : "Sale"})</strong>
-                  <div style={{ fontSize: "0.75rem", color: "var(--color-text-sub)", marginTop: "2px" }}>
-                    {type === "STOCK_IN" ? `Unit Cost: KES ${item.unitCost} / ${item.unit}` : `Unit Price: KES ${item.unitRevenue} / ${item.unit}`}
-                  </div>
-                </div>
-              </label>
-
-              {createFinanceTx && (
-                <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-sub)" }}>Amount (KES):</span>
-                  <input
-                    type="number"
-                    style={{ flex: 1, padding: "0.4rem 0.6rem", borderRadius: "6px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)", fontSize: "0.95rem", fontWeight: 700 }}
-                    value={financeAmount}
-                    onChange={e => setFinanceAmount(e.target.value)}
-                    placeholder="Total amount"
-                  />
-                </div>
-              )}
             </div>
           )}
         </div>
+      )}
+    </ResponsiveSheet>
+  );
+}
 
-        <div className={bsStyles.stickyFooter}>
-          <button
-             onClick={handleSave}
-             disabled={isSubmitting}
-             className={bsStyles.primarySubmitBtn}
-             style={{ backgroundColor: type === "STOCK_IN" ? "var(--color-primary, #16a34a)" : "#ef4444" }}
-          >
-             <Save size={18} />
-             <span>{isSubmitting ? "Processing..." : (type === "STOCK_IN" ? "Confirm Restock" : "Confirm Removal")}</span>
-          </button>
-        </div>
-      </div>
-    </div>
+export default function StockTransactionModal({
+  isOpen,
+  onClose,
+  item,
+  allItems,
+  type,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  item: InventoryItemSummary | null;
+  allItems?: InventoryItemSummary[];
+  type: "STOCK_IN" | "STOCK_OUT";
+}) {
+  if (!isOpen || !item) return null;
+  return (
+    <StockTransactionForm
+      key={`${item.id}-${type}`}
+      onClose={onClose}
+      item={item}
+      allItems={allItems}
+      type={type}
+    />
   );
 }

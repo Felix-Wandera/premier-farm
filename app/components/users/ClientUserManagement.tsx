@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import styles from "../../(dashboard)/users/page.module.css";
 import {
   Plus,
@@ -9,7 +10,6 @@ import {
   MoreHorizontal,
   Search,
   Info,
-  X,
   Mail,
   Link as LinkIcon,
   Send,
@@ -21,8 +21,16 @@ import {
 } from "lucide-react";
 import EmptyState from "../ui/EmptyState";
 import { useToast } from "../ui/Toast";
-import { inviteUser, removeUser, resendInvitation, getInviteLinkByUserId } from "@/actions/user.actions";
+import {
+  inviteUser,
+  removeUser,
+  resendInvitation,
+  getInviteLinkByUserId,
+} from "@/actions/user.actions";
 import UserPermissionsModal from "./UserPermissionsModal";
+import ResponsiveSheet from "../ui/ResponsiveSheet";
+import sheetStyles from "../ui/ResponsiveSheet.module.css";
+import ConfirmationModal from "../ui/ConfirmationModal";
 import {
   AppRole,
   PERMISSION_DEFINITIONS,
@@ -30,7 +38,7 @@ import {
   ROLE_DEFAULT_PERMISSIONS,
 } from "@/lib/permissions";
 import { useAuth } from "../auth/AuthProvider";
-import { useRouter } from "next/navigation";
+import { QUICK_ACTION_EVENT, QuickActionId } from "@/lib/quick-actions";
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
@@ -49,15 +57,35 @@ const ROLE_COLORS: Record<string, string> = {
   WORKER: "#64748b",
 };
 
-export default function ClientUserManagement({ initialUsers }: { initialUsers: any[] }) {
+export interface TeamMemberRow {
+  id: string;
+  name: string;
+  email: string;
+  role: AppRole;
+  lastActive: string;
+  isPending?: boolean;
+  isExpired?: boolean;
+  expiryText?: string | null;
+  hasCustomPermissions?: boolean;
+  customPermissions?: Partial<Record<PermissionKey, boolean>>;
+  permissionMap?: Record<PermissionKey, boolean>;
+}
+
+export default function ClientUserManagement({
+  initialUsers,
+}: {
+  initialUsers: TeamMemberRow[];
+}) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { refreshSession } = useAuth();
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  // Invite Modal State
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(
+    () => searchParams.get("action") === "invite-member"
+  );
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<AppRole>("WORKER");
   const [showInvitePerms, setShowInvitePerms] = useState(false);
@@ -65,19 +93,31 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
     () => ({ ...ROLE_DEFAULT_PERMISSIONS.WORKER })
   );
   const [isInviting, setIsInviting] = useState(false);
-  const [actionMember, setActionMember] = useState<any | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [actionMember, setActionMember] = useState<TeamMemberRow | null>(null);
   const isMobile = useIsMobile();
   const [backupInviteInfo, setBackupInviteInfo] = useState<string | null>(null);
-  const [deletingUser, setDeletingUser] = useState<any | null>(null);
+  const [deletingUser, setDeletingUser] = useState<TeamMemberRow | null>(null);
 
-  // Granular Role & Permissions Modal
-  const [editingMember, setEditingMember] = useState<any>(null);
+  const [editingMember, setEditingMember] = useState<TeamMemberRow | null>(null);
   const toast = useToast();
+
+  useEffect(() => {
+    const handleQuickAction = (e: Event) => {
+      const detail = (e as CustomEvent<{ action: QuickActionId }>).detail;
+      if (detail?.action === "invite-member") {
+        setIsInviteOpen(true);
+      }
+    };
+    window.addEventListener(QUICK_ACTION_EVENT, handleQuickAction);
+    return () => window.removeEventListener(QUICK_ACTION_EVENT, handleQuickAction);
+  }, []);
 
   const pendingCount = initialUsers.filter((m) => m.isPending).length;
 
   const filtered = initialUsers.filter((member) => {
     const matchesSearch =
+      !searchQuery.trim() ||
       member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.email.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
@@ -140,23 +180,38 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
     }
   };
 
+  const confirmRemoveUser = async () => {
+    if (!deletingUser) return;
+    setIsRemoving(true);
+    const res = await removeUser(deletingUser.id);
+    setIsRemoving(false);
+    toast(res.message, res.success ? "success" : "error");
+    setDeletingUser(null);
+    router.refresh();
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
           <h1 className={styles.pageTitle}>Team &amp; Permissions</h1>
-          <p className={styles.subtitle}>{initialUsers.length} organization members</p>
+          <p className={styles.subtitle}>{initialUsers.length} ranch members</p>
         </div>
-        <button className={styles.inviteBtn} onClick={() => setIsInviteOpen(true)}>
-          <Plus size={20} /> Invite
+        <button
+          type="button"
+          className={styles.desktopInviteBtn}
+          onClick={() => setIsInviteOpen(true)}
+        >
+          <Plus size={18} strokeWidth={2.4} />
+          <span>Invite Member</span>
         </button>
       </header>
 
       <div className={styles.searchBox}>
-        <Search className={styles.searchIcon} size={20} />
+        <Search className={styles.searchIcon} size={18} />
         <input
           type="text"
-          placeholder="Search team members..."
+          placeholder="Search team by name or email..."
           className={styles.searchInput}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -167,37 +222,26 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
         {["All", "Admin", "Manager", "Worker"].map((f) => (
           <button
             key={f}
+            type="button"
             className={`${styles.filterPill} ${activeFilter === f ? styles.activePill : ""}`}
             onClick={() => setActiveFilter(f)}
             role="tab"
             aria-selected={activeFilter === f}
-            aria-pressed={activeFilter === f}
           >
             {f}
           </button>
         ))}
         <button
+          type="button"
           className={`${styles.filterPill} ${activeFilter === "Pending" ? styles.activePill : ""}`}
           onClick={() => setActiveFilter("Pending")}
           role="tab"
           aria-selected={activeFilter === "Pending"}
-          aria-pressed={activeFilter === "Pending"}
           style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
         >
           Pending
           {pendingCount > 0 && (
-            <span
-              style={{
-                backgroundColor: activeFilter === "Pending" ? "rgba(255,255,255,0.25)" : "#fef08a",
-                color: activeFilter === "Pending" ? "#fff" : "#854d0e",
-                fontSize: "0.7rem",
-                fontWeight: 700,
-                padding: "1px 6px",
-                borderRadius: "10px",
-              }}
-            >
-              {pendingCount}
-            </span>
+            <span className={`${styles.pendingCountPill} tabular-nums`}>{pendingCount}</span>
           )}
         </button>
       </div>
@@ -209,94 +253,57 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
             return (
               <div key={member.id} className={styles.memberCard}>
                 <div className={styles.avatarCircle}>
-                  <User size={22} />
+                  <User size={20} />
                 </div>
 
                 <div className={styles.memberInfo}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                    <h3 style={{ margin: 0 }}>{member.name}</h3>
+                  <div className={styles.nameBadgeRow}>
+                    <h3>{member.name}</h3>
                     {member.isPending && (
                       <span
-                        style={{
-                          backgroundColor: member.isExpired ? "#fee2e2" : "#fef9c3",
-                          color: member.isExpired ? "#991b1b" : "#854d0e",
-                          fontSize: "0.65rem",
-                          fontWeight: 800,
-                          padding: "1px 6px",
-                          borderRadius: "4px",
-                          border: `1px solid ${member.isExpired ? "#fca5a5" : "#fef08a"}`,
-                        }}
+                        className={
+                          member.isExpired ? styles.badgeExpired : styles.badgePending
+                        }
                       >
-                        {member.isExpired ? "EXPIRED INVITE" : "PENDING"}
+                        {member.isExpired ? "EXPIRED" : "PENDING"}
                       </span>
                     )}
                     {member.hasCustomPermissions && (
-                      <span
-                        style={{
-                          backgroundColor: "rgba(59, 130, 246, 0.12)",
-                          color: "#2563eb",
-                          fontSize: "0.66rem",
-                          fontWeight: 700,
-                          padding: "2px 7px",
-                          borderRadius: "99px",
-                        }}
-                      >
-                        CUSTOM ACCESS
-                      </span>
+                      <span className={styles.badgeCustom}>CUSTOM</span>
                     )}
                     {hasDeletePerm && (
-                      <span
-                        style={{
-                          backgroundColor: "rgba(239, 68, 68, 0.12)",
-                          color: "#dc2626",
-                          fontSize: "0.66rem",
-                          fontWeight: 700,
-                          padding: "2px 7px",
-                          borderRadius: "99px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "3px",
-                        }}
-                      >
-                        <ShieldAlert size={11} /> CAN DELETE ANIMALS
-                      </span>
-                    )}
-                    {member.isPending && member.expiryText && !member.isExpired && (
-                      <span style={{ fontSize: "0.7rem", color: "var(--color-text-sub)", fontWeight: 500 }}>
-                        ({member.expiryText})
+                      <span className={styles.badgeDeleteGrant}>
+                        <ShieldAlert size={11} /> DELETE GRANT
                       </span>
                     )}
                   </div>
-                  <p>
-                    <Mail size={12} strokeWidth={3} /> {member.email}
+
+                  <p className={styles.emailLine}>
+                    <Mail size={12} /> <span>{member.email}</span>
                   </p>
-                  <div className={styles.lastSeen}>
-                    <Clock size={12} /> {member.isPending ? `Invited on ${member.lastActive}` : member.lastActive}
-                    <span style={{ fontSize: "0.9em", opacity: 0.5 }}>•</span>
-                    <span style={{ color: ROLE_COLORS[member.role], fontWeight: 700, fontSize: "0.75rem" }}>
+
+                  <div className={styles.metaFooterRow}>
+                    <span className={styles.rolePill} style={{ color: ROLE_COLORS[member.role] }}>
                       {member.role}
                     </span>
-                    <span style={{ fontSize: "0.9em", opacity: 0.5 }}>•</span>
+                    <span className={styles.dotSep}>•</span>
+                    <span className={styles.lastActiveText}>
+                      <Clock size={11} />{" "}
+                      {member.isPending ? `Invited ${member.lastActive}` : member.lastActive}
+                    </span>
                     <button
                       type="button"
                       onClick={() => setEditingMember(member)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "var(--color-primary, #047857)",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        padding: 0,
-                      }}
+                      className={styles.permsLinkBtn}
                     >
-                      Configure Permissions
+                      Permissions &rarr;
                     </button>
                   </div>
                 </div>
 
                 <div className={styles.menuWrapper}>
                   <button
+                    type="button"
                     className={styles.moreBtn}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -306,7 +313,7 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                         setOpenMenuId(openMenuId === member.id ? null : member.id);
                       }
                     }}
-                    aria-label="Actions"
+                    aria-label="Member actions"
                   >
                     <MoreHorizontal size={20} />
                   </button>
@@ -316,15 +323,18 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                       {member.isPending && (
                         <>
                           <button
+                            type="button"
                             onClick={async () => {
                               setOpenMenuId(null);
                               const res = await resendInvitation(member.id);
                               toast(res.message, res.success ? "success" : "error");
                             }}
                           >
-                            <Send size={14} /> {member.isExpired ? "Renew & Resend" : "Resend Invite"}
+                            <Send size={14} />{" "}
+                            {member.isExpired ? "Renew & Resend" : "Resend Invite"}
                           </button>
                           <button
+                            type="button"
                             onClick={async () => {
                               setOpenMenuId(null);
                               const res = await getInviteLinkByUserId(member.id);
@@ -338,10 +348,17 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                           >
                             <LinkIcon size={14} /> Copy Setup Link
                           </button>
-                          <hr style={{ margin: "4px 0", border: "none", borderTop: "1px solid var(--color-border)" }} />
+                          <hr
+                            style={{
+                              margin: "4px 0",
+                              border: "none",
+                              borderTop: "1px solid var(--color-border)",
+                            }}
+                          />
                         </>
                       )}
                       <button
+                        type="button"
                         onClick={() => {
                           setEditingMember(member);
                           setOpenMenuId(null);
@@ -350,6 +367,7 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                         <Shield size={14} /> Role &amp; Permissions
                       </button>
                       <button
+                        type="button"
                         className={styles.deleteBtn}
                         onClick={() => {
                           setDeletingUser(member);
@@ -370,7 +388,7 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
             title="No members found"
             description={
               searchQuery
-                ? `We couldn't find any team members matching "${searchQuery}"`
+                ? `No team members matched "${searchQuery}".`
                 : "You haven't added any team members yet."
             }
             actionLabel="Invite Member"
@@ -379,163 +397,187 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
         )}
       </div>
 
-      {/* Invite Modal */}
-      {isInviteOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContainer} style={{ maxWidth: "520px", maxHeight: "90vh", overflowY: "auto" }}>
-            <div className={styles.dragHandle} />
-            <div className={styles.modalHeader}>
-              <h2>Invite Team Member</h2>
+      {/* Invite Sheet */}
+      <ResponsiveSheet
+        isOpen={isInviteOpen}
+        onClose={() => {
+          setIsInviteOpen(false);
+          setBackupInviteInfo(null);
+        }}
+        size="md"
+        title="Invite Team Member"
+        subtitle="Send an email invite and assign role permissions"
+        disableClose={isInviting}
+        footer={
+          !backupInviteInfo ? (
+            <button
+              type="button"
+              onClick={handleInvite}
+              disabled={isInviting}
+              className={sheetStyles.primaryBtn}
+            >
+              <Mail size={18} />
+              <span>{isInviting ? "Sending Invitation..." : "Send Email Invite"}</span>
+            </button>
+          ) : undefined
+        }
+      >
+        {backupInviteInfo ? (
+          <div className={sheetStyles.cardBox} style={{ borderColor: "var(--color-primary)" }}>
+            <h3 style={{ margin: "0 0 0.4rem", color: "var(--color-primary)", fontSize: "1rem" }}>
+              Invitation Generated
+            </h3>
+            <p style={{ margin: "0 0 0.85rem", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
+              Copy the secure setup link below if you want to share it directly:
+            </p>
+            <pre
+              style={{
+                margin: 0,
+                padding: "0.75rem",
+                backgroundColor: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "10px",
+                fontSize: "0.8rem",
+                overflowX: "auto",
+                color: "var(--color-text-main)",
+              }}
+            >
+              {backupInviteInfo}
+            </pre>
+            <div style={{ display: "flex", gap: "0.65rem", marginTop: "1rem" }}>
               <button
+                type="button"
+                onClick={copyInviteToClipboard}
+                className={sheetStyles.primaryBtn}
+                style={{ flex: 1 }}
+              >
+                Copy Link
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   setIsInviteOpen(false);
                   setBackupInviteInfo(null);
                 }}
-                style={{ background: "none", border: "none", cursor: "pointer" }}
+                className={sheetStyles.secondaryBtn}
               >
-                <X size={24} color="#64748b" />
+                Done
               </button>
             </div>
+          </div>
+        ) : (
+          <>
+            <div className={sheetStyles.fieldGroup}>
+              <label className={sheetStyles.label}>Email Address *</label>
+              <input
+                type="email"
+                className={sheetStyles.input}
+                placeholder="e.g. employee@premierranch.co.ke"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </div>
 
-            <div className={styles.modalBody}>
-              {backupInviteInfo ? (
-                <div style={{ backgroundColor: "#f0fdf4", padding: "1rem", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
-                  <h3 style={{ margin: "0 0 0.5rem 0", color: "#166534", fontSize: "1rem" }}>Invitation Generated</h3>
-                  <p style={{ margin: "0 0 1rem 0", color: "#15803d", fontSize: "0.875rem" }}>
-                    You can copy the secure link details below in case the email fails.
-                  </p>
-                  <pre style={{ margin: 0, padding: "0.75rem", backgroundColor: "#dcfce7", borderRadius: "6px", fontSize: "0.875rem", overflowX: "auto", color: "#166534" }}>
-                    {backupInviteInfo}
-                  </pre>
-                  <button
-                    onClick={copyInviteToClipboard}
-                    style={{ marginTop: "1rem", width: "100%", padding: "0.5rem", backgroundColor: "#fff", border: "1px solid #22c55e", color: "#16a34a", borderRadius: "6px", cursor: "pointer", fontWeight: 500 }}
-                  >
-                    Copy to Clipboard
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsInviteOpen(false);
-                      setBackupInviteInfo(null);
-                    }}
-                    style={{ marginTop: "0.5rem", width: "100%", padding: "0.5rem", backgroundColor: "transparent", border: "none", color: "#64748b", cursor: "pointer", fontWeight: 500 }}
-                  >
-                    Close
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>Email Address *</label>
-                    <input
-                      type="email"
-                      style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-main)" }}
-                      placeholder="e.g. employee@premierranch.co.ke"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                    />
-                  </div>
+            <div className={sheetStyles.fieldGroup}>
+              <label className={sheetStyles.label}>Base Role Assignment</label>
+              <select
+                className={sheetStyles.select}
+                value={inviteRole}
+                onChange={(e) => handleInviteRoleChange(e.target.value as AppRole)}
+              >
+                <option value="WORKER">Worker (Field &amp; Milk Logging)</option>
+                <option value="MANAGER">Manager (Operations, Finances &amp; Analytics)</option>
+                <option value="ADMIN">Administrator (Full Organization Access)</option>
+              </select>
+            </div>
 
-                  <div>
-                    <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>Base Role Assignment</label>
-                    <select
-                      style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-bg)", color: "var(--color-text-main)" }}
-                      value={inviteRole}
-                      onChange={(e) => handleInviteRoleChange(e.target.value as AppRole)}
-                    >
-                      <option value="WORKER">Worker (Field &amp; Milk Logging)</option>
-                      <option value="MANAGER">Manager (Operations, Finances &amp; Analytics)</option>
-                      <option value="ADMIN">Administrator (Full Organization Access)</option>
-                    </select>
-                  </div>
+            <button
+              type="button"
+              onClick={() => setShowInvitePerms(!showInvitePerms)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                width: "100%",
+                minHeight: "44px",
+                padding: "0.65rem 0.9rem",
+                borderRadius: "12px",
+                border: "1px solid var(--color-border)",
+                background: "var(--color-bg)",
+                color: "var(--color-text-main)",
+                fontWeight: 700,
+                fontSize: "0.84rem",
+                fontFamily: "inherit",
+                cursor: "pointer",
+              }}
+            >
+              <span>Customize Granular Permissions</span>
+              {showInvitePerms ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowInvitePerms(!showInvitePerms)}
+            {showInvitePerms && (
+              <div
+                style={{
+                  maxHeight: "240px",
+                  overflowY: "auto",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "12px",
+                  padding: "0.4rem 0.85rem",
+                  backgroundColor: "var(--color-bg)",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                {PERMISSION_DEFINITIONS.map((def, idx) => (
+                  <label
+                    key={def.key}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      width: "100%",
-                      padding: "0.65rem 0.85rem",
-                      borderRadius: "8px",
-                      border: "1px solid var(--color-border)",
-                      background: "var(--color-bg)",
-                      color: "var(--color-text-main)",
-                      fontWeight: 600,
-                      fontSize: "0.85rem",
+                      gap: "0.75rem",
+                      fontSize: "0.84rem",
+                      padding: "0.55rem 0",
+                      borderBottom:
+                        idx < PERMISSION_DEFINITIONS.length - 1
+                          ? "1px solid var(--color-border)"
+                          : "none",
                       cursor: "pointer",
                     }}
                   >
-                    <span>Customize Granular Permissions (Finances, Analytics, etc.)</span>
-                    {showInvitePerms ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </button>
-
-                  {showInvitePerms && (
-                    <div
-                      style={{
-                        maxHeight: "240px",
-                        overflowY: "auto",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "10px",
-                        padding: "0.5rem 0.75rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      {PERMISSION_DEFINITIONS.map((def) => (
-                        <label
-                          key={def.key}
-                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", fontSize: "0.83rem", padding: "0.35rem 0", cursor: "pointer" }}
+                    <div>
+                      <span style={{ fontWeight: 600 }}>{def.label}</span>
+                      {def.optInOnly && (
+                        <span
+                          style={{
+                            marginLeft: "6px",
+                            fontSize: "0.68rem",
+                            color: "#ef4444",
+                            fontWeight: 700,
+                          }}
                         >
-                          <div>
-                            <span style={{ fontWeight: 600 }}>{def.label}</span>
-                            {def.optInOnly && (
-                              <span style={{ marginLeft: "6px", fontSize: "0.68rem", color: "#dc2626", fontWeight: 700 }}>
-                                (Opt-in only)
-                              </span>
-                            )}
-                          </div>
-                          <input
-                            type="checkbox"
-                            checked={invitePermMap[def.key]}
-                            onChange={() => handleInvitePermToggle(def.key)}
-                            style={{ width: "17px", height: "17px", accentColor: "var(--color-primary)" }}
-                          />
-                        </label>
-                      ))}
+                          (Opt-in)
+                        </span>
+                      )}
                     </div>
-                  )}
-
-                  <button
-                    onClick={handleInvite}
-                    disabled={isInviting}
-                    style={{
-                      width: "100%",
-                      padding: "0.875rem",
-                      backgroundColor: "var(--color-primary, #047857)",
-                      color: "#fff",
-                      borderRadius: "8px",
-                      border: "none",
-                      fontWeight: 600,
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: "8px",
-                      cursor: isInviting ? "not-allowed" : "pointer",
-                      opacity: isInviting ? 0.7 : 1,
-                    }}
-                  >
-                    <Mail size={18} />
-                    {isInviting ? "Sending Invitation..." : "Send Email Invite"}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+                    <input
+                      type="checkbox"
+                      checked={invitePermMap[def.key]}
+                      onChange={() => handleInvitePermToggle(def.key)}
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        accentColor: "var(--color-primary)",
+                        flexShrink: 0,
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </ResponsiveSheet>
 
       {/* Granular Permissions Modal */}
       <UserPermissionsModal
@@ -548,6 +590,7 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
         }}
       />
 
+      {/* Mobile Member Quick Action Sheet */}
       {isMobile && actionMember && (
         <div className={styles.actionSheetOverlay} onClick={() => setActionMember(null)}>
           <div className={styles.actionSheet} onClick={(e) => e.stopPropagation()}>
@@ -557,6 +600,7 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
             {actionMember.isPending && (
               <>
                 <button
+                  type="button"
                   className={styles.actionSheetButton}
                   onClick={async () => {
                     const res = await resendInvitation(actionMember.id);
@@ -564,10 +608,11 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                     setActionMember(null);
                   }}
                 >
-                  <Send size={20} color="#10b981" />{" "}
-                  {actionMember.isExpired ? "Renew & Resend Invitation" : "Resend Invitation Email"}
+                  <Send size={19} color="#10b981" />{" "}
+                  {actionMember.isExpired ? "Renew & Resend Invite" : "Resend Invite Email"}
                 </button>
                 <button
+                  type="button"
                   className={styles.actionSheetButton}
                   onClick={async () => {
                     const res = await getInviteLinkByUserId(actionMember.id);
@@ -580,83 +625,59 @@ export default function ClientUserManagement({ initialUsers }: { initialUsers: a
                     setActionMember(null);
                   }}
                 >
-                  <LinkIcon size={20} color="#3b82f6" /> Copy Setup Link
+                  <LinkIcon size={19} color="#3b82f6" /> Copy Setup Link
                 </button>
               </>
             )}
 
             <button
+              type="button"
               className={styles.actionSheetButton}
               onClick={() => {
                 setEditingMember(actionMember);
                 setActionMember(null);
               }}
             >
-              <Settings size={20} color="#64748b" /> Role &amp; Granular Permissions
+              <Settings size={19} color="var(--color-primary)" /> Role &amp; Permissions
             </button>
 
             <button
+              type="button"
               className={`${styles.actionSheetButton} ${styles.deleteBtn}`}
               onClick={() => {
                 setDeletingUser(actionMember);
                 setActionMember(null);
               }}
             >
-              <Trash2 size={20} color="#f43f5e" /> Remove from Organization
+              <Trash2 size={19} color="#ef4444" /> Remove from Organization
             </button>
 
-            <button className={`${styles.actionSheetButton} ${styles.cancelAction}`} onClick={() => setActionMember(null)}>
-              Dismiss
+            <button
+              type="button"
+              className={`${styles.actionSheetButton} ${styles.cancelAction}`}
+              onClick={() => setActionMember(null)}
+            >
+              Cancel
             </button>
           </div>
         </div>
       )}
 
-      {/* Remove Confirmation Modal */}
-      {deletingUser && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContainer}>
-            <div className={styles.modalHeader}>
-              <h2>Remove Team Member</h2>
-              <button onClick={() => setDeletingUser(null)} style={{ background: "none", border: "none", cursor: "pointer" }}>
-                <X size={24} color="#64748b" />
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <div style={{ textAlign: "center", padding: "1rem 0" }}>
-                <div style={{ backgroundColor: "#fee2e2", color: "#ef4444", width: "64px", height: "64px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem auto" }}>
-                  <Trash2 size={32} />
-                </div>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>Are you sure?</h3>
-                <p style={{ color: "#64748b", lineHeight: "1.5" }}>
-                  You are about to remove <strong>{deletingUser.name}</strong>. They will immediately lose access to this organization.
-                </p>
-              </div>
-            </div>
-            <div className={styles.modalFooter}>
-              <div style={{ display: "flex", gap: "1rem" }}>
-                <button
-                  onClick={() => setDeletingUser(null)}
-                  style={{ flex: 1, padding: "0.75rem", background: "#f1f5f9", border: "none", borderRadius: "12px", fontWeight: 700, cursor: "pointer" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    const res = await removeUser(deletingUser.id);
-                    toast(res.message, res.success ? "success" : "error");
-                    setDeletingUser(null);
-                    router.refresh();
-                  }}
-                  style={{ flex: 1, padding: "0.75rem", background: "#f43f5e", color: "#fff", border: "none", borderRadius: "12px", fontWeight: 700, cursor: "pointer" }}
-                >
-                  Remove User
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Theme-Safe Remove Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!deletingUser}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={confirmRemoveUser}
+        title="Remove Team Member"
+        message={
+          <span>
+            You are about to remove <strong>{deletingUser?.name}</strong>. They will immediately
+            lose access to this organization.
+          </span>
+        }
+        confirmText="Remove User"
+        isLoading={isRemoving}
+      />
     </div>
   );
 }

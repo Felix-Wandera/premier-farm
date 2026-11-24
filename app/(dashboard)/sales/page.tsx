@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import ClientSalesFinances from "../../components/sales/ClientSalesFinances";
 import { getFinancialOverview, getTransactions, getWeeklyCashFlow } from "@/actions/financial.actions";
 import { requirePermission } from "@/actions/utils";
@@ -17,5 +17,9 @@ export default async function SalesFinances() {
     getWeeklyCashFlow(),
   ]);
 
-  return <ClientSalesFinances overview={overview} transactions={transactions} cashFlow={cashFlow} />;
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading finances...</div>}>
+      <ClientSalesFinances overview={overview} transactions={transactions} cashFlow={cashFlow} />
+    </Suspense>
+  );
 }

@@ -23,7 +23,8 @@
   --text-page: 1.75rem;
   --text-section: 1.1rem;
 
-  --app-bar-height: 72px;
+  --app-bar-height: 68px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   --sidebar-width: 260px;
 }
 
@@ -34,9 +35,9 @@
   /* Slate 900 */
   --color-primary: #10b981;
   --color-primary-dark: #047857;
-  --color-primary-light: #064e3b;
+  --color-primary-light: rgba(16, 185, 129, 0.16);
   --color-text-main: #f8fafc;
-  --color-text-sub: #cdd5df;
+  --color-text-sub: #cbd5e1;
   --color-border: #1e293b;
 }
 
@@ -44,6 +45,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -55,16 +57,29 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Prevent iOS Safari forced viewport zoom on input focus */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Glassmorphism utility */
 .glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--color-border);
 }
 
 [data-theme='dark'] .glass {
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.9);
 }
 
 /* Accessibility: Focus Visible */

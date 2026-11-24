@@ -9,7 +9,7 @@ import bsStyles from "../ui/BottomSheetModal.module.css";
 
 interface Animal {
   id: string;
-  tagNumber: string;
+  tagNumber: string | null;
   name: string | null;
   species: string;
   breed: string | null;

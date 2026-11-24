@@ -3,15 +3,23 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import styles from "../../(dashboard)/breeding/page.module.css";
-import { Plus, Calendar, Activity, AlertCircle, CheckCircle2, Search, Info, Sparkles, HeartPulse } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  CheckCircle2,
+  Search,
+  Info,
+  Sparkles,
+  HeartPulse,
+} from "lucide-react";
 import AnimalIcon from "../ui/AnimalIcon";
-import QuickAddMenu from "../quick-add/QuickAddMenu";
 import EmptyState from "../ui/EmptyState";
 import { useToast } from "../ui/Toast";
 import NewBreedingEventModal from "./NewBreedingEventModal";
 import NewHealthRecordModal from "./NewHealthRecordModal";
 import { completeBreedingEvent } from "@/actions/event.actions";
 import { useAuth } from "../auth/AuthProvider";
+import { QUICK_ACTION_EVENT, QuickActionId } from "@/lib/quick-actions";
 
 function formatSpecies(s: string) {
   if (s === "DAIRY_COW") return "Dairy Cow";
@@ -23,34 +31,64 @@ function formatSpecies(s: string) {
   return s;
 }
 
+interface BreedingTimelineEvent {
+  id: string;
+  type: "warning" | "info" | "success" | string;
+  date: string;
+  species: string;
+  animalName?: string | null;
+  tagNumber?: string | null;
+  title: string;
+  description: string;
+  timeframe: string;
+}
+
+interface AnimalSummaryOption {
+  id: string;
+  name: string;
+  tagNumber: string | null;
+  species: string;
+  breed: string | null;
+  gender?: string;
+}
+
 export default function ClientBreedingHub({
   initialEvents,
   breedingAnimals = [],
   healthAnimals = [],
 }: {
-  initialEvents: any[];
-  breedingAnimals?: any[];
-  healthAnimals?: any[];
+  initialEvents: BreedingTimelineEvent[];
+  breedingAnimals?: AnimalSummaryOption[];
+  healthAnimals?: AnimalSummaryOption[];
 }) {
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [isBreedingModalOpen, setIsBreedingModalOpen] = useState(false);
-  const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const initialAction = searchParams.get("action");
+
+  const [isBreedingModalOpen, setIsBreedingModalOpen] = useState(
+    () => initialAction === "breeding" || initialAction === "log-breeding"
+  );
+  const [isHealthModalOpen, setIsHealthModalOpen] = useState(
+    () => initialAction === "health" || initialAction === "log-health"
+  );
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const searchParams = useSearchParams();
   const toast = useToast();
   const { hasPermission } = useAuth();
   const canManageHealth = hasPermission("health:manage");
 
   useEffect(() => {
-    const action = searchParams.get("action");
-    if (action === "health") {
-      setIsHealthModalOpen(true);
-    } else if (action === "breeding") {
-      setIsBreedingModalOpen(true);
-    }
-  }, [searchParams]);
+    const handleQuickAction = (e: Event) => {
+      const detail = (e as CustomEvent<{ action: QuickActionId }>).detail;
+      if (detail?.action === "log-breeding") {
+        setIsBreedingModalOpen(true);
+      } else if (detail?.action === "log-health") {
+        setIsHealthModalOpen(true);
+      }
+    };
+    window.addEventListener(QUICK_ACTION_EVENT, handleQuickAction);
+    return () => window.removeEventListener(QUICK_ACTION_EVENT, handleQuickAction);
+  }, []);
 
   const handleComplete = async (eventId: string) => {
     setCompletingId(eventId);
@@ -64,64 +102,89 @@ export default function ClientBreedingHub({
     }
   };
 
-  const filteredEvents = initialEvents.filter((event) =>
-    (event.tagNumber ? event.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
-    (event.animalName ? event.animalName.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
-    (event.title ? event.title.toLowerCase().includes(searchQuery.toLowerCase()) : false)
+  const filteredEvents = initialEvents.filter(
+    (event) =>
+      !searchQuery.trim() ||
+      (event.tagNumber ? event.tagNumber.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
+      (event.animalName ? event.animalName.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
+      (event.title ? event.title.toLowerCase().includes(searchQuery.toLowerCase()) : false)
   );
 
   const upcomingSoon = filteredEvents.filter((e) => e.timeframe === "Next 7 Days");
   const upcomingLater = filteredEvents.filter((e) => e.timeframe === "Next 30 Days");
 
+  const renderEventCard = (event: BreedingTimelineEvent) => (
+    <div key={event.id} className={styles.timelineCard}>
+      <div className={styles.iconBadgeWrap}>
+        {event.type === "warning" && (
+          <div className={`${styles.eventIconBadge} ${styles.badgeWarn}`}>
+            <AlertCircle size={17} />
+          </div>
+        )}
+        {event.type === "info" && (
+          <div className={`${styles.eventIconBadge} ${styles.badgeInfo}`}>
+            <Activity size={17} />
+          </div>
+        )}
+        {event.type === "success" && (
+          <div className={`${styles.eventIconBadge} ${styles.badgeSuccess}`}>
+            <CheckCircle2 size={17} />
+          </div>
+        )}
+        <div className={styles.line} />
+      </div>
+
+      <div className={styles.cardContent}>
+        <div className={styles.cardHeader}>
+          <span className={styles.dateBadge}>{event.date}</span>
+          <span className={styles.cowTag}>
+            <AnimalIcon species={formatSpecies(event.species)} size={15} />
+            <span>
+              {event.animalName || event.tagNumber}
+              {event.tagNumber && event.animalName ? ` (#${event.tagNumber})` : ""}
+            </span>
+          </span>
+        </div>
+        <h4 className={styles.eventTitle}>{event.title}</h4>
+        <p className={styles.eventDesc}>{event.description}</p>
+        {canManageHealth && event.type === "warning" && (
+          <button
+            type="button"
+            className={styles.actionBtn}
+            disabled={completingId === event.id}
+            onClick={() => handleComplete(event.id)}
+          >
+            {completingId === event.id ? "Completing..." : "Mark Complete"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.pageTitle}>Breeding & Health</h1>
-          <p className={styles.subtitle}>Upcoming events & herd health timeline</p>
+          <h1 className={styles.pageTitle}>Breeding &amp; Health</h1>
+          <p className={styles.subtitle}>Upcoming schedule &amp; veterinary timeline</p>
         </div>
 
+        {/* Desktop Header Actions (Mobile uses BottomNav '+' Quick Actions) */}
         {canManageHealth && (
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <div className={styles.desktopHeaderActions}>
             <button
+              type="button"
               onClick={() => setIsBreedingModalOpen(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                background: "var(--color-primary, #16a34a)",
-                color: "#ffffff",
-                border: "none",
-                padding: "0.5rem 0.9rem",
-                borderRadius: "99px",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)",
-                transition: "all 0.2s ease",
-              }}
+              className={styles.primaryHeaderBtn}
             >
               <Sparkles size={16} />
               <span>Log Breeding</span>
             </button>
 
             <button
+              type="button"
               onClick={() => setIsHealthModalOpen(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                background: "var(--color-surface, #ffffff)",
-                color: "var(--color-text-main, #0f172a)",
-                border: "1px solid var(--color-border, #e2e8f0)",
-                padding: "0.5rem 0.9rem",
-                borderRadius: "99px",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                boxShadow: "var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05))",
-                transition: "all 0.2s ease",
-              }}
+              className={styles.secondaryHeaderBtn}
             >
               <HeartPulse size={16} color="#e11d48" />
               <span>Log Health</span>
@@ -133,21 +196,21 @@ export default function ClientBreedingHub({
       {/* Summary Row */}
       <div className={styles.summaryRow}>
         <div className={styles.summaryCard}>
-          <span className={styles.num}>{initialEvents.length}</span>
+          <span className={`${styles.num} tabular-nums`}>{initialEvents.length}</span>
           <span>Pending Events</span>
         </div>
         <div className={styles.summaryCard}>
-          <span className={styles.num}>{upcomingSoon.length}</span>
-          <span>Due this week</span>
+          <span className={`${styles.num} tabular-nums`}>{upcomingSoon.length}</span>
+          <span>Due This Week</span>
         </div>
       </div>
 
       {/* Search */}
       <div className={styles.searchBox}>
-        <Search className={styles.searchIcon} size={20} />
+        <Search className={styles.searchIcon} size={18} />
         <input
           type="text"
-          placeholder="Search by Tag, Name or Event..."
+          placeholder="Search by animal name, tag, or event..."
           className={styles.searchInput}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -160,76 +223,14 @@ export default function ClientBreedingHub({
             {upcomingSoon.length > 0 && (
               <>
                 <h3 className={styles.timeGroup}>Next 7 Days</h3>
-                <div className={styles.timeline}>
-                  {upcomingSoon.map((event) => (
-                    <div key={event.id} className={styles.timelineCard}>
-                      <div className={`${styles.iconLine} ${styles[event.type + "Line"]}`}>
-                        {event.type === "warning" && <AlertCircle size={20} className={styles.iconWarning} />}
-                        {event.type === "info" && <Activity size={20} className={styles.iconInfo} />}
-                        {event.type === "success" && <CheckCircle2 size={20} className={styles.iconSuccess} />}
-                        <div className={styles.line}></div>
-                      </div>
-                      <div className={styles.cardContent}>
-                        <div className={styles.cardHeader}>
-                          <span className={styles.dateBadge}>{event.date}</span>
-                          <span className={styles.cowTag} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <AnimalIcon species={formatSpecies(event.species)} size={14} /> {event.animalName || event.tagNumber}{" "}
-                            {event.tagNumber && event.animalName && `(#${event.tagNumber})`}
-                          </span>
-                        </div>
-                        <h4 className={styles.eventTitle}>{event.title}</h4>
-                        <p className={styles.eventDesc}>{event.description}</p>
-                        {canManageHealth && event.type === "warning" && (
-                          <button
-                            className={styles.actionBtn}
-                            disabled={completingId === event.id}
-                            onClick={() => handleComplete(event.id)}
-                          >
-                            {completingId === event.id ? "Completing..." : "Mark Complete"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <div className={styles.timeline}>{upcomingSoon.map(renderEventCard)}</div>
               </>
             )}
 
             {upcomingLater.length > 0 && (
               <>
                 <h3 className={styles.timeGroup}>Next 30 Days</h3>
-                <div className={styles.timeline}>
-                  {upcomingLater.map((event) => (
-                    <div key={event.id} className={styles.timelineCard}>
-                      <div className={`${styles.iconLine} ${styles[event.type + "Line"]}`}>
-                        {event.type === "warning" && <AlertCircle size={20} className={styles.iconWarning} />}
-                        {event.type === "info" && <Activity size={20} className={styles.iconInfo} />}
-                        {event.type === "success" && <CheckCircle2 size={20} className={styles.iconSuccess} />}
-                        <div className={styles.line}></div>
-                      </div>
-                      <div className={styles.cardContent}>
-                        <div className={styles.cardHeader}>
-                          <span className={styles.dateBadge}>{event.date}</span>
-                          <span className={styles.cowTag} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <AnimalIcon species={formatSpecies(event.species)} size={14} /> {event.animalName || event.tagNumber}{" "}
-                            {event.tagNumber && event.animalName && `(#${event.tagNumber})`}
-                          </span>
-                        </div>
-                        <h4 className={styles.eventTitle}>{event.title}</h4>
-                        <p className={styles.eventDesc}>{event.description}</p>
-                        {canManageHealth && event.type === "warning" && (
-                          <button
-                            className={styles.actionBtn}
-                            disabled={completingId === event.id}
-                            onClick={() => handleComplete(event.id)}
-                          >
-                            {completingId === event.id ? "Completing..." : "Mark Complete"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <div className={styles.timeline}>{upcomingLater.map(renderEventCard)}</div>
               </>
             )}
           </>
@@ -239,19 +240,14 @@ export default function ClientBreedingHub({
             title="No events found"
             description={
               searchQuery
-                ? `No breeding or health events matching "${searchQuery}"`
-                : "Your farm holds a clean bill of health! No pending upcoming events."
+                ? `No breeding or health events matched "${searchQuery}".`
+                : "Clean bill of health! No pending breeding or veterinary events."
             }
-            actionLabel="Record Breeding Event"
-            onAction={() => setIsBreedingModalOpen(true)}
+            actionLabel={canManageHealth ? "Log Breeding Event" : undefined}
+            onAction={canManageHealth ? () => setIsBreedingModalOpen(true) : undefined}
           />
         )}
       </div>
-
-      {/* Floating Action Button specifically for Event Insertion */}
-      <button className={styles.fabMain} aria-label="Add Event" onClick={() => setIsQuickAddOpen(true)}>
-        <Plus size={28} color="white" strokeWidth={2.5} />
-      </button>
 
       {/* Modals */}
       <NewBreedingEventModal
@@ -265,8 +261,6 @@ export default function ClientBreedingHub({
         onClose={() => setIsHealthModalOpen(false)}
         animals={healthAnimals}
       />
-
-      <QuickAddMenu isOpen={isQuickAddOpen} onClose={() => setIsQuickAddOpen(false)} />
     </div>
   );
 }

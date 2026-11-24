@@ -16,6 +16,9 @@
   border-radius: 16px;
   width: 100%;
   max-width: 450px;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   position: relative;
@@ -23,31 +26,36 @@
 }
 
 .modalHeader {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .modalHeader h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--color-text-main);
 }
 
 .modalBody {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modalFooter {
-  padding: 1.5rem;
+  padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--color-border);
-  background-color: rgba(64, 64, 64, 0.02);
+  background-color: var(--color-surface);
+  flex-shrink: 0;
 }
 
 .dragHandle {

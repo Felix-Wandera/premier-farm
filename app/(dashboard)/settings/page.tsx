@@ -3,7 +3,18 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { ThemeToggle } from "../../components/theme-toggle/ThemeToggle";
-import { ChevronRight, Download, Bell, Lock, HelpCircle, LogOut, Globe, Palette, User, Phone, Mail } from "lucide-react";
+import {
+  ChevronRight,
+  Download,
+  Bell,
+  Lock,
+  HelpCircle,
+  LogOut,
+  Palette,
+  User,
+  Phone,
+  Mail,
+} from "lucide-react";
 import { useToast } from "../../components/ui/Toast";
 import { useAuth } from "../../components/auth/AuthProvider";
 import ChangePasswordModal from "../../components/settings/ChangePasswordModal";
@@ -11,7 +22,10 @@ import EditProfileModal from "../../components/settings/EditProfileModal";
 import EditFarmProfileModal from "../../components/settings/EditFarmProfileModal";
 import HelpGuideModal from "../../components/settings/HelpGuideModal";
 import DataExportModal from "../../components/settings/DataExportModal";
-import { subscribeUser, unsubscribeUser } from "../../components/notifications/NotificationManager";
+import {
+  subscribeUser,
+  unsubscribeUser,
+} from "../../components/notifications/NotificationManager";
 import { sendTestNotification } from "@/actions/push.actions";
 import { getFarmSettings } from "@/actions/settings.actions";
 import {
@@ -71,8 +85,8 @@ export default function SettingsPage() {
           toast("Push notifications enabled!", "success");
         }
       }
-    } catch (err: any) {
-      toast(err.message || "Failed to toggle notifications.", "error");
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : "Failed to toggle notifications.", "error");
     }
   };
 
@@ -91,54 +105,54 @@ export default function SettingsPage() {
         <h1 className={styles.pageTitle}>Settings</h1>
       </header>
 
-      {/* User Info */}
+      {/* Personal Profile */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Personal Profile</h2>
         <div className={styles.card}>
-          <div className={styles.settingRow} style={{ borderBottom: "1px solid var(--color-border)", cursor: "default" }}>
+          <div
+            className={styles.settingRow}
+            style={{ borderBottom: "1px solid var(--color-border)", cursor: "default" }}
+          >
             <div className={styles.rowLeft}>
-              <User size={20} className={styles.rowIcon} />
+              <User size={19} className={styles.rowIcon} />
               <span>Full Name</span>
             </div>
             <span className={styles.valueLabel}>
-              {user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Not set" : "..."}
+              {user
+                ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Not set"
+                : "..."}
             </span>
           </div>
-          <div className={styles.settingRow} style={{ borderBottom: "1px solid var(--color-border)", cursor: "default" }}>
+          <div
+            className={styles.settingRow}
+            style={{ borderBottom: "1px solid var(--color-border)", cursor: "default" }}
+          >
             <div className={styles.rowLeft}>
-              <Mail size={20} className={styles.rowIcon} />
+              <Mail size={19} className={styles.rowIcon} />
               <span>Email</span>
             </div>
             <span className={styles.valueLabel}>{user?.email || "..."}</span>
           </div>
           <div className={styles.settingRow} style={{ cursor: "default" }}>
             <div className={styles.rowLeft}>
-              <Phone size={20} className={styles.rowIcon} />
+              <Phone size={19} className={styles.rowIcon} />
               <span>Phone</span>
             </div>
             <span className={styles.valueLabel}>{user?.phoneNumber || "Not linked"}</span>
           </div>
           <button
+            type="button"
             onClick={() => setIsProfileModalOpen(true)}
-            style={{
-              width: "100%",
-              padding: "0.85rem",
-              color: "var(--color-primary)",
-              fontWeight: 600,
-              border: "none",
-              background: "var(--color-bg)",
-              borderTop: "1px solid var(--color-border)",
-              cursor: "pointer",
-            }}
+            className={styles.cardFooterBtn}
           >
             Edit Profile Details
           </button>
         </div>
       </section>
 
-      {/* Farm Info */}
+      {/* Farm Profile */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Farm Profile</h2>
+        <h2 className={styles.sectionTitle}>Ranch Profile</h2>
         <div className={styles.card}>
           <div className={styles.farmBanner}>
             <div className={styles.farmAvatar}>
@@ -151,84 +165,59 @@ export default function SettingsPage() {
                     .toUpperCase()
                 : "PR"}
             </div>
-            <div style={{ flex: 1 }}>
+            <div className={styles.farmInfo}>
               <h3 className={styles.farmName}>{farmSettings.farmName}</h3>
               <p className={styles.farmSub}>{farmSettings.location}</p>
-              <div style={{ display: "flex", gap: "1rem", marginTop: "0.35rem", fontSize: "0.8rem", color: "var(--color-text-sub)" }}>
+              <div className={styles.farmMetaPills}>
                 {farmSettings.phoneNumber && <span>📞 {farmSettings.phoneNumber}</span>}
-                {farmSettings.currencySymbol && <span>💰 Currency: {farmSettings.currencySymbol}</span>}
+                {farmSettings.currencySymbol && (
+                  <span>💰 Currency: {farmSettings.currencySymbol}</span>
+                )}
               </div>
             </div>
           </div>
           {hasPermission("settings:manage") && (
             <button
+              type="button"
               onClick={() => setIsFarmModalOpen(true)}
-              style={{
-                width: "100%",
-                padding: "0.85rem",
-                color: "var(--color-primary)",
-                fontWeight: 600,
-                border: "none",
-                background: "var(--color-bg)",
-                borderTop: "1px solid var(--color-border)",
-                cursor: "pointer",
-              }}
+              className={styles.cardFooterBtn}
             >
-              Edit Farm Details
+              Edit Ranch Details
             </button>
           )}
         </div>
       </section>
 
-      {/* Appearance */}
+      {/* Appearance (Language row removed) */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Appearance</h2>
         <div className={styles.card}>
-          <div className={styles.settingRow}>
+          <div className={styles.settingRow} style={{ cursor: "default" }}>
             <div className={styles.rowLeft}>
-              <Palette size={20} className={styles.rowIcon} />
-              <span>Theme</span>
+              <Palette size={19} className={styles.rowIcon} />
+              <span>Color Theme</span>
             </div>
             <ThemeToggle className={styles.themeToggle} />
-          </div>
-
-          <div className={styles.divider}></div>
-
-          <div className={styles.settingRow}>
-            <div className={styles.rowLeft}>
-              <Globe size={20} className={styles.rowIcon} />
-              <span>Language</span>
-            </div>
-            <div className={styles.rowRight}>
-              <span className={styles.valueLabel}>English</span>
-              <ChevronRight size={18} className={styles.chevron} />
-            </div>
           </div>
         </div>
       </section>
 
+      {/* Notifications */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Notifications</h2>
         <div className={styles.card}>
-          <div className={styles.settingRow}>
+          <div className={styles.settingRow} style={{ cursor: "default" }}>
             <div className={styles.rowLeft}>
-              <Bell size={20} className={styles.rowIcon} />
+              <Bell size={19} className={styles.rowIcon} />
               <span>Push Notifications</span>
             </div>
             <div className={styles.rowRight}>
               <button
+                type="button"
                 onClick={handlePushToggle}
-                style={{
-                  padding: "0.4rem 1rem",
-                  borderRadius: "20px",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  transition: "all 0.2s",
-                  backgroundColor: isPushEnabled ? "var(--color-primary-light)" : "var(--color-bg)",
-                  color: isPushEnabled ? "var(--color-primary-dark)" : "var(--color-text-sub)",
-                  border: "1px solid var(--color-border)",
-                  cursor: "pointer",
-                }}
+                className={`${styles.pushToggleBtn} ${
+                  isPushEnabled ? styles.pushEnabled : ""
+                }`}
               >
                 {isPushEnabled ? "Enabled" : "Enable"}
               </button>
@@ -236,14 +225,15 @@ export default function SettingsPage() {
           </div>
           {isPushEnabled && (
             <>
-              <div className={styles.divider}></div>
+              <div className={styles.divider} />
               <button
+                type="button"
                 className={styles.settingRow}
                 onClick={handleTestPush}
                 disabled={isSendingTest}
               >
                 <div className={styles.rowLeft}>
-                  <Bell size={20} className={styles.rowIcon} />
+                  <Bell size={19} className={styles.rowIcon} />
                   <span>Send Test Notification</span>
                 </div>
                 <ChevronRight size={18} className={styles.chevron} />
@@ -253,32 +243,34 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Data */}
+      {/* Data & Security */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Data & Privacy</h2>
+        <h2 className={styles.sectionTitle}>Data &amp; Security</h2>
         <div className={styles.card}>
           {hasPermission("exports:download") && (
             <>
               <button
+                type="button"
                 className={styles.settingRow}
                 onClick={() => setIsExportModalOpen(true)}
               >
                 <div className={styles.rowLeft}>
-                  <Download size={20} className={styles.rowIcon} />
-                  <span>Export Farm Data (CSV)</span>
+                  <Download size={19} className={styles.rowIcon} />
+                  <span>Export Ranch Data (CSV)</span>
                 </div>
                 <ChevronRight size={18} className={styles.chevron} />
               </button>
-              <div className={styles.divider}></div>
+              <div className={styles.divider} />
             </>
           )}
 
           <button
+            type="button"
             className={styles.settingRow}
             onClick={() => setIsPasswordModalOpen(true)}
           >
             <div className={styles.rowLeft}>
-              <Lock size={20} className={styles.rowIcon} />
+              <Lock size={19} className={styles.rowIcon} />
               <span>Change Password</span>
             </div>
             <ChevronRight size={18} className={styles.chevron} />
@@ -291,12 +283,13 @@ export default function SettingsPage() {
         <h2 className={styles.sectionTitle}>Support</h2>
         <div className={styles.card}>
           <button
+            type="button"
             className={styles.settingRow}
             onClick={() => setIsHelpModalOpen(true)}
           >
             <div className={styles.rowLeft}>
-              <HelpCircle size={20} className={styles.rowIcon} />
-              <span>Help & FAQ (Operations Guide)</span>
+              <HelpCircle size={19} className={styles.rowIcon} />
+              <span>Operations Guide &amp; FAQ</span>
             </div>
             <ChevronRight size={18} className={styles.chevron} />
           </button>
@@ -306,15 +299,16 @@ export default function SettingsPage() {
       {/* Logout */}
       <section className={styles.section}>
         <button
+          type="button"
           className={`${styles.card} ${styles.logoutCard}`}
           onClick={async () => {
             toast("Logging out...", "success");
             await fetch("/api/auth/logout", { method: "POST" });
-            setTimeout(() => router.push("/login"), 500);
+            setTimeout(() => router.push("/login"), 400);
           }}
         >
           <div className={styles.rowLeft}>
-            <LogOut size={20} />
+            <LogOut size={19} />
             <span>Log Out</span>
           </div>
         </button>
@@ -322,8 +316,14 @@ export default function SettingsPage() {
 
       <p className={styles.version}>{APP_BRAND_NAME} Operations Portal</p>
 
-      <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
-      <EditProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
+      <EditProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
       <EditFarmProfileModal
         isOpen={isFarmModalOpen}
         onClose={() => setIsFarmModalOpen(false)}
@@ -333,8 +333,14 @@ export default function SettingsPage() {
           refreshSession();
         }}
       />
-      <HelpGuideModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
-      <DataExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
+      <HelpGuideModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+      />
+      <DataExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+      />
     </div>
   );
 }

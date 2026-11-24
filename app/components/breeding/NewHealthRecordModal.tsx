@@ -9,11 +9,11 @@ import bsStyles from "../ui/BottomSheetModal.module.css";
 
 interface Animal {
   id: string;
-  tagNumber: string;
+  tagNumber: string | null;
   name: string | null;
   species: string;
   breed: string | null;
-  gender: string;
+  gender?: string;
 }
 
 export default function NewHealthRecordModal({
@@ -159,7 +159,8 @@ export default function NewHealthRecordModal({
               <option value="">-- Select Animal --</option>
               {animals.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.name || a.tagNumber} {a.tagNumber && a.name ? `(#${a.tagNumber})` : ""} — {a.species.replace("_", " ")} ({a.gender.toLowerCase()})
+                  {a.name || a.tagNumber} {a.tagNumber && a.name ? `(#${a.tagNumber})` : ""} — {a.species.replace("_", " ")}
+                  {a.gender ? ` (${a.gender.toLowerCase()})` : ""}
                 </option>
               ))}
             </select>

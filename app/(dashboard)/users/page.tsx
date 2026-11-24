@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import ClientUserManagement from "../../components/users/ClientUserManagement";
 import { getUsers } from "@/actions/user.actions";
 import { requirePermission } from "@/actions/utils";
@@ -12,5 +12,9 @@ export default async function UserManagement() {
   }
 
   const users = await getUsers();
-  return <ClientUserManagement initialUsers={users} />;
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading team...</div>}>
+      <ClientUserManagement initialUsers={users} />
+    </Suspense>
+  );
 }

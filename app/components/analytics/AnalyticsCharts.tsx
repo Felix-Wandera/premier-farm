@@ -27,34 +27,70 @@ function formatCompact(n: number): string {
   return n.toFixed(1);
 }
 
+/**
+ * Maps a touch or pointer event clientX onto the closest index [0..count-1] within an SVG plot area.
+ */
+function resolveSvgTouchIndex(
+  svgEl: SVGSVGElement,
+  clientX: number,
+  viewBoxWidth: number,
+  padLeft: number,
+  plotW: number,
+  count: number
+): number {
+  if (count <= 1) return 0;
+  const rect = svgEl.getBoundingClientRect();
+  if (rect.width <= 0) return 0;
+  const svgX = ((clientX - rect.left) / rect.width) * viewBoxWidth;
+  const ratio = Math.max(0, Math.min(1, (svgX - padLeft) / plotW));
+  return Math.min(count - 1, Math.max(0, Math.round(ratio * (count - 1))));
+}
+
+function resolveSvgSlotIndex(
+  svgEl: SVGSVGElement,
+  clientX: number,
+  viewBoxWidth: number,
+  padLeft: number,
+  plotW: number,
+  count: number
+): number {
+  if (count <= 1) return 0;
+  const rect = svgEl.getBoundingClientRect();
+  if (rect.width <= 0) return 0;
+  const svgX = ((clientX - rect.left) / rect.width) * viewBoxWidth;
+  const ratio = Math.max(0, Math.min(0.9999, (svgX - padLeft) / plotW));
+  return Math.min(count - 1, Math.max(0, Math.floor(ratio * count)));
+}
+
 const tooltipBoxStyle: React.CSSProperties = {
   position: "absolute",
-  top: "8px",
-  right: "12px",
+  top: "4px",
+  right: "6px",
   zIndex: 20,
   backgroundColor: "var(--color-surface, #ffffff)",
   color: "var(--color-text-main, #0f172a)",
   border: "1px solid var(--color-border, #cbd5e1)",
-  borderRadius: "10px",
-  padding: "0.55rem 0.75rem",
-  boxShadow: "0 10px 20px -5px rgba(0, 0, 0, 0.15)",
-  fontSize: "0.78rem",
+  borderRadius: "12px",
+  padding: "0.5rem 0.7rem",
+  boxShadow: "0 10px 24px -5px rgba(0, 0, 0, 0.18)",
+  fontSize: "0.76rem",
   pointerEvents: "none",
-  minWidth: "150px",
+  minWidth: "140px",
+  maxWidth: "85%",
 };
 
 const legendRowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: "0.85rem",
+  gap: "0.8rem",
   flexWrap: "wrap",
   marginTop: "0.35rem",
   fontSize: "0.78rem",
 };
 
 // ============================================================================
-// 1. STACKED AREA / LINE CHART
+// 1. STACKED AREA / LINE CHART (WITH TOUCH SCRUBBING)
 // ============================================================================
 export function StackedAreaChart({
   data,
@@ -83,16 +119,15 @@ export function StackedAreaChart({
     );
   }
 
-  const width = 680;
+  const width = 640;
   const height = 240;
-  const padLeft = 46;
-  const padRight = 16;
+  const padLeft = 48;
+  const padRight = 14;
   const padTop = 16;
-  const padBottom = 30;
+  const padBottom = 32;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
 
-  // Compute cumulative or individual values per point
   const computed = data.map((row) => {
     let running = 0;
     const layers: Record<string, { y0: number; y1: number; raw: number }> = {};
@@ -114,7 +149,7 @@ export function StackedAreaChart({
     computed.length === 1 ? padLeft + plotW / 2 : padLeft + (i / (computed.length - 1)) * plotW;
   const yFor = (val: number) => padTop + plotH - (val / maxY) * plotH;
 
-  const tickStep = Math.max(1, Math.ceil(computed.length / 7));
+  const tickStep = Math.max(1, Math.ceil(computed.length / 6));
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => Number((maxY * t).toFixed(1)));
 
   const toggleSeries = (key: string) => {
@@ -126,15 +161,23 @@ export function StackedAreaChart({
     });
   };
 
+  const handleTouch = (e: React.TouchEvent<SVGSVGElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    setHoverIdx(
+      resolveSvgTouchIndex(e.currentTarget, touch.clientX, width, padLeft, plotW, computed.length)
+    );
+  };
+
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
       {hoverIdx !== null && computed[hoverIdx] && (
-        <div style={tooltipBoxStyle}>
+        <div style={tooltipBoxStyle} className="tabular-nums">
           <div style={{ fontWeight: 700, marginBottom: "4px", borderBottom: "1px solid var(--color-border)", paddingBottom: "3px" }}>
             {computed[hoverIdx].label}
           </div>
           {activeSeries.map((s) => (
-            <div key={s.key} style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginTop: "2px" }}>
+            <div key={s.key} style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginTop: "2px" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: s.color }} />
                 {s.label}:
@@ -146,7 +189,7 @@ export function StackedAreaChart({
             </div>
           ))}
           {stacked && activeSeries.length > 1 && (
-            <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginTop: "4px", paddingTop: "3px", borderTop: "1px dashed var(--color-border)", fontWeight: 700 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginTop: "4px", paddingTop: "3px", borderTop: "1px dashed var(--color-border)", fontWeight: 700 }}>
               <span>Total:</span>
               <span>
                 {Number(computed[hoverIdx].peak.toFixed(1))}
@@ -159,19 +202,20 @@ export function StackedAreaChart({
 
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        style={{ width: "100%", flex: 1, overflow: "visible" }}
+        style={{ width: "100%", flex: 1, overflow: "visible", touchAction: "pan-y" }}
         onMouseLeave={() => setHoverIdx(null)}
+        onTouchStart={handleTouch}
+        onTouchMove={handleTouch}
       >
         <defs>
           {activeSeries.map((s) => (
             <linearGradient key={s.key} id={`grad-${uid}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={s.color} stopOpacity={0.45} />
-              <stop offset="100%" stopColor={s.color} stopOpacity={0.05} />
+              <stop offset="100%" stopColor={s.color} stopOpacity={0.04} />
             </linearGradient>
           ))}
         </defs>
 
-        {/* Horizontal Gridlines & Y Labels */}
         {yTicks.map((tv, idx) => {
           const y = yFor(tv);
           return (
@@ -188,7 +232,8 @@ export function StackedAreaChart({
                 x={padLeft - 8}
                 y={y + 4}
                 textAnchor="end"
-                fontSize="11"
+                fontSize="12.5"
+                fontWeight="600"
                 fill="var(--color-text-sub, #64748b)"
               >
                 {formatCompact(tv)}
@@ -197,7 +242,6 @@ export function StackedAreaChart({
           );
         })}
 
-        {/* Area & Stroke Paths */}
         {activeSeries.map((s) => {
           const topPoints = computed.map((c, i) => `${xFor(i)},${yFor(c.layers[s.key].y1)}`);
           const bottomPoints = [...computed]
@@ -211,17 +255,23 @@ export function StackedAreaChart({
               {computed.length > 1 && (
                 <>
                   <path d={areaPath} fill={`url(#grad-${uid}-${s.key})`} />
-                  <path d={linePath} fill="none" stroke={s.color} strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d={linePath}
+                    fill="none"
+                    stroke={s.color}
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </>
               )}
               {computed.length === 1 && (
-                <circle cx={xFor(0)} cy={yFor(computed[0].layers[s.key].y1)} r={5} fill={s.color} />
+                <circle cx={xFor(0)} cy={yFor(computed[0].layers[s.key].y1)} r={5.5} fill={s.color} />
               )}
             </g>
           );
         })}
 
-        {/* X Axis Labels */}
         {computed.map((c, i) => {
           if (i % tickStep !== 0 && i !== computed.length - 1) return null;
           return (
@@ -230,7 +280,8 @@ export function StackedAreaChart({
               x={xFor(i)}
               y={height - 8}
               textAnchor="middle"
-              fontSize="11"
+              fontSize="12"
+              fontWeight="600"
               fill="var(--color-text-sub, #64748b)"
             >
               {c.label}
@@ -238,7 +289,6 @@ export function StackedAreaChart({
           );
         })}
 
-        {/* Hover Crosshair & Active Dots */}
         {hoverIdx !== null && computed[hoverIdx] && (
           <g>
             <line
@@ -248,14 +298,14 @@ export function StackedAreaChart({
               y2={padTop + plotH}
               stroke="var(--color-text-sub, #64748b)"
               strokeDasharray="3 3"
-              strokeWidth={1.2}
+              strokeWidth={1.3}
             />
             {activeSeries.map((s) => (
               <circle
                 key={s.key}
                 cx={xFor(hoverIdx)}
                 cy={yFor(computed[hoverIdx].layers[s.key].y1)}
-                r={4.5}
+                r={5}
                 fill={s.color}
                 stroke="var(--color-surface, #fff)"
                 strokeWidth={2}
@@ -264,7 +314,6 @@ export function StackedAreaChart({
           </g>
         )}
 
-        {/* Invisible Hover Capture Columns */}
         {computed.map((_, i) => {
           const colW = plotW / Math.max(1, computed.length);
           const x = computed.length === 1 ? padLeft : xFor(i) - colW / 2;
@@ -277,6 +326,7 @@ export function StackedAreaChart({
               height={plotH}
               fill="transparent"
               onMouseEnter={() => setHoverIdx(i)}
+              onClick={() => setHoverIdx((prev) => (prev === i ? null : i))}
             />
           );
         })}
@@ -316,7 +366,7 @@ export function StackedAreaChart({
 }
 
 // ============================================================================
-// 2. STACKED OR GROUPED VERTICAL BAR CHART
+// 2. STACKED OR GROUPED VERTICAL BAR CHART (WITH TOUCH SCRUBBING)
 // ============================================================================
 export function MultiBarChart({
   data,
@@ -341,12 +391,12 @@ export function MultiBarChart({
     );
   }
 
-  const width = 680;
+  const width = 640;
   const height = 240;
-  const padLeft = 46;
-  const padRight = 16;
+  const padLeft = 48;
+  const padRight = 14;
   const padTop = 16;
-  const padBottom = 30;
+  const padBottom = 32;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
 
@@ -364,17 +414,25 @@ export function MultiBarChart({
 
   const slotW = plotW / data.length;
   const barGroupW = Math.min(44, slotW * 0.68);
-  const tickStep = Math.max(1, Math.ceil(data.length / 8));
+  const tickStep = Math.max(1, Math.ceil(data.length / 6));
+
+  const handleTouch = (e: React.TouchEvent<SVGSVGElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    setHoverIdx(
+      resolveSvgSlotIndex(e.currentTarget, touch.clientX, width, padLeft, plotW, data.length)
+    );
+  };
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
       {hoverIdx !== null && data[hoverIdx] && (
-        <div style={tooltipBoxStyle}>
+        <div style={tooltipBoxStyle} className="tabular-nums">
           <div style={{ fontWeight: 700, marginBottom: "4px", borderBottom: "1px solid var(--color-border)", paddingBottom: "3px" }}>
             {String(data[hoverIdx][xKey])}
           </div>
           {series.map((s) => (
-            <div key={s.key} style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginTop: "2px" }}>
+            <div key={s.key} style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginTop: "2px" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
                 <span style={{ width: 8, height: 8, borderRadius: "2px", backgroundColor: s.color }} />
                 {s.label}:
@@ -390,8 +448,10 @@ export function MultiBarChart({
 
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        style={{ width: "100%", flex: 1, overflow: "visible" }}
+        style={{ width: "100%", flex: 1, overflow: "visible", touchAction: "pan-y" }}
         onMouseLeave={() => setHoverIdx(null)}
+        onTouchStart={handleTouch}
+        onTouchMove={handleTouch}
       >
         {yTicks.map((tv, idx) => {
           const y = yFor(tv);
@@ -405,7 +465,7 @@ export function MultiBarChart({
                 stroke="var(--color-border, #e2e8f0)"
                 strokeDasharray={idx === 0 ? undefined : "4 4"}
               />
-              <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="11" fill="var(--color-text-sub, #64748b)">
+              <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="12.5" fontWeight="600" fill="var(--color-text-sub, #64748b)">
                 {formatCompact(tv)}
               </text>
             </g>
@@ -417,7 +477,11 @@ export function MultiBarChart({
           const isHovered = hoverIdx === i;
 
           return (
-            <g key={i} onMouseEnter={() => setHoverIdx(i)}>
+            <g
+              key={i}
+              onMouseEnter={() => setHoverIdx(i)}
+              onClick={() => setHoverIdx((prev) => (prev === i ? null : i))}
+            >
               {isHovered && (
                 <rect
                   x={padLeft + i * slotW + 2}
@@ -425,31 +489,40 @@ export function MultiBarChart({
                   width={Math.max(4, slotW - 4)}
                   height={plotH}
                   rx={6}
-                  fill="rgba(100, 116, 139, 0.08)"
+                  fill="rgba(100, 116, 139, 0.1)"
                 />
               )}
 
               {stacked ? (
                 (() => {
-                  let cum = 0;
-                  return series.map((s) => {
-                    const val = Number(row[s.key]) || 0;
-                    const yTop = yFor(cum + val);
-                    const yBottom = yFor(cum);
-                    cum += val;
-                    const h = Math.max(0, yBottom - yTop);
-                    return (
-                      <rect
-                        key={s.key}
-                        x={centerX - barGroupW / 2}
-                        y={yTop}
-                        width={barGroupW}
-                        height={h}
-                        rx={h > 3 ? 2 : 0}
-                        fill={s.color}
-                      />
-                    );
-                  });
+                  const segments = series.reduce<Array<{ key: string; color: string; yTop: number; h: number; nextCum: number }>>(
+                    (acc, s) => {
+                      const prevCum = acc.length > 0 ? acc[acc.length - 1].nextCum : 0;
+                      const val = Number(row[s.key]) || 0;
+                      const yTop = yFor(prevCum + val);
+                      const yBottom = yFor(prevCum);
+                      acc.push({
+                        key: s.key,
+                        color: s.color,
+                        yTop,
+                        h: Math.max(0, yBottom - yTop),
+                        nextCum: prevCum + val,
+                      });
+                      return acc;
+                    },
+                    []
+                  );
+                  return segments.map((seg) => (
+                    <rect
+                      key={seg.key}
+                      x={centerX - barGroupW / 2}
+                      y={seg.yTop}
+                      width={barGroupW}
+                      height={seg.h}
+                      rx={seg.h > 3 ? 2 : 0}
+                      fill={seg.color}
+                    />
+                  ));
                 })()
               ) : (
                 series.map((s, sIdx) => {
@@ -477,7 +550,8 @@ export function MultiBarChart({
                   x={centerX}
                   y={height - 8}
                   textAnchor="middle"
-                  fontSize="11"
+                  fontSize="12"
+                  fontWeight="600"
                   fill="var(--color-text-sub, #64748b)"
                 >
                   {String(row[xKey])}
@@ -509,7 +583,7 @@ export function MultiBarChart({
 }
 
 // ============================================================================
-// 3. CASH FLOW COMBO CHART (INCOME / EXPENSE BARS + NET PROFIT LINE)
+// 3. CASH FLOW COMBO CHART (WITH TOUCH SCRUBBING)
 // ============================================================================
 export function CashFlowComboChart({
   data,
@@ -528,12 +602,12 @@ export function CashFlowComboChart({
     );
   }
 
-  const width = 680;
+  const width = 640;
   const height = 240;
   const padLeft = 52;
-  const padRight = 16;
+  const padRight = 14;
   const padTop = 16;
-  const padBottom = 30;
+  const padBottom = 32;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
 
@@ -549,32 +623,41 @@ export function CashFlowComboChart({
   const slotW = plotW / data.length;
   const groupW = Math.min(36, slotW * 0.64);
   const barW = Math.max(3, (groupW - 3) / 2);
-  const tickStep = Math.max(1, Math.ceil(data.length / 8));
+  const tickStep = Math.max(1, Math.ceil(data.length / 6));
 
-  const yTicks = lower < 0
-    ? [lower, lower / 2, 0, upper / 2, upper]
-    : [0, upper * 0.25, upper * 0.5, upper * 0.75, upper];
+  const yTicks =
+    lower < 0
+      ? [lower, lower / 2, 0, upper / 2, upper]
+      : [0, upper * 0.25, upper * 0.5, upper * 0.75, upper];
 
   const netLinePoints = data
     .map((d, i) => `${padLeft + i * slotW + slotW / 2},${yFor(d.net)}`)
     .join(" L ");
 
+  const handleTouch = (e: React.TouchEvent<SVGSVGElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    setHoverIdx(
+      resolveSvgSlotIndex(e.currentTarget, touch.clientX, width, padLeft, plotW, data.length)
+    );
+  };
+
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
       {hoverIdx !== null && data[hoverIdx] && (
-        <div style={tooltipBoxStyle}>
+        <div style={tooltipBoxStyle} className="tabular-nums">
           <div style={{ fontWeight: 700, marginBottom: "4px", borderBottom: "1px solid var(--color-border)", paddingBottom: "3px" }}>
             {data[hoverIdx].label}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", color: "#16a34a" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", color: "#10b981" }}>
             <span>Income:</span>
             <strong>{formatMoneyFn(data[hoverIdx].income)}</strong>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", color: "#dc2626", marginTop: "2px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", color: "#ef4444", marginTop: "2px" }}>
             <span>Expenses:</span>
             <strong>{formatMoneyFn(data[hoverIdx].expense)}</strong>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", color: "#2563eb", marginTop: "4px", paddingTop: "3px", borderTop: "1px dashed var(--color-border)", fontWeight: 700 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", color: "#3b82f6", marginTop: "4px", paddingTop: "3px", borderTop: "1px dashed var(--color-border)", fontWeight: 700 }}>
             <span>Net:</span>
             <span>{formatMoneyFn(data[hoverIdx].net)}</span>
           </div>
@@ -583,8 +666,10 @@ export function CashFlowComboChart({
 
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        style={{ width: "100%", flex: 1, overflow: "visible" }}
+        style={{ width: "100%", flex: 1, overflow: "visible", touchAction: "pan-y" }}
         onMouseLeave={() => setHoverIdx(null)}
+        onTouchStart={handleTouch}
+        onTouchMove={handleTouch}
       >
         {yTicks.map((tv, idx) => {
           const y = yFor(tv);
@@ -599,7 +684,7 @@ export function CashFlowComboChart({
                 strokeDasharray={tv === 0 ? undefined : "4 4"}
                 strokeWidth={tv === 0 ? 1.2 : 1}
               />
-              <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="11" fill="var(--color-text-sub, #64748b)">
+              <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="12.5" fontWeight="600" fill="var(--color-text-sub, #64748b)">
                 {formatCompact(tv)}
               </text>
             </g>
@@ -612,7 +697,11 @@ export function CashFlowComboChart({
           const expY = yFor(d.expense);
 
           return (
-            <g key={i} onMouseEnter={() => setHoverIdx(i)}>
+            <g
+              key={i}
+              onMouseEnter={() => setHoverIdx(i)}
+              onClick={() => setHoverIdx((prev) => (prev === i ? null : i))}
+            >
               {hoverIdx === i && (
                 <rect
                   x={padLeft + i * slotW + 2}
@@ -620,7 +709,7 @@ export function CashFlowComboChart({
                   width={Math.max(4, slotW - 4)}
                   height={plotH}
                   rx={6}
-                  fill="rgba(100, 116, 139, 0.08)"
+                  fill="rgba(100, 116, 139, 0.1)"
                 />
               )}
               <rect
@@ -640,7 +729,7 @@ export function CashFlowComboChart({
                 fill="#ef4444"
               />
               {(i % tickStep === 0 || i === data.length - 1) && (
-                <text x={centerX} y={height - 8} textAnchor="middle" fontSize="11" fill="var(--color-text-sub, #64748b)">
+                <text x={centerX} y={height - 8} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--color-text-sub, #64748b)">
                   {d.label}
                 </text>
               )}
@@ -653,7 +742,7 @@ export function CashFlowComboChart({
           <path
             d={`M ${netLinePoints}`}
             fill="none"
-            stroke="#2563eb"
+            stroke="#3b82f6"
             strokeWidth={2.4}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -665,8 +754,8 @@ export function CashFlowComboChart({
           <circle
             cx={padLeft + hoverIdx * slotW + slotW / 2}
             cy={yFor(data[hoverIdx].net)}
-            r={4.5}
-            fill="#2563eb"
+            r={5}
+            fill="#3b82f6"
             stroke="var(--color-surface, #fff)"
             strokeWidth={2}
             pointerEvents="none"
@@ -684,7 +773,7 @@ export function CashFlowComboChart({
           <span>Expenses</span>
         </div>
         <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontWeight: 600 }}>
-          <span style={{ width: 14, height: 3, borderRadius: "2px", backgroundColor: "#2563eb" }} />
+          <span style={{ width: 14, height: 3, borderRadius: "2px", backgroundColor: "#3b82f6" }} />
           <span>Net Profit</span>
         </div>
       </div>
@@ -693,7 +782,7 @@ export function CashFlowComboChart({
 }
 
 // ============================================================================
-// 4. INTERACTIVE DONUT CHART
+// 4. INTERACTIVE DONUT CHART (TAP + HOVER)
 // ============================================================================
 export function InteractiveDonutChart({
   data,
@@ -734,8 +823,8 @@ export function InteractiveDonutChart({
   const activeSlice = hoverIdx !== null ? data[hoverIdx] : null;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around", gap: "1rem", height: "100%", flexWrap: "wrap" }}>
-      <svg viewBox="0 0 200 200" style={{ width: "185px", height: "185px", flexShrink: 0 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around", gap: "0.85rem", height: "100%", flexWrap: "wrap" }}>
+      <svg viewBox="0 0 200 200" style={{ width: "165px", height: "165px", flexShrink: 0 }}>
         {computedSlices.map((slice, idx) => {
           const isHovered = hoverIdx === idx;
 
@@ -754,6 +843,7 @@ export function InteractiveDonutChart({
               style={{ cursor: "pointer", transition: "stroke-width 0.15s ease" }}
               onMouseEnter={() => setHoverIdx(idx)}
               onMouseLeave={() => setHoverIdx(null)}
+              onClick={() => setHoverIdx((prev) => (prev === idx ? null : idx))}
             />
           );
         })}
@@ -766,21 +856,26 @@ export function InteractiveDonutChart({
         </text>
       </svg>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", flex: 1, minWidth: "170px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: 1, minWidth: "160px" }}>
         {data.map((slice, idx) => (
-          <div
+          <button
             key={slice.label}
+            type="button"
             onMouseEnter={() => setHoverIdx(idx)}
             onMouseLeave={() => setHoverIdx(null)}
+            onClick={() => setHoverIdx((prev) => (prev === idx ? null : idx))}
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: "0.5rem",
               fontSize: "0.8rem",
-              padding: "0.3rem 0.5rem",
+              padding: "0.35rem 0.55rem",
               borderRadius: "8px",
-              backgroundColor: hoverIdx === idx ? "var(--color-bg, #f8fafc)" : "transparent",
+              border: "none",
+              fontFamily: "inherit",
+              color: "var(--color-text-main)",
+              backgroundColor: hoverIdx === idx ? "var(--color-bg)" : "transparent",
               cursor: "pointer",
             }}
           >
@@ -788,8 +883,10 @@ export function InteractiveDonutChart({
               <span style={{ width: 10, height: 10, borderRadius: "3px", backgroundColor: colors[idx % colors.length], flexShrink: 0 }} />
               {slice.label}
             </span>
-            <span style={{ fontWeight: 700, color: "var(--color-text-sub)" }}>{slice.sharePct}%</span>
-          </div>
+            <span className="tabular-nums" style={{ fontWeight: 700, color: "var(--color-text-sub)" }}>
+              {slice.sharePct}%
+            </span>
+          </button>
         ))}
       </div>
     </div>
@@ -819,7 +916,7 @@ export function HorizontalCategoryBars({
           <div key={row.cohort} style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.83rem" }}>
               <span style={{ fontWeight: 600 }}>{row.cohort}</span>
-              <span style={{ color: "var(--color-text-sub)", fontWeight: 700 }}>
+              <span className="tabular-nums" style={{ color: "var(--color-text-sub)", fontWeight: 700 }}>
                 {row.count} ({sharePct}%)
               </span>
             </div>
@@ -828,8 +925,8 @@ export function HorizontalCategoryBars({
                 width: "100%",
                 height: "12px",
                 borderRadius: "99px",
-                backgroundColor: "var(--color-bg, #f1f5f9)",
-                border: "1px solid var(--color-border, #e2e8f0)",
+                backgroundColor: "var(--color-bg)",
+                border: "1px solid var(--color-border)",
                 overflow: "hidden",
               }}
             >

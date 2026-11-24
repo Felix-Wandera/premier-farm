@@ -7,7 +7,7 @@ import { ChevronRight, Home } from "lucide-react";
 import styles from "./Breadcrumb.module.css";
 
 const routeLabels: Record<string, string> = {
-  herd: "Herd",
+  herd: "Herd Directory",
   milk: "Milk Production",
   breeding: "Breeding & Health",
   sales: "Sales & Finances",
@@ -15,26 +15,33 @@ const routeLabels: Record<string, string> = {
   inventory: "Inventory",
   users: "Team Management",
   settings: "Settings",
-  new: "Register New",
+  new: "Register Animal",
 };
+
+function formatSegmentLabel(segment: string, prevSegment?: string): string {
+  if (routeLabels[segment]) return routeLabels[segment];
+  if (prevSegment === "herd") return "Animal Profile";
+  if (segment.length >= 16 && /^[a-z0-9_-]+$/i.test(segment)) return "Details";
+  return segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export default function Breadcrumb() {
   const pathname = usePathname();
-  
+
   if (pathname === "/") return null;
 
   const segments = pathname.split("/").filter(Boolean);
-  
+
   return (
     <nav className={styles.breadcrumb} aria-label="Breadcrumb">
       <Link href="/" className={styles.homeLink}>
         <Home size={14} />
       </Link>
-      
+
       {segments.map((segment, index) => {
         const href = `/${segments.slice(0, index + 1).join("/")}`;
         const isLast = index === segments.length - 1;
-        const label = routeLabels[segment] || segment.toUpperCase();
+        const label = formatSegmentLabel(segment, segments[index - 1]);
 
         return (
           <React.Fragment key={href}>

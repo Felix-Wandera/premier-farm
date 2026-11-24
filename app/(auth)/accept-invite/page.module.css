@@ -1,12 +1,13 @@
 .container {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 1.25rem 1rem calc(2rem + env(safe-area-inset-bottom, 0px));
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 :global([data-theme='dark']) .container {
@@ -167,15 +168,11 @@
 
 @media (max-width: 640px) {
   .setupCard {
-    padding: 1.5rem;
-    border-radius: 0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    padding: 1.5rem 1.25rem;
+    border-radius: 20px;
   }
-  
+
   .row {
-      grid-template-columns: 1fr;
+    grid-template-columns: 1fr;
   }
 }
