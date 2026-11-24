@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, Save, Calendar, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { X, Save, Sparkles } from "lucide-react";
 import { createBreedingEvent } from "@/actions/event.actions";
 import { useToast } from "../ui/Toast";
 import OutlierWarningModal from "../ui/OutlierWarningModal";
@@ -23,21 +24,51 @@ const GESTATION_DAYS: Record<string, number> = {
   SHEEP: 150,
 };
 
+type BreedingEventTypeOption = "INSEMINATION" | "NATURAL_MATING" | "PREGNANCY_CHECK" | "BIRTH";
+
+function computeAutoExpectedDate(
+  animals: Animal[],
+  animalId: string,
+  eventType: BreedingEventTypeOption,
+  dateStr: string
+): string {
+  if (!dateStr || !animalId) return "";
+  const selectedAnimal = animals.find((a) => a.id === animalId);
+  if (!selectedAnimal) return "";
+
+  const eventDate = new Date(dateStr);
+  if (isNaN(eventDate.getTime())) return "";
+
+  if (eventType === "INSEMINATION" || eventType === "NATURAL_MATING") {
+    const days = GESTATION_DAYS[selectedAnimal.species] || 283;
+    const expected = new Date(eventDate.getTime() + days * 24 * 60 * 60 * 1000);
+    return expected.toISOString().split("T")[0];
+  }
+  if (eventType === "PREGNANCY_CHECK") {
+    const checkReminder = new Date(eventDate.getTime() + 60 * 24 * 60 * 60 * 1000);
+    return checkReminder.toISOString().split("T")[0];
+  }
+  return "";
+}
+
 export default function NewBreedingEventModal({
   isOpen,
   onClose,
   animals,
+  onSuccess,
 }: {
   isOpen: boolean;
   onClose: () => void;
   animals: Animal[];
+  onSuccess?: () => void;
 }) {
+  const router = useRouter();
   const toast = useToast();
   const todayStr = new Date().toISOString().split("T")[0];
 
   const [formData, setFormData] = useState({
     animalId: "",
-    eventType: "INSEMINATION" as "INSEMINATION" | "NATURAL_MATING" | "PREGNANCY_CHECK" | "BIRTH",
+    eventType: "INSEMINATION" as BreedingEventTypeOption,
     date: todayStr,
     sireDetails: "",
     expectedDate: "",
@@ -46,28 +77,6 @@ export default function NewBreedingEventModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [outlierState, setOutlierState] = useState<{ warnings: string[]; canOverride: boolean } | null>(null);
-
-  // Auto-calculate expected date whenever animal, eventType, or date changes
-  useEffect(() => {
-    if (!formData.date || !formData.animalId) return;
-
-    const selectedAnimal = animals.find((a) => a.id === formData.animalId);
-    if (!selectedAnimal) return;
-
-    const eventDate = new Date(formData.date);
-    if (isNaN(eventDate.getTime())) return;
-
-    if (formData.eventType === "INSEMINATION" || formData.eventType === "NATURAL_MATING") {
-      const days = GESTATION_DAYS[selectedAnimal.species] || 283;
-      const expected = new Date(eventDate.getTime() + days * 24 * 60 * 60 * 1000);
-      setFormData((prev) => ({ ...prev, expectedDate: expected.toISOString().split("T")[0] }));
-    } else if (formData.eventType === "PREGNANCY_CHECK") {
-      const checkReminder = new Date(eventDate.getTime() + 60 * 24 * 60 * 60 * 1000);
-      setFormData((prev) => ({ ...prev, expectedDate: checkReminder.toISOString().split("T")[0] }));
-    } else {
-      setFormData((prev) => ({ ...prev, expectedDate: "" }));
-    }
-  }, [formData.animalId, formData.eventType, formData.date, animals]);
 
   if (!isOpen) return null;
 
@@ -82,7 +91,7 @@ export default function NewBreedingEventModal({
     }
 
     setIsSubmitting(true);
-    const res: any = await createBreedingEvent({ ...formData, overrideWarnings });
+    const res = await createBreedingEvent({ ...formData, overrideWarnings });
     setIsSubmitting(false);
 
     if (res.code === "OUTLIER_WARNING" && res.warnings) {
@@ -105,6 +114,8 @@ export default function NewBreedingEventModal({
         expectedDate: "",
         notes: "",
       });
+      router.refresh();
+      onSuccess?.();
       onClose();
     } else {
       toast(res.message, "error");
@@ -158,7 +169,19 @@ export default function NewBreedingEventModal({
             <select
               required
               value={formData.animalId}
-              onChange={(e) => setFormData({ ...formData, animalId: e.target.value })}
+              onChange={(e) => {
+                const nextAnimalId = e.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  animalId: nextAnimalId,
+                  expectedDate: computeAutoExpectedDate(
+                    animals,
+                    nextAnimalId,
+                    prev.eventType,
+                    prev.date
+                  ),
+                }));
+              }}
               style={{
                 width: "100%",
                 padding: "0.75rem",
@@ -197,7 +220,18 @@ export default function NewBreedingEventModal({
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setFormData({ ...formData, eventType: opt.value })}
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        eventType: opt.value,
+                        expectedDate: computeAutoExpectedDate(
+                          animals,
+                          prev.animalId,
+                          opt.value,
+                          prev.date
+                        ),
+                      }))
+                    }
                     style={{
                       padding: "0.65rem 0.5rem",
                       borderRadius: "8px",
@@ -228,7 +262,19 @@ export default function NewBreedingEventModal({
               type="date"
               required
               value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              onChange={(e) => {
+                const nextDate = e.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  date: nextDate,
+                  expectedDate: computeAutoExpectedDate(
+                    animals,
+                    prev.animalId,
+                    prev.eventType,
+                    nextDate
+                  ),
+                }));
+              }}
               style={{
                 width: "100%",
                 padding: "0.75rem",

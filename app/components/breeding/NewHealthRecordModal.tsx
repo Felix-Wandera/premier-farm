@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Save, ShieldPlus, Stethoscope, Syringe, DollarSign, Calendar } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, Save, ShieldPlus, Stethoscope, Syringe, DollarSign } from "lucide-react";
 import { createHealthRecord } from "@/actions/event.actions";
 import { useToast } from "../ui/Toast";
 import OutlierWarningModal from "../ui/OutlierWarningModal";
@@ -20,11 +21,14 @@ export default function NewHealthRecordModal({
   isOpen,
   onClose,
   animals,
+  onSuccess,
 }: {
   isOpen: boolean;
   onClose: () => void;
   animals: Animal[];
+  onSuccess?: () => void;
 }) {
+  const router = useRouter();
   const toast = useToast();
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -57,7 +61,7 @@ export default function NewHealthRecordModal({
 
     setIsSubmitting(true);
     const parsedCost = formData.cost ? parseFloat(formData.cost) : undefined;
-    const res: any = await createHealthRecord({
+    const res = await createHealthRecord({
       animalId: formData.animalId,
       recordType: formData.recordType,
       description: formData.description,
@@ -86,6 +90,8 @@ export default function NewHealthRecordModal({
         cost: "",
         date: todayStr,
       });
+      router.refresh();
+      onSuccess?.();
       onClose();
     } else {
       toast(res.message, "error");

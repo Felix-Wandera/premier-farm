@@ -4,7 +4,12 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "./utils";
 import { revalidatePath } from "next/cache";
-import { ActionResponse, getEndOfToday, getSpeciesFamily, parseLocalDate } from "@/lib/validations";
+import {
+  ActionResponse,
+  getEndOfToday,
+  getSpeciesFamily,
+  parseLocalDate,
+} from "@/lib/validations";
 
 const GESTATION_DAYS: Record<string, number> = {
   DAIRY_COW: 283,
@@ -65,7 +70,11 @@ const breedingEventSchema = z.object({
   overrideWarnings: z.boolean().optional(),
 });
 
-export async function createBreedingEvent(data: any): Promise<ActionResponse> {
+export type CreateBreedingEventInput = z.input<typeof breedingEventSchema>;
+
+export async function createBreedingEvent(
+  data: CreateBreedingEventInput
+): Promise<ActionResponse> {
   try {
     const { tenantId, isAdmin } = await requirePermission("health:manage");
 
@@ -78,7 +87,8 @@ export async function createBreedingEvent(data: any): Promise<ActionResponse> {
       };
     }
 
-    const { animalId, eventType, date, sireDetails, expectedDate, notes, overrideWarnings } = val.data;
+    const { animalId, eventType, date, sireDetails, expectedDate, notes, overrideWarnings } =
+      val.data;
 
     const animal = await prisma.animal.findFirst({
       where: { id: animalId, tenantId, isDeleted: false },
@@ -124,7 +134,9 @@ export async function createBreedingEvent(data: any): Promise<ActionResponse> {
     }
 
     if (
-      (eventType === "INSEMINATION" || eventType === "NATURAL_MATING" || eventType === "BIRTH") &&
+      (eventType === "INSEMINATION" ||
+        eventType === "NATURAL_MATING" ||
+        eventType === "BIRTH") &&
       eventDate > getEndOfToday()
     ) {
       return {
@@ -228,13 +240,20 @@ export async function createBreedingEvent(data: any): Promise<ActionResponse> {
       success: true,
       message: `Successfully recorded ${eventType.replace("_", " ").toLowerCase()} for ${animal.name || animal.tagNumber || "animal"}!`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to create breeding event:", error);
-    return { success: false, message: error.message || "Failed to create breeding event." };
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to create breeding event.",
+    };
   }
 }
 
-export async function completeBreedingEvent(eventId: string, actualDate?: string, notes?: string) {
+export async function completeBreedingEvent(
+  eventId: string,
+  actualDate?: string,
+  notes?: string
+) {
   try {
     const { tenantId } = await requirePermission("health:manage");
 
@@ -266,9 +285,12 @@ export async function completeBreedingEvent(eventId: string, actualDate?: string
       success: true,
       message: `Marked event complete for ${event.animal.name || event.animal.tagNumber || "animal"}!`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to complete breeding event:", error);
-    return { success: false, message: error.message || "Failed to complete event." };
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to complete event.",
+    };
   }
 }
 
@@ -281,7 +303,11 @@ const healthRecordSchema = z.object({
   overrideWarnings: z.boolean().optional(),
 });
 
-export async function createHealthRecord(data: any): Promise<ActionResponse> {
+export type CreateHealthRecordInput = z.input<typeof healthRecordSchema>;
+
+export async function createHealthRecord(
+  data: CreateHealthRecordInput
+): Promise<ActionResponse> {
   try {
     const { userId, tenantId, isAdmin } = await requirePermission("health:manage");
 
@@ -386,9 +412,12 @@ export async function createHealthRecord(data: any): Promise<ActionResponse> {
       success: true,
       message: `Successfully recorded ${recordType.toLowerCase()} for ${animal.name || animal.tagNumber || "animal"}!`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to create health record:", error);
-    return { success: false, message: error.message || "Failed to record health event." };
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to record health event.",
+    };
   }
 }
 
@@ -439,4 +468,210 @@ export async function getUpcomingEvents() {
       isOverdue,
     };
   });
+}
+
+export interface BreedingScheduleItem {
+  id: string;
+  animalId: string;
+  animalName: string;
+  tagNumber: string | null;
+  species: string;
+  eventType: string;
+  title: string;
+  description: string;
+  dueDateLabel: string;
+  countdownText: string;
+  isOverdue: boolean;
+  bucket: "overdue" | "due_30d" | "gestation";
+}
+
+export interface BreedingLogItem {
+  id: string;
+  animalId: string;
+  animalName: string;
+  tagNumber: string | null;
+  species: string;
+  eventType: string;
+  dateLabel: string;
+  expectedDateLabel: string | null;
+  actualDateLabel: string | null;
+  sireDetails: string | null;
+  notes: string | null;
+  isCompleted: boolean;
+}
+
+export interface HealthLogItem {
+  id: string;
+  animalId: string;
+  animalName: string;
+  tagNumber: string | null;
+  species: string;
+  recordType: string;
+  dateLabel: string;
+  description: string;
+  cost: number | null;
+}
+
+function formatShortDate(d: Date): string {
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export async function getBreedingHubData() {
+  const { tenantId, hasPermission } = await requirePermission("health:view");
+  const canViewFinances = hasPermission("finances:view");
+
+  const [tenant, allBreedingEvents, allHealthRecords] = await Promise.all([
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { currencySymbol: true },
+    }),
+    prisma.breedingEvent.findMany({
+      where: {
+        tenantId,
+        isDeleted: false,
+        animal: { isDeleted: false },
+      },
+      include: {
+        animal: {
+          select: {
+            id: true,
+            tagNumber: true,
+            name: true,
+            species: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: 250,
+    }),
+    prisma.healthRecord.findMany({
+      where: {
+        tenantId,
+        isDeleted: false,
+        animal: { isDeleted: false },
+      },
+      include: {
+        animal: {
+          select: {
+            id: true,
+            tagNumber: true,
+            name: true,
+            species: true,
+          },
+        },
+      },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: 250,
+    }),
+  ]);
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const openEvents = allBreedingEvents
+    .filter(
+      (e) =>
+        e.actualDate === null &&
+        (e.animal.status === "ACTIVE" || e.animal.status === "SICK")
+    )
+    .sort((a, b) => {
+      const aTime = a.expectedDate ? a.expectedDate.getTime() : Number.MAX_SAFE_INTEGER;
+      const bTime = b.expectedDate ? b.expectedDate.getTime() : Number.MAX_SAFE_INTEGER;
+      return aTime - bTime;
+    });
+
+  const scheduleEvents: BreedingScheduleItem[] = openEvents.map((e) => {
+    const due = e.expectedDate;
+    let isOverdue = false;
+    let countdownText = "Scheduled";
+    let bucket: BreedingScheduleItem["bucket"] = "gestation";
+
+    if (due) {
+      const dueStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+      const diffDays = Math.round(
+        (dueStart.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (diffDays < 0) {
+        isOverdue = true;
+        bucket = "overdue";
+        countdownText = `${Math.abs(diffDays)}d overdue`;
+      } else if (diffDays === 0) {
+        bucket = "due_30d";
+        countdownText = "Due today";
+      } else if (diffDays <= 30) {
+        bucket = "due_30d";
+        countdownText = `Due in ${diffDays}d`;
+      } else {
+        bucket = "gestation";
+        countdownText = `Due in ${diffDays}d`;
+      }
+    }
+
+    const titleMap: Record<string, string> = {
+      INSEMINATION: "Expected Calving / Birth (AI)",
+      NATURAL_MATING: "Expected Calving / Birth (Mating)",
+      PREGNANCY_CHECK: "Follow-up Pregnancy Check",
+      BIRTH: "Birth",
+    };
+
+    const parts: string[] = [`Recorded ${formatShortDate(e.date)}`];
+    if (e.sireDetails) parts.push(`Sire: ${e.sireDetails}`);
+    if (e.notes) parts.push(e.notes);
+
+    return {
+      id: e.id,
+      animalId: e.animal.id,
+      animalName: e.animal.name,
+      tagNumber: e.animal.tagNumber,
+      species: e.animal.species,
+      eventType: e.eventType,
+      title: titleMap[e.eventType] || e.eventType.replace(/_/g, " "),
+      description: parts.join(" • "),
+      dueDateLabel: due ? formatShortDate(due) : "No due date",
+      countdownText,
+      isOverdue,
+      bucket,
+    };
+  });
+
+  const breedingRecords: BreedingLogItem[] = allBreedingEvents.map((e) => ({
+    id: e.id,
+    animalId: e.animal.id,
+    animalName: e.animal.name,
+    tagNumber: e.animal.tagNumber,
+    species: e.animal.species,
+    eventType: e.eventType,
+    dateLabel: formatShortDate(e.date),
+    expectedDateLabel: e.expectedDate ? formatShortDate(e.expectedDate) : null,
+    actualDateLabel: e.actualDate ? formatShortDate(e.actualDate) : null,
+    sireDetails: e.sireDetails,
+    notes: e.notes,
+    isCompleted: e.actualDate !== null,
+  }));
+
+  const healthRecords: HealthLogItem[] = allHealthRecords.map((r) => ({
+    id: r.id,
+    animalId: r.animal.id,
+    animalName: r.animal.name,
+    tagNumber: r.animal.tagNumber,
+    species: r.animal.species,
+    recordType: r.recordType,
+    dateLabel: formatShortDate(r.date),
+    description: r.description,
+    cost: canViewFinances ? r.cost : null,
+  }));
+
+  return {
+    scheduleEvents,
+    breedingRecords,
+    healthRecords,
+    canViewFinances,
+    currencySymbol: tenant?.currencySymbol || "KES",
+  };
 }

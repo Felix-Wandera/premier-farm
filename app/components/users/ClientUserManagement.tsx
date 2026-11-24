@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   ChevronDown,
   ChevronUp,
+  UserCheck,
 } from "lucide-react";
 import EmptyState from "../ui/EmptyState";
 import { useToast } from "../ui/Toast";
@@ -27,15 +28,17 @@ import {
   resendInvitation,
   getInviteLinkByUserId,
 } from "@/actions/user.actions";
-import UserPermissionsModal from "./UserPermissionsModal";
+import UserPermissionsModal, { PermissionMatrixEditor } from "./UserPermissionsModal";
 import ResponsiveSheet from "../ui/ResponsiveSheet";
 import sheetStyles from "../ui/ResponsiveSheet.module.css";
 import ConfirmationModal from "../ui/ConfirmationModal";
+import PasswordInput from "../ui/PasswordInput";
 import {
+  ALL_PERMISSION_KEYS,
   AppRole,
-  PERMISSION_DEFINITIONS,
   PermissionKey,
   ROLE_DEFAULT_PERMISSIONS,
+  resolvePermissionMap,
 } from "@/lib/permissions";
 import { useAuth } from "../auth/AuthProvider";
 import { QUICK_ACTION_EVENT, QuickActionId } from "@/lib/quick-actions";
@@ -57,9 +60,21 @@ const ROLE_COLORS: Record<string, string> = {
   WORKER: "#64748b",
 };
 
+const MODULE_BADGE_SUMMARY: Array<{ label: string; keys: PermissionKey[] }> = [
+  { label: "Herd", keys: ["herd:view", "herd:create", "herd:edit"] },
+  { label: "Milk", keys: ["milk:view", "milk:log", "milk:manage_history"] },
+  { label: "Breeding & Health", keys: ["health:view", "health:manage"] },
+  { label: "Finances", keys: ["finances:view", "finances:manage"] },
+  { label: "Inventory", keys: ["inventory:view", "inventory:transact", "inventory:manage"] },
+  { label: "Analytics", keys: ["analytics:view", "exports:download"] },
+  { label: "Admin", keys: ["users:manage", "settings:manage"] },
+];
+
 export interface TeamMemberRow {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   role: AppRole;
   lastActive: string;
@@ -86,7 +101,11 @@ export default function ClientUserManagement({
   const [isInviteOpen, setIsInviteOpen] = useState(
     () => searchParams.get("action") === "invite-member"
   );
+  const [provisionMode, setProvisionMode] = useState<"invite" | "direct">("invite");
+  const [inviteFirstName, setInviteFirstName] = useState("");
+  const [inviteLastName, setInviteLastName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
   const [inviteRole, setInviteRole] = useState<AppRole>("WORKER");
   const [showInvitePerms, setShowInvitePerms] = useState(false);
   const [invitePermMap, setInvitePermMap] = useState<Record<PermissionKey, boolean>>(
@@ -130,34 +149,47 @@ export default function ClientUserManagement({
   });
 
   const handleInviteRoleChange = (r: AppRole) => {
+    const keepDelete = invitePermMap["herd:delete"];
+    const next = { ...ROLE_DEFAULT_PERMISSIONS[r] };
+    if (keepDelete) {
+      next["herd:delete"] = true;
+      next["herd:view"] = true;
+    }
     setInviteRole(r);
-    setInvitePermMap({ ...ROLE_DEFAULT_PERMISSIONS[r] });
+    setInvitePermMap(next);
   };
 
-  const handleInvitePermToggle = (key: PermissionKey) => {
-    setInvitePermMap((prev) => {
-      const nextVal = !prev[key];
-      const next = { ...prev, [key]: nextVal };
-      const def = PERMISSION_DEFINITIONS.find((d) => d.key === key);
-      if (nextVal && def?.requires) next[def.requires] = true;
-      if (!nextVal) {
-        for (const c of PERMISSION_DEFINITIONS) {
-          if (c.requires === key) next[c.key] = false;
-        }
-      }
-      return next;
-    });
+  const resetInviteForm = () => {
+    setInviteFirstName("");
+    setInviteLastName("");
+    setInviteEmail("");
+    setInvitePassword("");
+    setInviteRole("WORKER");
+    setInvitePermMap({ ...ROLE_DEFAULT_PERMISSIONS.WORKER });
+    setShowInvitePerms(false);
   };
 
   const handleInvite = async () => {
-    if (!inviteEmail.trim()) return toast("Email is required", "error");
+    if (!inviteEmail.trim()) return toast("Email address is required.", "error");
+    if (provisionMode === "direct") {
+      if (!inviteFirstName.trim()) {
+        return toast("First name is required when creating an account directly.", "error");
+      }
+      if (invitePassword.length < 6) {
+        return toast("Password must be at least 6 characters.", "error");
+      }
+    }
 
     setIsInviting(true);
     setBackupInviteInfo(null);
 
     const res = await inviteUser({
       email: inviteEmail.trim(),
+      firstName: inviteFirstName.trim() || undefined,
+      lastName: inviteLastName.trim() || undefined,
       role: inviteRole,
+      mode: provisionMode,
+      password: provisionMode === "direct" ? invitePassword : undefined,
       permissionMap: invitePermMap,
     });
 
@@ -165,8 +197,13 @@ export default function ClientUserManagement({
 
     if (res.success) {
       toast(res.message, res.message.includes("failed") ? "warning" : "success");
-      setBackupInviteInfo(res.backupInvite ?? null);
-      setInviteEmail("");
+      if (provisionMode === "direct") {
+        resetInviteForm();
+        setIsInviteOpen(false);
+      } else {
+        setBackupInviteInfo(res.backupInvite ?? null);
+        resetInviteForm();
+      }
       router.refresh();
     } else {
       toast(res.message, "error");
@@ -195,7 +232,9 @@ export default function ClientUserManagement({
       <header className={styles.header}>
         <div>
           <h1 className={styles.pageTitle}>Team &amp; Permissions</h1>
-          <p className={styles.subtitle}>{initialUsers.length} ranch members</p>
+          <p className={styles.subtitle}>
+            {initialUsers.length} ranch members • assign roles or customize individual access
+          </p>
         </div>
         <button
           type="button"
@@ -203,7 +242,7 @@ export default function ClientUserManagement({
           onClick={() => setIsInviteOpen(true)}
         >
           <Plus size={18} strokeWidth={2.4} />
-          <span>Invite Member</span>
+          <span>Add Staff Member</span>
         </button>
       </header>
 
@@ -249,7 +288,25 @@ export default function ClientUserManagement({
       <div className={styles.teamList}>
         {filtered.length > 0 ? (
           filtered.map((member) => {
-            const hasDeletePerm = member.permissionMap?.["herd:delete"];
+            const effectiveMap =
+              member.permissionMap ||
+              resolvePermissionMap(member.role, member.customPermissions);
+            const roleDefaults = ROLE_DEFAULT_PERMISSIONS[member.role];
+
+            let addedCount = 0;
+            let removedCount = 0;
+            let activePermCount = 0;
+            for (const key of ALL_PERMISSION_KEYS) {
+              if (effectiveMap[key]) activePermCount++;
+              if (effectiveMap[key] && !roleDefaults[key]) addedCount++;
+              if (!effectiveMap[key] && roleDefaults[key]) removedCount++;
+            }
+
+            const hasDeletePerm = effectiveMap["herd:delete"];
+            const activeModules = MODULE_BADGE_SUMMARY.filter((mod) =>
+              mod.keys.some((k) => effectiveMap[k])
+            );
+
             return (
               <div key={member.id} className={styles.memberCard}>
                 <div className={styles.avatarCircle}>
@@ -265,15 +322,20 @@ export default function ClientUserManagement({
                           member.isExpired ? styles.badgeExpired : styles.badgePending
                         }
                       >
-                        {member.isExpired ? "EXPIRED" : "PENDING"}
+                        {member.isExpired ? "EXPIRED" : member.expiryText || "PENDING"}
                       </span>
                     )}
-                    {member.hasCustomPermissions && (
-                      <span className={styles.badgeCustom}>CUSTOM</span>
+                    {addedCount > 0 && (
+                      <span className={styles.badgeAdded}>+{addedCount} Added</span>
+                    )}
+                    {removedCount > 0 && (
+                      <span className={styles.badgeRemoved}>
+                        &minus;{removedCount} Restricted
+                      </span>
                     )}
                     {hasDeletePerm && (
                       <span className={styles.badgeDeleteGrant}>
-                        <ShieldAlert size={11} /> DELETE GRANT
+                        <ShieldAlert size={11} /> Delete Animals
                       </span>
                     )}
                   </div>
@@ -281,6 +343,18 @@ export default function ClientUserManagement({
                   <p className={styles.emailLine}>
                     <Mail size={12} /> <span>{member.email}</span>
                   </p>
+
+                  {/* Module Access Chips */}
+                  <div className={styles.moduleChipsRow}>
+                    {activeModules.map((mod) => (
+                      <span key={mod.label} className={styles.moduleChip}>
+                        {mod.label}
+                      </span>
+                    ))}
+                    <span className={`${styles.permCountLabel} tabular-nums`}>
+                      {activePermCount}/{ALL_PERMISSION_KEYS.length} capabilities
+                    </span>
+                  </div>
 
                   <div className={styles.metaFooterRow}>
                     <span className={styles.rolePill} style={{ color: ROLE_COLORS[member.role] }}>
@@ -296,7 +370,8 @@ export default function ClientUserManagement({
                       onClick={() => setEditingMember(member)}
                       className={styles.permsLinkBtn}
                     >
-                      Permissions &rarr;
+                      <Shield size={12} />
+                      <span>Manage Access</span>
                     </button>
                   </div>
                 </div>
@@ -328,6 +403,7 @@ export default function ClientUserManagement({
                               setOpenMenuId(null);
                               const res = await resendInvitation(member.id);
                               toast(res.message, res.success ? "success" : "error");
+                              router.refresh();
                             }}
                           >
                             <Send size={14} />{" "}
@@ -364,7 +440,7 @@ export default function ClientUserManagement({
                           setOpenMenuId(null);
                         }}
                       >
-                        <Shield size={14} /> Role &amp; Permissions
+                        <Shield size={14} /> Manage Access &amp; Role
                       </button>
                       <button
                         type="button"
@@ -391,34 +467,54 @@ export default function ClientUserManagement({
                 ? `No team members matched "${searchQuery}".`
                 : "You haven't added any team members yet."
             }
-            actionLabel="Invite Member"
+            actionLabel="Add Staff Member"
             onAction={() => setIsInviteOpen(true)}
           />
         )}
       </div>
 
-      {/* Invite Sheet */}
+      {/* Add / Invite Staff Member Sheet */}
       <ResponsiveSheet
         isOpen={isInviteOpen}
         onClose={() => {
           setIsInviteOpen(false);
           setBackupInviteInfo(null);
         }}
-        size="md"
-        title="Invite Team Member"
-        subtitle="Send an email invite and assign role permissions"
+        size="lg"
+        title="Add Staff Member"
+        subtitle="Send an email setup link or create an active account immediately"
         disableClose={isInviting}
         footer={
           !backupInviteInfo ? (
-            <button
-              type="button"
-              onClick={handleInvite}
-              disabled={isInviting}
-              className={sheetStyles.primaryBtn}
-            >
-              <Mail size={18} />
-              <span>{isInviting ? "Sending Invitation..." : "Send Email Invite"}</span>
-            </button>
+            <div style={{ display: "flex", gap: "0.65rem" }}>
+              <button
+                type="button"
+                onClick={() => setIsInviteOpen(false)}
+                disabled={isInviting}
+                className={sheetStyles.secondaryBtn}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleInvite}
+                disabled={isInviting}
+                className={sheetStyles.primaryBtn}
+                style={{ flex: 1.7 }}
+              >
+                {provisionMode === "direct" ? <UserCheck size={18} /> : <Mail size={18} />}
+                <span>
+                  {isInviting
+                    ? provisionMode === "direct"
+                      ? "Creating Account..."
+                      : "Sending Invite..."
+                    : provisionMode === "direct"
+                      ? "Create Staff Account"
+                      : "Send Email Invite"}
+                </span>
+              </button>
+            </div>
           ) : undefined
         }
       >
@@ -428,7 +524,7 @@ export default function ClientUserManagement({
               Invitation Generated
             </h3>
             <p style={{ margin: "0 0 0.85rem", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
-              Copy the secure setup link below if you want to share it directly:
+              Copy the secure setup link below if you want to share it directly via WhatsApp or SMS:
             </p>
             <pre
               style={{
@@ -467,28 +563,134 @@ export default function ClientUserManagement({
           </div>
         ) : (
           <>
+            {/* Provisioning Mode Toggle */}
+            <div className={styles.modeTabs} role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={provisionMode === "invite"}
+                className={`${styles.modeTabBtn} ${
+                  provisionMode === "invite" ? styles.modeTabActive : ""
+                }`}
+                onClick={() => setProvisionMode("invite")}
+              >
+                <Mail size={15} />
+                <span>Send Invite Link</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={provisionMode === "direct"}
+                className={`${styles.modeTabBtn} ${
+                  provisionMode === "direct" ? styles.modeTabActive : ""
+                }`}
+                onClick={() => setProvisionMode("direct")}
+              >
+                <UserCheck size={15} />
+                <span>Create Directly</span>
+              </button>
+            </div>
+
+            <div className={sheetStyles.grid2}>
+              <div className={sheetStyles.fieldGroup}>
+                <label className={sheetStyles.label}>
+                  First Name {provisionMode === "direct" ? "*" : "(Optional)"}
+                </label>
+                <input
+                  type="text"
+                  className={sheetStyles.input}
+                  placeholder="e.g. Faith"
+                  value={inviteFirstName}
+                  onChange={(e) => setInviteFirstName(e.target.value)}
+                />
+              </div>
+
+              <div className={sheetStyles.fieldGroup}>
+                <label className={sheetStyles.label}>Last Name (Optional)</label>
+                <input
+                  type="text"
+                  className={sheetStyles.input}
+                  placeholder="e.g. Wandera"
+                  value={inviteLastName}
+                  onChange={(e) => setInviteLastName(e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className={sheetStyles.fieldGroup}>
               <label className={sheetStyles.label}>Email Address *</label>
               <input
                 type="email"
                 className={sheetStyles.input}
-                placeholder="e.g. employee@premierranch.co.ke"
+                placeholder="e.g. staff@premierranch.co.ke"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
               />
             </div>
 
+            {provisionMode === "direct" && (
+              <div className={sheetStyles.fieldGroup}>
+                <label className={sheetStyles.label}>Initial Password *</label>
+                <PasswordInput
+                  placeholder="Minimum 6 characters"
+                  value={invitePassword}
+                  onChange={(e) => setInvitePassword(e.target.value)}
+                  isSubmitting={isInviting}
+                />
+              </div>
+            )}
+
             <div className={sheetStyles.fieldGroup}>
-              <label className={sheetStyles.label}>Base Role Assignment</label>
-              <select
-                className={sheetStyles.select}
-                value={inviteRole}
-                onChange={(e) => handleInviteRoleChange(e.target.value as AppRole)}
+              <label className={sheetStyles.label}>Base Role Preset</label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(115px, 1fr))",
+                  gap: "0.5rem",
+                }}
               >
-                <option value="WORKER">Worker (Field &amp; Milk Logging)</option>
-                <option value="MANAGER">Manager (Operations, Finances &amp; Analytics)</option>
-                <option value="ADMIN">Administrator (Full Organization Access)</option>
-              </select>
+                {(
+                  [
+                    { value: "WORKER", title: "Worker", desc: "Field & Milk Entry" },
+                    { value: "MANAGER", title: "Manager", desc: "Ops & Reports" },
+                    { value: "ADMIN", title: "Admin", desc: "Full Org Control" },
+                  ] as const
+                ).map((opt) => {
+                  const selected = inviteRole === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleInviteRoleChange(opt.value)}
+                      style={{
+                        padding: "0.7rem 0.65rem",
+                        borderRadius: "12px",
+                        border: selected
+                          ? "2px solid var(--color-primary)"
+                          : "1px solid var(--color-border)",
+                        backgroundColor: selected
+                          ? "var(--color-primary-light)"
+                          : "var(--color-bg)",
+                        color: "var(--color-text-main)",
+                        textAlign: "left",
+                        fontFamily: "inherit",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{opt.title}</div>
+                      <div
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--color-text-sub)",
+                          marginTop: "2px",
+                        }}
+                      >
+                        {opt.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <button
@@ -511,69 +713,23 @@ export default function ClientUserManagement({
                 cursor: "pointer",
               }}
             >
-              <span>Customize Granular Permissions</span>
+              <span>
+                Customize Staff Permissions (
+                {ALL_PERMISSION_KEYS.filter((k) => invitePermMap[k]).length}/
+                {ALL_PERMISSION_KEYS.length} active)
+              </span>
               {showInvitePerms ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
 
             {showInvitePerms && (
-              <div
-                style={{
-                  maxHeight: "240px",
-                  overflowY: "auto",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "12px",
-                  padding: "0.4rem 0.85rem",
-                  backgroundColor: "var(--color-bg)",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                {PERMISSION_DEFINITIONS.map((def, idx) => (
-                  <label
-                    key={def.key}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "0.75rem",
-                      fontSize: "0.84rem",
-                      padding: "0.55rem 0",
-                      borderBottom:
-                        idx < PERMISSION_DEFINITIONS.length - 1
-                          ? "1px solid var(--color-border)"
-                          : "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div>
-                      <span style={{ fontWeight: 600 }}>{def.label}</span>
-                      {def.optInOnly && (
-                        <span
-                          style={{
-                            marginLeft: "6px",
-                            fontSize: "0.68rem",
-                            color: "#ef4444",
-                            fontWeight: 700,
-                          }}
-                        >
-                          (Opt-in)
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={invitePermMap[def.key]}
-                      onChange={() => handleInvitePermToggle(def.key)}
-                      style={{
-                        width: "20px",
-                        height: "20px",
-                        accentColor: "var(--color-primary)",
-                        flexShrink: 0,
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
+              <PermissionMatrixEditor
+                role={inviteRole}
+                permMap={invitePermMap}
+                onChangePermMap={setInvitePermMap}
+                onResetDefaults={() =>
+                  setInvitePermMap({ ...ROLE_DEFAULT_PERMISSIONS[inviteRole] })
+                }
+              />
             )}
           </>
         )}
@@ -606,6 +762,7 @@ export default function ClientUserManagement({
                     const res = await resendInvitation(actionMember.id);
                     toast(res.message, res.success ? "success" : "error");
                     setActionMember(null);
+                    router.refresh();
                   }}
                 >
                   <Send size={19} color="#10b981" />{" "}
@@ -638,7 +795,7 @@ export default function ClientUserManagement({
                 setActionMember(null);
               }}
             >
-              <Settings size={19} color="var(--color-primary)" /> Role &amp; Permissions
+              <Settings size={19} color="var(--color-primary)" /> Manage Access &amp; Permissions
             </button>
 
             <button

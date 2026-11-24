@@ -82,8 +82,8 @@
 
 .summaryRow {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.7rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.55rem;
 }
 
 @media (min-width: 640px) {
@@ -95,31 +95,209 @@
 .summaryCard {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  padding: 0.95rem 1.05rem;
+  padding: 0.85rem 0.9rem;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   box-shadow: var(--shadow-sm);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.summaryCardActive {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .num {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--color-primary);
   line-height: 1.1;
 }
 
 @media (min-width: 640px) {
+  .summaryCard {
+    padding: 0.95rem 1.05rem;
+  }
+
   .num {
-    font-size: 1.85rem;
+    font-size: 1.8rem;
   }
 }
 
 .summaryCard span:last-child {
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: var(--color-text-sub);
+}
+
+@media (min-width: 640px) {
+  .summaryCard span:last-child {
+    font-size: 0.8rem;
+  }
+}
+
+.tabsBar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  padding: 0.32rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tabBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-sub);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .tabBtn {
+    font-size: 0.86rem;
+    gap: 0.45rem;
+  }
+}
+
+.tabBtnActive {
+  background: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(4, 120, 87, 0.22);
+}
+
+.tabCountBadge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--color-bg);
+  color: var(--color-text-sub);
+}
+
+.tabBtnActive .tabCountBadge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.subFilters {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.subFilters::-webkit-scrollbar {
+  display: none;
+}
+
+.subFilterPill {
+  white-space: nowrap;
+  min-height: 34px;
+  padding: 0.35rem 0.85rem;
+  border-radius: 99px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.subFilterPillActive {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.cowLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  background: var(--color-bg);
+  padding: 0.24rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  text-decoration: none;
+  max-width: 100%;
+}
+
+.cowLink:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.badgeRose {
+  background: rgba(225, 29, 72, 0.13);
+  color: #e11d48;
+}
+
+.statusPillOpen {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(59, 130, 246, 0.14);
+  color: #2563eb;
+}
+
+.statusPillDone {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #059669;
+}
+
+.statusPillOverdue {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(239, 68, 68, 0.14);
+  color: #ef4444;
+}
+
+.costBadge {
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(225, 29, 72, 0.1);
+  color: #e11d48;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+  color: var(--color-text-sub);
+  margin-top: 0.1rem;
 }
 
 .searchBox {
